@@ -21,6 +21,11 @@ You can also edit, save and reload reusable YAML definitions without Proxmox.
 The server validates the schema and persists definitions in SQLite, without
 creating VMs. See [definition format and storage](docs/definitions.md).
 
+To preview provisioning, configure `POCKETLAB_TEMPLATES` with your explicit
+[image-to-template catalog](docs/provisioning-plan.md), enter a candidate VMID
+and click **Preview provisioning**. The offline plan never reserves or creates
+a VM and clearly marks live checks as pending.
+
 ## Start development
 
 Install Node.js (22.12+ or a compatible newer release), npm, Rust 1.99.1 with

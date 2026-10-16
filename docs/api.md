@@ -13,6 +13,8 @@ Definition validation/create/list/read routes are documented in
 [the definition API and schema](definitions.md). They operate without Proxmox.
 Asynchronous inventory requests and persisted statuses are described in
 [durable operations](operations.md).
+Image catalog and offline preview routes are documented in
+[provisioning plans](provisioning-plan.md).
 
 ## Read-only inventory
 

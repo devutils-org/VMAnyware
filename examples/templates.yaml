@@ -1,0 +1,13 @@
+# Example only. These values are not verified against any real homelab.
+apiVersion: pocketlab.dev/v1
+kind: TemplateCatalog
+images:
+  - image: debian-13
+    node: pve-test
+    templateVmid: 9000
+    templateVersion: debian-13-cloud-20261016
+    storage: local-lvm
+    bridge: vmbr0
+    diskDevice: scsi0
+    sourceDiskGiB: 8
+    guestUser: debian

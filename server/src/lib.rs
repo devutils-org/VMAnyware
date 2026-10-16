@@ -4,6 +4,8 @@ mod definitions_api;
 mod inventory;
 pub mod operation;
 mod operations_api;
+pub mod provisioning;
+mod provisioning_api;
 pub mod proxmox;
 pub mod service_lock;
 pub mod store;
@@ -30,8 +32,22 @@ pub fn router_with_provider(provider: Option<proxmox::Proxmox>) -> Router {
 }
 
 pub fn router_with_services(provider: Option<proxmox::Proxmox>, store: store::Store) -> Router {
+    router_with_catalog(provider, store, None)
+}
+
+pub fn router_with_catalog(
+    provider: Option<proxmox::Proxmox>,
+    store: store::Store,
+    catalog: Option<provisioning::Catalog>,
+) -> Router {
     Router::new()
         .route("/api/v1/health", get(health))
+        .route("/api/v1/images", get(provisioning_api::images))
+        .route(
+            "/api/v1/provisioning/plan",
+            post(provisioning_api::preview)
+                .layer(DefaultBodyLimit::max(6 * definition::MAX_YAML_BYTES + 1024)),
+        )
         .route("/api/v1/provider/inventory", get(inventory::get))
         .route(
             "/api/v1/provider/inventory/refresh",
@@ -50,7 +66,11 @@ pub fn router_with_services(provider: Option<proxmox::Proxmox>, store: store::St
         .layer(DefaultBodyLimit::max(definition::MAX_YAML_BYTES))
         .fallback(not_found)
         .method_not_allowed_fallback(method_not_allowed)
-        .with_state(inventory::AppState { provider, store })
+        .with_state(inventory::AppState {
+            provider,
+            store,
+            catalog,
+        })
 }
 
 #[derive(Serialize)]

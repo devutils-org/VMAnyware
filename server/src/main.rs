@@ -1,4 +1,6 @@
-use pocketlab_server::{config::Config, proxmox::Proxmox, router_with_services, store::Store};
+use pocketlab_server::{
+    config::Config, provisioning::Catalog, proxmox::Proxmox, router_with_catalog, store::Store,
+};
 use std::future::IntoFuture;
 
 #[tokio::main]
@@ -12,6 +14,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     };
     let config = Config::from_port(port.as_deref())?;
     let provider = Proxmox::from_environment()?;
+    let catalog = Catalog::from_environment()?;
     let database = match std::env::var("POCKETLAB_DATABASE") {
         Ok(value) if !value.is_empty() => value,
         Err(std::env::VarError::NotPresent) => "pocketlab.sqlite".into(),
@@ -27,7 +30,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         store.clone(),
         provider.clone(),
     ));
-    let server = axum::serve(listener, router_with_services(provider, store))
+    let server = axum::serve(listener, router_with_catalog(provider, store, catalog))
         .with_graceful_shutdown(shutdown())
         .into_future();
     tokio::select! {

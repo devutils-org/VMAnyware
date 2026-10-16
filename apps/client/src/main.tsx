@@ -3,6 +3,7 @@ import { createRoot } from "react-dom/client";
 import { invoke, isTauri } from "@tauri-apps/api/core";
 import "./styles.css";
 import sampleDefinition from "../../../examples/kernel-lab.yaml?raw";
+import { ProvisioningPreview } from "./ProvisioningPreview";
 
 type DefinitionRecord = {
   name: string;
@@ -184,6 +185,7 @@ function App() {
           </button> · Revision {record.revision}
         </li>)}</ul>}
       </section>
+      <ProvisioningPreview port={port} yaml={yaml} native={native} />
       {inventory && <>
         <section aria-labelledby="nodes-heading">
           <h2 id="nodes-heading">Nodes</h2>

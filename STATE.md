@@ -15,6 +15,9 @@ Updated: 2026-10-16. Keep this file short; historical decisions belong in ADRs.
   background worker, status API, native polling/resume cache and startup recovery.
 - SQLite migration 2 and an exclusive database service lock prevent duplicate
   process ownership. No VM mutation jobs are implemented yet.
+- Explicit server-owned image/template catalog and stateless offline provisioning
+  plans. Native preview shows source/target/resources/storage/network/access,
+  binds inputs with deterministic hashes, and hides stale results after edits.
 - README, scoped Makefile checks, tool doctor, API contract, Phase 0 brief,
   agent instructions and architecture decisions. Original roadmap retained.
 
@@ -34,11 +37,10 @@ Apple developer directory: `/Library/Developer/CommandLineTools`.
 
 - `make doctor`: passed. The old missing-tool/network restrictions are resolved.
 - `make check-client`: passed TypeScript checking and Vite production build.
-- `make check-server`: passed fmt, Clippy with warnings denied and 29 server tests.
+- `make check-server`: passed fmt, Clippy with warnings denied and 36 server tests.
 - `make check-rust`: passed workspace fmt, Clippy with warnings denied and all
-  tests present at that run (32). One additional TLS-backed worker test then
-  passed in the scoped server checks: 33 tests total, including 4 native HTTP,
-  11 configuration/provider/TLS, 8 definitions, 3 service HTTP and 7 operations.
+  42 tests: 6 native HTTP, 11 configuration/provider/TLS, 8 definitions,
+  3 service HTTP, 7 operations and 7 provisioning/catalog tests.
 - Live server started on an unused loopback port, returned HTTP 200 with
   `{"status":"ok"}`, and shut down on SIGINT with exit code 0.
 - Live HTTP/SQLite restart check passed using a temporary database: validation,
@@ -48,12 +50,20 @@ Apple developer directory: `/Library/Developer/CommandLineTools`.
   operation, failed result survives restart, second process cannot acquire the
   same database, and a simulated pre-crash running record becomes interrupted
   on actual service startup. No provider was configured for this process test.
+- Live provisioning-preview smoke passed with the example catalog, temporary
+  database and no provider: explicit mapping loaded, stable plan hash, requested
+  resources/VMID returned, disk shrink/source VMID/unknown fields rejected,
+  no definitions or operations written. Invalid catalog refused binary startup
+  without echoing configuration values. Plans explicitly remain unverified and
+  do not reserve VMIDs or enable creation.
 - `make dev`: compiled successfully and launched `target/debug/pocketlab-client`.
   The user confirmed the native window and button result:
   `Native bridge connected (macos)`. The desktop UI-to-Rust smoke check passes.
 - `npm --prefix apps/client run tauri build -- --no-bundle`: passed; optimized
   native executable generated at `target/release/pocketlab-client`. Installers,
   signing and distribution bundles were not built.
+- The new preview UI is compiled; a manual walkthrough with the user's real
+  template catalog and live host validation are still pending.
 
 The initial implementation is versioned in Git; see `git log` for the commit.
 No Proxmox infrastructure has been contacted. Mobile and SSH remain untested.
@@ -61,10 +71,10 @@ Phase 0 is not complete; no unsupported roadmap acceptance claims are made.
 
 ## Next single task
 
-Prepare explicit image-to-template mapping and a reviewable provisioning plan
-before any clone implementation/live mutation. Read-only live verification is
-still pending the user's test endpoint. Real VM mutations require a concrete
-approved disposable target.
+Implement read-only preflight validation of a provisioning plan against actual
+template metadata, target VMID availability, storage and network. Use local TLS
+fixtures by default. Live verification awaits the user's test endpoint/catalog;
+real VM mutations require a concrete approved disposable target.
 
 ## Open inputs
 

@@ -7,6 +7,7 @@ use std::time::Duration;
 pub struct AppState {
     pub provider: Option<Proxmox>,
     pub store: crate::store::Store,
+    pub catalog: Option<crate::provisioning::Catalog>,
 }
 
 #[derive(Serialize)]

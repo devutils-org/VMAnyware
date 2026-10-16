@@ -1,6 +1,6 @@
 use super::{
-    begin_inventory_refresh, inspect_control_plane, list_definitions, read_operation,
-    save_definition, OperationStatus,
+    begin_inventory_refresh, inspect_control_plane, list_definitions, preview_provisioning,
+    read_operation, save_definition, OperationStatus,
 };
 use std::{
     io::{Read, Write},
@@ -151,4 +151,62 @@ fn definitions_use_yaml_post_and_list_saved_records() {
     );
     task.join().unwrap();
     assert!(tauri::async_runtime::block_on(save_definition(port, "x".repeat(65537))).is_err());
+}
+
+#[test]
+fn provisioning_preview_posts_explicit_target_and_decodes_offline_plan() {
+    let sample = include_str!("../../../../../examples/kernel-lab.yaml");
+    let plan = serde_json::json!({
+        "definitionName":"kernel-lab", "definitionHash":"definition-hash", "planHash":"plan-hash", "provider":"proxmox",
+        "source":{"image":"debian-13","node":"pve-test","templateVmid":9000,"templateVersion":"debian-13-cloud-20261016","storage":"local-lvm","bridge":"vmbr0","diskDevice":"scsi0","sourceDiskGiB":8,"guestUser":"debian"},
+        "target":{"node":"pve-test","vmid":201,"name":"kernel-lab","storage":"local-lvm","bridge":"vmbr0","resources":{"cpu":4,"memoryMiB":8192,"diskGiB":40},"guestUser":"debian","ipv4":"dhcp"},
+        "sshKeyCount":1,"packages":["git"],"snapshotAfterProvisioning":false,"steps":["full_clone"],
+        "liveVerified":false,"vmidReserved":false,"creationEnabled":false
+    });
+    let (port, task) = response(
+        "POST",
+        "/api/v1/provisioning/plan",
+        "200 OK",
+        &plan.to_string(),
+    );
+    let result =
+        tauri::async_runtime::block_on(preview_provisioning(port, sample.into(), 201)).unwrap();
+    assert_eq!(result.target.vmid, 201);
+    assert!(!result.live_verified && !result.vmid_reserved && !result.creation_enabled);
+    let request = task.join().unwrap();
+    assert!(request
+        .to_ascii_lowercase()
+        .contains("content-type: application/json\r\n"));
+    let payload: serde_json::Value =
+        serde_json::from_str(request.split_once("\r\n\r\n").unwrap().1).unwrap();
+    assert_eq!(payload["yaml"], sample);
+    assert_eq!(payload["targetVmid"], 201);
+}
+
+#[test]
+fn preview_validation_and_provider_error_codes_return_safe_actionable_messages() {
+    for (code, text) in [
+        ("image_not_mapped", "No template is mapped"),
+        ("invalid_target_vmid", "different from the source"),
+        ("disk_shrink_unsupported", "smaller than the source"),
+    ] {
+        let body = serde_json::json!({"error":{"code":code,"message":"must-not-echo"}});
+        let (port, task) = response(
+            "POST",
+            "/api/v1/provisioning/plan",
+            "422 Unprocessable Entity",
+            &body.to_string(),
+        );
+        let message =
+            tauri::async_runtime::block_on(preview_provisioning(port, "yaml".into(), 201))
+                .err()
+                .unwrap();
+        assert!(message.contains(text));
+        assert!(!message.contains("must-not-echo"));
+        task.join().unwrap();
+    }
+    assert!(tauri::async_runtime::block_on(preview_provisioning(1, "yaml".into(), 99)).is_err());
+    assert!(
+        tauri::async_runtime::block_on(preview_provisioning(1, "x".repeat(65537), 201)).is_err()
+    );
 }
