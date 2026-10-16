@@ -64,7 +64,7 @@ function App() {
   const [definitionMessage, setDefinitionMessage] = useState("");
   const [definitionError, setDefinitionError] = useState("");
 
-  async function definitionsAction(save: boolean) {
+  async function definitionsAction(action: "save" | "load" | "validate") {
     const value = Number(port);
     if (!Number.isInteger(value) || value < 1 || value > 65535) {
       setDefinitionError("Enter a port between 1 and 65535.");
@@ -74,13 +74,18 @@ function App() {
     setDefinitionError("");
     setDefinitionMessage("");
     try {
-      if (save) {
+      if (action === "validate") {
+        const result = await invoke<{ name: string; hash: string; yaml: string }>("validate_definition", { port: value, yaml });
+        setDefinitionMessage(`Validated ${result.name}. Nothing was saved or provisioned.`);
+        return;
+      }
+      if (action === "save") {
         const record = await invoke<DefinitionRecord>("save_definition", { port: value, yaml });
         setYaml(record.yaml);
         setDefinitionMessage(`Saved ${record.name}. No VM was created.`);
       }
       setDefinitions(await invoke<DefinitionRecord[]>("list_definitions", { port: value }));
-      if (!save) setDefinitionMessage("Saved definitions loaded.");
+      if (action === "load") setDefinitionMessage("Saved definitions loaded.");
     } catch (error) {
       setDefinitionError(typeof error === "string" ? error : "Cannot load or save definitions. Please retry.");
     } finally {
@@ -171,10 +176,11 @@ function App() {
         <textarea id="definition-yaml" value={yaml} spellCheck={false} disabled={definitionBusy}
           onChange={(event) => { setYaml(event.target.value); setDefinitionMessage(""); setDefinitionError(""); }} />
         <div className="connection-fields">
-          <button disabled={!native || definitionBusy} onClick={() => definitionsAction(true)}>
+          <button disabled={!native || definitionBusy} onClick={() => definitionsAction("validate")}>Validate YAML</button>
+          <button disabled={!native || definitionBusy} onClick={() => definitionsAction("save")}>
             {definitionBusy ? "Working…" : "Save definition"}
           </button>
-          <button disabled={!native || definitionBusy} onClick={() => definitionsAction(false)}>Load saved definitions</button>
+          <button disabled={!native || definitionBusy} onClick={() => definitionsAction("load")}>Load saved definitions</button>
         </div>
         <p>CPU: 1–64 · Memory: 256–262144 MiB · Disk: 4–4096 GiB</p>
         {definitionMessage && <p role="status">{definitionMessage}</p>}

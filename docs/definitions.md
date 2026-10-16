@@ -41,6 +41,14 @@ YAML, so YAML formatting changes do not change the hash. Changing declared list
 order does change the hash. This is configuration reproducibility, not a claim
 that unpinned package repositories produce identical software.
 
+## Native validation
+
+Click **Validate YAML** to check the current editor contents without saving,
+loading the catalog or contacting Proxmox. Success leaves the editor unchanged.
+Validation uses the server's canonical parser; known invalid fields produce
+application-owned hints, while unknown errors remain generic. Raw server error
+messages or submitted values are never forwarded by the native command.
+
 ## Local API
 
 | Method | Route | Behavior |

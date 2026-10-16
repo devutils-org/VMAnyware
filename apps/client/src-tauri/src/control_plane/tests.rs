@@ -261,3 +261,72 @@ fn preflight_bounds_and_configuration_errors_are_safe() {
     assert!(error.contains("Proxmox provider") && error.contains("POCKETLAB_TEMPLATES"));
     assert!(!error.contains("private-provider-body"));
 }
+
+#[test]
+fn validation_uses_dedicated_endpoint_and_returns_canonical_definition() {
+    let body = serde_json::json!({"name":"test-definition","hash":"canonical-hash","yaml":"canonical-yaml"});
+    let (port, task) = response(
+        "POST",
+        "/api/v1/definitions/validate",
+        "200 OK",
+        &body.to_string(),
+    );
+    let validated =
+        tauri::async_runtime::block_on(super::validate_definition(port, "input-yaml".into()))
+            .unwrap();
+    assert_eq!(validated.name, "test-definition");
+    assert_eq!(validated.hash, "canonical-hash");
+    assert_eq!(validated.yaml, "canonical-yaml");
+    let request = task.join().unwrap();
+    assert!(request
+        .to_ascii_lowercase()
+        .contains("content-type: application/yaml\r\n"));
+    assert_eq!(request.split_once("\r\n\r\n").unwrap().1, "input-yaml");
+}
+
+#[test]
+fn validation_limits_and_untrusted_error_bodies_are_safe() {
+    assert!(
+        tauri::async_runtime::block_on(super::validate_definition(1, "x".repeat(65537))).is_err()
+    );
+    let (port, task) = response(
+        "POST",
+        "/api/v1/definitions/validate",
+        "422 Unprocessable Entity",
+        "private-response-data",
+    );
+    let error = tauri::async_runtime::block_on(super::validate_definition(port, "yaml".into()))
+        .err()
+        .unwrap();
+    task.join().unwrap();
+    assert!(error.contains("Definition is invalid"));
+    assert!(!error.contains("private-response-data"));
+}
+
+#[test]
+fn definition_errors_select_only_known_field_messages() {
+    for (field, expected) in [
+        (
+            "spec.resources.cpu",
+            "spec.resources.cpu: choose 1–64 CPUs.",
+        ),
+        (
+            "unknown-secret-field",
+            "Definition is invalid. Check the v1 schema, required fields and public SSH keys.",
+        ),
+    ] {
+        let body = serde_json::json!({"error":{"code":"invalid_definition","field":field,"message":"secret-provider-message"}});
+        let (port, task) = response(
+            "POST",
+            "/api/v1/definitions/validate",
+            "422 Unprocessable Entity",
+            &body.to_string(),
+        );
+        let error = tauri::async_runtime::block_on(super::validate_definition(port, "yaml".into()))
+            .err()
+            .unwrap();
+        task.join().unwrap();
+        assert_eq!(error, expected);
+        assert!(!error.contains("secret"));
+    }
+}

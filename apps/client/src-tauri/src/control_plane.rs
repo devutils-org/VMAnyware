@@ -93,6 +93,26 @@ pub async fn list_definitions(port: u16) -> Result<Vec<DefinitionRecord>, String
     request(port, "/api/v1/definitions", None).await
 }
 
+#[derive(Deserialize, Serialize)]
+pub struct ValidatedDefinition {
+    name: String,
+    hash: String,
+    yaml: String,
+}
+
+#[tauri::command]
+pub async fn validate_definition(port: u16, yaml: String) -> Result<ValidatedDefinition, String> {
+    if yaml.len() > 64 * 1024 {
+        return Err("Definition exceeds 64 KiB.".into());
+    }
+    request(
+        port,
+        "/api/v1/definitions/validate",
+        Some(Payload::Yaml(yaml)),
+    )
+    .await
+}
+
 #[tauri::command]
 pub async fn save_definition(port: u16, yaml: String) -> Result<DefinitionRecord, String> {
     if yaml.len() > 64 * 1024 {
@@ -270,6 +290,27 @@ async fn request<T: DeserializeOwned>(
         body.extend_from_slice(&chunk);
     }
     if !status.is_success() {
+        if status.as_u16() == 422
+            && matches!(path, "/api/v1/definitions" | "/api/v1/definitions/validate")
+        {
+            let problem: serde_json::Value = serde_json::from_slice(&body).unwrap_or_default();
+            if problem["error"]["code"] == "invalid_definition" {
+                // Only known field identifiers select application-owned messages.
+                let message = match problem["error"]["field"].as_str() {
+                    Some("metadata.name") => "metadata.name: use 1–63 lowercase letters, digits or internal hyphens.",
+                    Some("metadata.description") => "metadata.description: keep the description within 1024 bytes.",
+                    Some("spec.image") => "spec.image: use a 1–64 character lowercase image identifier.",
+                    Some("spec.resources.cpu") => "spec.resources.cpu: choose 1–64 CPUs.",
+                    Some("spec.resources.memoryMiB") => "spec.resources.memoryMiB: choose 256–262144 MiB.",
+                    Some("spec.resources.diskGiB") => "spec.resources.diskGiB: choose 4–4096 GiB.",
+                    Some("spec.provisioning.cloudInit") => "spec.provisioning.cloudInit: Cloud-Init must be true.",
+                    Some("spec.provisioning.sshAuthorizedKeys") => "spec.provisioning.sshAuthorizedKeys: provide 1–16 unique, inline OpenSSH public keys, not file paths.",
+                    Some("spec.provisioning.packages") => "spec.provisioning.packages: provide at most 128 unique Debian package declarations; shell syntax is forbidden.",
+                    _ => "Definition is invalid. Check the v1 schema, required fields and public SSH keys.",
+                };
+                return Err(message.into());
+            }
+        }
         if path.starts_with("/api/v1/provisioning/") {
             let problem: serde_json::Value = serde_json::from_slice(&body).unwrap_or_default();
             let message = match problem["error"]["code"].as_str() {

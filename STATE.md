@@ -12,7 +12,8 @@ Updated: 2026-10-16. Keep this file short; historical decisions belong in ADRs.
   and same-database restart/lock release. Windows source remains untested.
 - Verified-TLS, read-only Proxmox client and local inventory endpoint/UI.
 - Strict versioned YAML definitions, deterministic exports/hashes, SQLite
-  migration and persistent create/list/read APIs; native YAML editor/catalog.
+  migration and persistent create/list/read APIs; native YAML editor/catalog
+  with standalone validation without save and safe field-specific error hints.
 - Definitions named `validate` can be read through the existing static route;
   POST on that path still validates without saving. No names were reserved.
 - Durable inventory jobs: queued/running/terminal states, idempotent enqueue,
