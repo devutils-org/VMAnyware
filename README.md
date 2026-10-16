@@ -26,7 +26,8 @@ To preview provisioning, configure `POCKETLAB_TEMPLATES` with your explicit
 and click **Preview provisioning**. The offline plan never reserves or creates
 a VM. **Check against Proxmox** performs read-only preflight checks when a
 provider is configured, reporting passed, failed and unknown observations.
-Actual provisioning and real-host validation remain pending.
+Actual provisioning and real-host validation remain pending. For the upcoming
+test PC, follow the [Debian Cloud-Init template guide](docs/debian-template.md).
 
 ## Start development
 

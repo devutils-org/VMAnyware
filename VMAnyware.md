@@ -340,7 +340,7 @@ Tasks:
 
 Tasks:
 
-- [ ] Document how to prepare/import a supported Debian template in Proxmox.
+- [x] Document how to prepare/import a supported Debian template in Proxmox. (Proposed Debian 13 amd64 procedure reviewed against official sources; real-host support validation pending.)
 - [x] Implement an explicit PocketLab image-to-Proxmox-template mapping. (Strict server catalog and offline plan; live template verification pending.)
 - [ ] Implement clone and resource configuration.
 - [ ] Apply Cloud-Init settings and SSH public keys.

@@ -22,6 +22,9 @@ Updated: 2026-10-16. Keep this file short; historical decisions belong in ADRs.
   Cloud-Init drive, storage/capacity, bridge and candidate VMID observations,
   with explicit passed/failed/unknown results bound to the preview hash. No
   mutation, reservation or execution approval is implemented.
+- Debian 13 amd64 template preparation guide: dated image/checksum evidence,
+  unbooted import, explicit catalog mapping and optional disposable-clone
+  validation. Official syntax/artifacts reviewed; no host commands executed.
 - README, scoped Makefile checks, tool doctor, API contract, Phase 0 brief,
   agent instructions and architecture decisions. Original roadmap retained.
 
@@ -51,6 +54,12 @@ Apple developer directory: `/Library/Developer/CommandLineTools`.
   with an explicit example catalog and temporary SQLite database passed: offline
   plan HTTP 200, preflight without provider 503, Origin 403, invalid VMID 422,
   no definition/operation writes, graceful SIGINT shutdown.
+- Documentation-only template slice: seven shell blocks passed `bash -n`
+  without execution; local Markdown links resolved; catalog sample matched
+  the repository example schema. The dated official Debian manifest listed
+  the qcow2 artifact and build metadata listed Cloud-Init, OpenSSH server and
+  disk-growth utilities. No image download, VM operation or runtime test was
+  performed for this documentation change.
 - Earlier baseline checks before preflight:
 - `make check-rust`: passed workspace fmt, Clippy with warnings denied and all
   42 tests: 6 native HTTP, 11 configuration/provider/TLS, 8 definitions,
@@ -85,11 +94,11 @@ Phase 0 is not complete; no unsupported roadmap acceptance claims are made.
 
 ## Next single task
 
-Document a reproducible Debian Cloud-Init template preparation procedure for the
-user's upcoming disposable Proxmox PC, with explicit manual validation points.
-Then run opt-in read-only inventory/preflight against its approved endpoint and
-catalog. Actual clone/configure/start work still requires approval of the concrete
-target and operations; no real infrastructure has been tested.
+Once the user's disposable Proxmox PC is ready, run opt-in read-only inventory
+and preflight against its explicitly approved endpoint and catalog. Use
+`docs/debian-template.md` to prepare and record the template first. Live checks
+await those inputs. Actual clone/configure/start work still requires approval of
+the concrete target and operations; no real infrastructure has been tested.
 
 ## Open inputs
 

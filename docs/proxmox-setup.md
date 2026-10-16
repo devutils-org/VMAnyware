@@ -64,6 +64,12 @@ The probe reports version, node status and templates visible to the token.
 It emits fixed errors rather than raw HTTP bodies, transport URLs or headers.
 Template VMIDs/versions must still be mapped explicitly to PocketLab image names.
 
+## Preparing the template
+
+Use the [Debian 13 template procedure](debian-template.md) to choose a dated
+cloud image, verify its checksum, import an unbooted template and record the
+explicit mapping. The procedure is documentation, not real-host test evidence.
+
 ## Evidence required before provisioning
 
 Record the Proxmox version, certificate trust method, tested ACLs, Debian
