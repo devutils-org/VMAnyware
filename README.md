@@ -24,7 +24,9 @@ creating VMs. See [definition format and storage](docs/definitions.md).
 To preview provisioning, configure `POCKETLAB_TEMPLATES` with your explicit
 [image-to-template catalog](docs/provisioning-plan.md), enter a candidate VMID
 and click **Preview provisioning**. The offline plan never reserves or creates
-a VM and clearly marks live checks as pending.
+a VM. **Check against Proxmox** performs read-only preflight checks when a
+provider is configured, reporting passed, failed and unknown observations.
+Actual provisioning and real-host validation remain pending.
 
 ## Start development
 

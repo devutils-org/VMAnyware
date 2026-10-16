@@ -26,6 +26,23 @@ pub async fn preview(
     headers: HeaderMap,
     request: Result<Json<PlanRequest>, JsonRejection>,
 ) -> Response {
+    respond(state, headers, request, false).await
+}
+
+pub async fn preflight(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    request: Result<Json<PlanRequest>, JsonRejection>,
+) -> Response {
+    respond(state, headers, request, true).await
+}
+
+async fn respond(
+    state: AppState,
+    headers: HeaderMap,
+    request: Result<Json<PlanRequest>, JsonRejection>,
+    live: bool,
+) -> Response {
     if headers.contains_key(header::ORIGIN) {
         return error(
             StatusCode::FORBIDDEN,
@@ -53,6 +70,15 @@ pub async fn preview(
         return missing_catalog().into_response();
     };
     match catalog.plan(&definition, request.target_vmid) {
+        Ok(plan) if live => match state.provider {
+            Some(provider) => Json(crate::preflight::run(&provider, plan).await).into_response(),
+            None => error(
+                StatusCode::SERVICE_UNAVAILABLE,
+                "provider_not_configured",
+                "Configure the Proxmox provider before checking a plan.",
+            )
+            .into_response(),
+        },
         Ok(plan) => Json(plan).into_response(),
         Err(issue) => {
             let (code, message) = match issue {

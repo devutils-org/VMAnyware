@@ -4,6 +4,7 @@ mod definitions_api;
 mod inventory;
 pub mod operation;
 mod operations_api;
+mod preflight;
 pub mod provisioning;
 mod provisioning_api;
 pub mod proxmox;
@@ -46,6 +47,11 @@ pub fn router_with_catalog(
         .route(
             "/api/v1/provisioning/plan",
             post(provisioning_api::preview)
+                .layer(DefaultBodyLimit::max(6 * definition::MAX_YAML_BYTES + 1024)),
+        )
+        .route(
+            "/api/v1/provisioning/preflight",
+            post(provisioning_api::preflight)
                 .layer(DefaultBodyLimit::max(6 * definition::MAX_YAML_BYTES + 1024)),
         )
         .route("/api/v1/provider/inventory", get(inventory::get))

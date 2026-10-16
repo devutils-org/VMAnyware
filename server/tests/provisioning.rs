@@ -258,3 +258,52 @@ async fn json_envelope_and_encoded_yaml_have_separate_size_limits() {
         "invalid_plan_request"
     );
 }
+
+#[tokio::test]
+async fn preflight_requires_explicit_provider_and_rejects_origins_and_invalid_requests() {
+    let app = router_with_catalog(
+        None,
+        Store::memory().unwrap(),
+        Some(Catalog::parse(CATALOG).unwrap()),
+    );
+    let request = |body: Value| {
+        Request::post("/api/v1/provisioning/preflight")
+            .header("content-type", "application/json")
+            .body(Body::from(body.to_string()))
+            .unwrap()
+    };
+    let response = app
+        .clone()
+        .oneshot(request(json!({"yaml":DEFINITION,"targetVmid":201})))
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::SERVICE_UNAVAILABLE);
+    let body: Value =
+        serde_json::from_slice(&to_bytes(response.into_body(), 4096).await.unwrap()).unwrap();
+    assert_eq!(body["error"]["code"], "provider_not_configured");
+    let mut origin = request(json!({"yaml":DEFINITION,"targetVmid":201}));
+    origin
+        .headers_mut()
+        .insert("origin", "http://localhost".parse().unwrap());
+    assert_eq!(
+        app.clone().oneshot(origin).await.unwrap().status(),
+        StatusCode::FORBIDDEN
+    );
+    assert_eq!(
+        app.clone()
+            .oneshot(request(json!({"yaml":DEFINITION,"targetVmid":9000})))
+            .await
+            .unwrap()
+            .status(),
+        StatusCode::UNPROCESSABLE_ENTITY
+    );
+    assert_eq!(
+        app.oneshot(request(
+            json!({"yaml":DEFINITION,"targetVmid":201,"secret":"never-echo"})
+        ))
+        .await
+        .unwrap()
+        .status(),
+        StatusCode::UNPROCESSABLE_ENTITY
+    );
+}

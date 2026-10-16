@@ -50,20 +50,20 @@ enum CatalogKind {
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct ImageMapping {
     image: String,
-    node: String,
-    template_vmid: u32,
+    pub(crate) node: String,
+    pub(crate) template_vmid: u32,
     template_version: String,
-    storage: String,
-    bridge: String,
-    disk_device: DiskDevice,
+    pub(crate) storage: String,
+    pub(crate) bridge: String,
+    pub(crate) disk_device: DiskDevice,
     #[serde(rename = "sourceDiskGiB")]
-    source_disk_gib: u32,
+    pub(crate) source_disk_gib: u32,
     guest_user: String,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 #[serde(rename_all = "lowercase")]
-enum DiskDevice {
+pub(crate) enum DiskDevice {
     Scsi0,
     Virtio0,
     Sata0,
@@ -205,12 +205,12 @@ fn identifier(value: &str, max: usize) -> bool {
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Target {
-    node: String,
-    vmid: u32,
+    pub(crate) node: String,
+    pub(crate) vmid: u32,
     name: String,
-    storage: String,
-    bridge: String,
-    resources: Resources,
+    pub(crate) storage: String,
+    pub(crate) bridge: String,
+    pub(crate) resources: Resources,
     guest_user: String,
     ipv4: &'static str,
 }
@@ -222,8 +222,8 @@ pub struct Plan {
     pub definition_hash: String,
     pub plan_hash: String,
     provider: &'static str,
-    source: ImageMapping,
-    target: Target,
+    pub(crate) source: ImageMapping,
+    pub(crate) target: Target,
     ssh_key_count: usize,
     packages: Vec<String>,
     snapshot_after_provisioning: bool,

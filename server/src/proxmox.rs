@@ -212,12 +212,49 @@ impl Proxmox {
         self.get(&["nodes", node, "qemu"]).await
     }
 
+    pub(crate) async fn template_config(
+        &self,
+        node: &str,
+        vmid: u32,
+    ) -> Result<serde_json::Value, Error> {
+        self.get_query(
+            &["nodes", node, "qemu", &vmid.to_string(), "config"],
+            &[("current", "1".to_string())],
+        )
+        .await
+    }
+
+    pub(crate) async fn storage(&self, node: &str) -> Result<Vec<serde_json::Value>, Error> {
+        self.get(&["nodes", node, "storage"]).await
+    }
+
+    pub(crate) async fn networks(&self, node: &str) -> Result<Vec<serde_json::Value>, Error> {
+        self.get(&["nodes", node, "network"]).await
+    }
+
+    pub(crate) async fn available_vmid(&self, vmid: u32) -> Result<u32, Error> {
+        self.get_query(&["cluster", "nextid"], &[("vmid", vmid.to_string())])
+            .await
+    }
+
     async fn get<T: DeserializeOwned>(&self, segments: &[&str]) -> Result<T, Error> {
+        self.get_query(segments, &[]).await
+    }
+
+    async fn get_query<T: DeserializeOwned>(
+        &self,
+        segments: &[&str],
+        query: &[(&str, String)],
+    ) -> Result<T, Error> {
         let mut url = self.endpoint.clone();
         url.path_segments_mut()
             .map_err(|_| Error::Configuration)?
             .extend(["api2", "json"])
             .extend(segments);
+        if !query.is_empty() {
+            url.query_pairs_mut()
+                .extend_pairs(query.iter().map(|(key, value)| (*key, value)));
+        }
         let mut response = self
             .client
             .get(url)

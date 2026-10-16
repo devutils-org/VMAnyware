@@ -5,8 +5,8 @@ certificate trust/hostname checks, authentication/error mapping and parsing.
 
 ## Scope and permissions
 
-Only `GET /api2/json/version`, `GET /api2/json/nodes` and
-`GET /api2/json/nodes/{node}/qemu` are implemented. The last route returns only
+The inventory probe uses `GET /api2/json/version`, `GET /api2/json/nodes` and
+`GET /api2/json/nodes/{node}/qemu`. The last route returns only
 VMs for which the effective identity has `VM.Audit` on `/vms/<vmid>` according to
 the official API schema. An empty inventory does not prove that no VMs exist.
 
@@ -15,7 +15,22 @@ to the test template/VMs. Effective token privileges are constrained by both
 the user and the token ACLs. Actual ACL behavior must be verified on the target
 Proxmox version; no administrator token is needed for these reads.
 
-This probe cannot create, start, stop, snapshot, restore or delete a VM.
+The application also offers opt-in read-only [provisioning checks](provisioning-plan.md):
+
+| GET endpoint (under `/api2/json`) | Purpose and documented visibility |
+| --- | --- |
+| `/nodes/{node}/qemu/{vmid}/config?current=1` | Current source configuration; `VM.Audit` on `/vms/{vmid}` |
+| `/nodes/{node}/storage` | Status visible with `Datastore.Audit` or `Datastore.AllocateSpace` on the storage |
+| `/nodes/{node}/network` | Network list; API schema permits authenticated users |
+| `/cluster/nextid?vmid=<candidate>` | Assert candidate availability at observation time; API schema permits authenticated users |
+
+These are documented read requirements, not a tested minimum provisioning role.
+Storage hidden by ACLs remains unknown. Provider failures and incomplete metadata
+remain unknown. Actual token behavior must be verified on the disposable host.
+No read establishes permission to clone, configure, start or snapshot a VM.
+
+Neither the probe nor the preflight can create, start, stop, snapshot, restore or
+delete a VM.
 
 ## Runtime configuration
 

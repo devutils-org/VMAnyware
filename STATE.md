@@ -18,6 +18,10 @@ Updated: 2026-10-16. Keep this file short; historical decisions belong in ADRs.
 - Explicit server-owned image/template catalog and stateless offline provisioning
   plans. Native preview shows source/target/resources/storage/network/access,
   binds inputs with deterministic hashes, and hides stale results after edits.
+- Read-only provisioning preflight in server/native UI: current template/disk,
+  Cloud-Init drive, storage/capacity, bridge and candidate VMID observations,
+  with explicit passed/failed/unknown results bound to the preview hash. No
+  mutation, reservation or execution approval is implemented.
 - README, scoped Makefile checks, tool doctor, API contract, Phase 0 brief,
   agent instructions and architecture decisions. Original roadmap retained.
 
@@ -37,7 +41,17 @@ Apple developer directory: `/Library/Developer/CommandLineTools`.
 
 - `make doctor`: passed. The old missing-tool/network restrictions are resolved.
 - `make check-client`: passed TypeScript checking and Vite production build.
-- `make check-server`: passed fmt, Clippy with warnings denied and 36 server tests.
+- Latest `make check-server`: passed fmt, Clippy with warnings denied and 41 server tests.
+- Latest client verification: `make check-client`, native Clippy with warnings
+  denied and all 8 native HTTP tests passed (49 tests across server/client).
+- Preflight fixtures cover full router POST over verified localhost TLS, four
+  GET-only provider calls, plan-hash binding, denied reads, invalid and missing
+  metadata, failed capability checks and request guards. No real host is used.
+- Latest `cargo build -p pocketlab-server --locked` passed. Actual binary smoke
+  with an explicit example catalog and temporary SQLite database passed: offline
+  plan HTTP 200, preflight without provider 503, Origin 403, invalid VMID 422,
+  no definition/operation writes, graceful SIGINT shutdown.
+- Earlier baseline checks before preflight:
 - `make check-rust`: passed workspace fmt, Clippy with warnings denied and all
   42 tests: 6 native HTTP, 11 configuration/provider/TLS, 8 definitions,
   3 service HTTP, 7 operations and 7 provisioning/catalog tests.
@@ -62,7 +76,7 @@ Apple developer directory: `/Library/Developer/CommandLineTools`.
 - `npm --prefix apps/client run tauri build -- --no-bundle`: passed; optimized
   native executable generated at `target/release/pocketlab-client`. Installers,
   signing and distribution bundles were not built.
-- The new preview UI is compiled; a manual walkthrough with the user's real
+- The preview/preflight UI is compiled; a manual walkthrough with the user's real
   template catalog and live host validation are still pending.
 
 The initial implementation is versioned in Git; see `git log` for the commit.
@@ -71,14 +85,18 @@ Phase 0 is not complete; no unsupported roadmap acceptance claims are made.
 
 ## Next single task
 
-Implement read-only preflight validation of a provisioning plan against actual
-template metadata, target VMID availability, storage and network. Use local TLS
-fixtures by default. Live verification awaits the user's test endpoint/catalog;
-real VM mutations require a concrete approved disposable target.
+Document a reproducible Debian Cloud-Init template preparation procedure for the
+user's upcoming disposable Proxmox PC, with explicit manual validation points.
+Then run opt-in read-only inventory/preflight against its approved endpoint and
+catalog. Actual clone/configure/start work still requires approval of the concrete
+target and operations; no real infrastructure has been tested.
 
 ## Open inputs
 
 - `../omniscient` and `../atfq` were inspected; `../distroproof` was not found.
+- User will set up Proxmox on another PC. Current Apple M1 Mac reports native
+  virtualization supported but nested virtualization unsupported; no local VM
+  was installed or changed.
 - Test Proxmox endpoint, template, storage/network and approved mutation scope.
 - iOS/Android build and test devices/simulators for terminal feasibility.
 

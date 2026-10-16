@@ -13,7 +13,7 @@ Definition validation/create/list/read routes are documented in
 [the definition API and schema](definitions.md). They operate without Proxmox.
 Asynchronous inventory requests and persisted statuses are described in
 [durable operations](operations.md).
-Image catalog and offline preview routes are documented in
+Image catalog, offline preview and read-only preflight routes are documented in
 [provisioning plans](provisioning-plan.md).
 
 ## Read-only inventory
@@ -42,7 +42,7 @@ HTTP 504 with `provider_timeout`; other failures map to HTTP 502 with
 `provider_unavailable`. All use the fixed safe error envelope below.
 
 Configure runtime variables as described in [Proxmox setup](proxmox-setup.md).
-`make server` does not contact Proxmox until an inventory request arrives.
+`make server` does not contact Proxmox until an inventory or preflight request arrives.
 In the native application, enter the local server port and click **Connect**.
 The current connection prototype supports this computer only; remote control
 planes require authentication and TLS configuration in a later slice.

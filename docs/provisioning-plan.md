@@ -1,4 +1,4 @@
-# Explicit template mappings and offline provisioning preview
+# Explicit template mappings and read-only provisioning checks
 
 This slice prepares a reviewable plan. It does not clone, configure, start,
 reserve or delete anything in Proxmox. It does not save a definition, enqueue a
@@ -116,3 +116,39 @@ The preview does not prove VMID availability, reserve resources or confirm the
 template/bridge/storage exists. Real execution will require fresh provider
 checks and explicit approval of the concrete disposable target. A hash alone
 cannot replace those checks or approve a VM mutation.
+
+
+## Read-only provider preflight
+
+After an offline preview, **Check against Proxmox** submits the same current YAML
+and requested VMID to `POST /api/v1/provisioning/preflight`. The server recomputes
+the plan from its current catalog, then makes bounded, verified-TLS GET requests.
+Both a catalog and an explicitly configured provider are required. The operation
+does not save a definition or create an operation record.
+
+The response contains `planHash`, a `checks` array of `{code, status, message}`,
+`creationEnabled: false` and `vmidReserved: false`. Each status is `passed`,
+`failed` or `unknown`. An unavailable endpoint, missing permission or insufficient
+metadata must not become a successful check. Messages are fixed application text;
+raw provider configuration and responses are not forwarded to the client.
+
+Checks inspect source template configuration, the declared disk and Cloud-Init
+drive, target storage and reported capacity, network bridge and requested VMID.
+The dedicated `GET /cluster/nextid?vmid=<candidate>` check is used for VMID
+availability. Missing entries in a permission-filtered VM inventory cannot prove
+that a candidate is free. A successful check observes availability at that moment;
+it never reserves the ID, storage or network resources.
+
+Some requirements cannot be proven through these reads: the operator's template
+revision label, working DHCP, guest readiness and permission to perform the full
+clone/configuration workflow. They remain explicit unknowns. Storage observations
+also cannot guarantee that a later full clone succeeds or that snapshots are
+supported. These checks are preparation for a real disposable-host test, not a
+substitute for it.
+
+The native view binds results to the exact YAML, service port and requested VMID.
+Input edits hide old results. A catalog change on the server may produce a new
+plan hash; the client must not present that result as verification of an older
+preview. No create or approval action is enabled, even if all observable checks
+pass. Future execution must perform fresh checks and obtain approval of the
+concrete disposable target and operations.

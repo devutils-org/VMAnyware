@@ -1,6 +1,6 @@
 use super::{
-    begin_inventory_refresh, inspect_control_plane, list_definitions, preview_provisioning,
-    read_operation, save_definition, OperationStatus,
+    begin_inventory_refresh, inspect_control_plane, list_definitions, preflight_provisioning,
+    preview_provisioning, read_operation, save_definition, OperationStatus, PreflightStatus,
 };
 use std::{
     io::{Read, Write},
@@ -209,4 +209,55 @@ fn preview_validation_and_provider_error_codes_return_safe_actionable_messages()
     assert!(
         tauri::async_runtime::block_on(preview_provisioning(1, "x".repeat(65537), 201)).is_err()
     );
+}
+
+#[test]
+fn preflight_posts_target_and_preserves_unknown_checks_without_enabling_creation() {
+    let body = serde_json::json!({"planHash":"plan-hash", "checks":[
+        {"code":"template", "status":"passed", "message":"Template is available."},
+        {"code":"storage", "status":"failed", "message":"Storage is inactive."},
+        {"code":"vmid", "status":"unknown", "message":"VMID availability could not be established."}
+    ], "creationEnabled":false, "vmidReserved":false});
+    let (port, task) = response(
+        "POST",
+        "/api/v1/provisioning/preflight",
+        "200 OK",
+        &body.to_string(),
+    );
+    let result =
+        tauri::async_runtime::block_on(preflight_provisioning(port, "definition-yaml".into(), 201))
+            .unwrap();
+    assert_eq!(result.plan_hash, "plan-hash");
+    assert!(matches!(result.checks[0].status, PreflightStatus::Passed));
+    assert!(matches!(result.checks[1].status, PreflightStatus::Failed));
+    assert!(matches!(result.checks[2].status, PreflightStatus::Unknown));
+    assert!(!result.creation_enabled && !result.vmid_reserved);
+    let request = task.join().unwrap();
+    let payload: serde_json::Value =
+        serde_json::from_str(request.split_once("\r\n\r\n").unwrap().1).unwrap();
+    assert_eq!(
+        payload,
+        serde_json::json!({"yaml":"definition-yaml", "targetVmid":201})
+    );
+}
+
+#[test]
+fn preflight_bounds_and_configuration_errors_are_safe() {
+    assert!(tauri::async_runtime::block_on(preflight_provisioning(1, "yaml".into(), 99)).is_err());
+    assert!(
+        tauri::async_runtime::block_on(preflight_provisioning(1, "x".repeat(65537), 201)).is_err()
+    );
+    assert!(tauri::async_runtime::block_on(preflight_provisioning(0, "yaml".into(), 201)).is_err());
+    let (port, task) = response(
+        "POST",
+        "/api/v1/provisioning/preflight",
+        "503 Service Unavailable",
+        "private-provider-body",
+    );
+    let error = tauri::async_runtime::block_on(preflight_provisioning(port, "yaml".into(), 201))
+        .err()
+        .unwrap();
+    task.join().unwrap();
+    assert!(error.contains("Proxmox provider") && error.contains("POCKETLAB_TEMPLATES"));
+    assert!(!error.contains("private-provider-body"));
 }

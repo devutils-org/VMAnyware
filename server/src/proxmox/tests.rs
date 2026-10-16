@@ -347,3 +347,103 @@ async fn inventory_parsing_and_node_path_validation() {
         );
     }
 }
+
+#[tokio::test]
+async fn preflight_observes_metadata_over_verified_tls_and_never_mutates() {
+    let mut fixture = Fixture::routes("200 OK", &[
+        ("/api2/json/nodes/pve-test/qemu/9000/config?current=1", r#"{"data":{"template":1,"scsi0":"local:base-9000-disk-0,size=8G","ide2":"local:vm-9000-cloudinit,media=cdrom"}}"#),
+        ("/api2/json/nodes/pve-test/storage", r#"{"data":[{"storage":"local-lvm","content":"images,rootdir","active":1,"enabled":true,"avail":100000000000}]}"#),
+        ("/api2/json/nodes/pve-test/network", r#"{"data":[{"iface":"vmbr0","type":"bridge","active":1}]}"#),
+        ("/api2/json/cluster/nextid?vmid=201", r#"{"data":201}"#),
+    ], "", Duration::ZERO).await;
+    let catalog =
+        crate::provisioning::Catalog::parse(include_str!("../../../examples/templates.yaml"))
+            .unwrap();
+    let definition =
+        crate::definition::Definition::parse(include_str!("../../../examples/kernel-lab.yaml"))
+            .unwrap();
+    let plan = catalog.plan(&definition, 201).unwrap();
+    let expected_hash = plan.plan_hash.clone();
+    use tower::ServiceExt;
+    let store = crate::store::Store::memory().unwrap();
+    let app = crate::router_with_catalog(Some(fixture.client()), store, Some(catalog));
+    let response = app.oneshot(axum::http::Request::post("/api/v1/provisioning/preflight")
+        .header("content-type", "application/json")
+        .body(axum::body::Body::from(serde_json::json!({"yaml":include_str!("../../../examples/kernel-lab.yaml"),"targetVmid":201}).to_string())).unwrap()).await.unwrap();
+    assert_eq!(response.status(), axum::http::StatusCode::OK);
+    let report: serde_json::Value = serde_json::from_slice(
+        &axum::body::to_bytes(response.into_body(), 16384)
+            .await
+            .unwrap(),
+    )
+    .unwrap();
+    assert_eq!(report["planHash"], expected_hash);
+    assert_eq!(report["creationEnabled"], false);
+    assert_eq!(report["vmidReserved"], false);
+    for item in report["checks"].as_array().unwrap().iter().take(7) {
+        assert_eq!(item["status"], "passed", "{item}");
+    }
+    for _ in 0..4 {
+        let request = fixture.requests.recv().await.unwrap();
+        assert!(request.starts_with("GET "));
+    }
+    assert!(fixture.requests.try_recv().is_err());
+}
+
+#[tokio::test]
+async fn preflight_denied_reads_are_unknown_and_do_not_leak_provider_body() {
+    let fixture = Fixture::new(
+        "403 Forbidden",
+        r#"{"data":"secret-provider-details"}"#,
+        "",
+        Duration::ZERO,
+    )
+    .await;
+    let catalog =
+        crate::provisioning::Catalog::parse(include_str!("../../../examples/templates.yaml"))
+            .unwrap();
+    let definition =
+        crate::definition::Definition::parse(include_str!("../../../examples/kernel-lab.yaml"))
+            .unwrap();
+    let report = serde_json::to_value(
+        crate::preflight::run(&fixture.client(), catalog.plan(&definition, 201).unwrap()).await,
+    )
+    .unwrap();
+    assert!(report["checks"]
+        .as_array()
+        .unwrap()
+        .iter()
+        .all(|item| item["status"] == "unknown"));
+    assert!(!report.to_string().contains("secret-provider-details"));
+}
+
+#[tokio::test]
+async fn preflight_reports_failed_metadata_and_unknown_absent_fields() {
+    let fixture = Fixture::routes("200 OK", &[
+        ("/api2/json/nodes/pve-test/qemu/9000/config?current=1", r#"{"data":{"template":0,"scsi0":"local:base-9000-disk-0,size=16G","description":"cloudinit"}}"#),
+        ("/api2/json/nodes/pve-test/storage", r#"{"data":[{"storage":"local-lvm","content":"images","active":0,"enabled":1,"avail":1}]}"#),
+        ("/api2/json/nodes/pve-test/network", r#"{"data":[{"iface":"vmbr0","type":"eth","active":1}]}"#),
+        ("/api2/json/cluster/nextid?vmid=201", r#"{"data":202}"#),
+    ], "", Duration::ZERO).await;
+    let catalog =
+        crate::provisioning::Catalog::parse(include_str!("../../../examples/templates.yaml"))
+            .unwrap();
+    let definition =
+        crate::definition::Definition::parse(include_str!("../../../examples/kernel-lab.yaml"))
+            .unwrap();
+    let report = serde_json::to_value(
+        crate::preflight::run(&fixture.client(), catalog.plan(&definition, 201).unwrap()).await,
+    )
+    .unwrap();
+    for item in report["checks"].as_array().unwrap().iter().take(7) {
+        assert_eq!(item["status"], "failed", "{item}");
+    }
+    let fixture = Fixture::new("200 OK", r#"{"data":{}}"#, "", Duration::ZERO).await;
+    let report = serde_json::to_value(
+        crate::preflight::run(&fixture.client(), catalog.plan(&definition, 201).unwrap()).await,
+    )
+    .unwrap();
+    for item in report["checks"].as_array().unwrap() {
+        assert_ne!(item["status"], "passed");
+    }
+}

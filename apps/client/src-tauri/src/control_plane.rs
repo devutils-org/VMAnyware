@@ -184,6 +184,52 @@ pub async fn preview_provisioning(
     .await
 }
 
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum PreflightStatus {
+    Passed,
+    Failed,
+    Unknown,
+}
+
+#[derive(Deserialize, Serialize)]
+pub struct PreflightCheck {
+    code: String,
+    status: PreflightStatus,
+    message: String,
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct ProvisioningPreflight {
+    plan_hash: String,
+    checks: Vec<PreflightCheck>,
+    creation_enabled: bool,
+    vmid_reserved: bool,
+}
+
+#[tauri::command]
+pub async fn preflight_provisioning(
+    port: u16,
+    yaml: String,
+    target_vmid: u32,
+) -> Result<ProvisioningPreflight, String> {
+    if yaml.len() > 64 * 1024 {
+        return Err("Definition exceeds 64 KiB.".into());
+    }
+    if !(100..=999_999_999).contains(&target_vmid) {
+        return Err("Choose a target VMID between 100 and 999999999.".into());
+    }
+    request(
+        port,
+        "/api/v1/provisioning/preflight",
+        Some(Payload::Json(
+            serde_json::json!({"yaml":yaml,"targetVmid":target_vmid}),
+        )),
+    )
+    .await
+}
+
 async fn request<T: DeserializeOwned>(
     port: u16,
     path: &str,
@@ -224,7 +270,7 @@ async fn request<T: DeserializeOwned>(
         body.extend_from_slice(&chunk);
     }
     if !status.is_success() {
-        if path == "/api/v1/provisioning/plan" {
+        if path.starts_with("/api/v1/provisioning/") {
             let problem: serde_json::Value = serde_json::from_slice(&body).unwrap_or_default();
             let message = match problem["error"]["code"].as_str() {
                 Some("image_not_mapped") => Some("No template is mapped to this image on the control plane."),
@@ -241,13 +287,14 @@ async fn request<T: DeserializeOwned>(
             409 => "Another inventory refresh is active. Wait briefly, then retry.",
             404 => "This feature is not available on the selected control plane.",
             413 => "Definition exceeds 64 KiB.",
-            422 if path == "/api/v1/provisioning/plan" => "Cannot preview this configuration. Check the YAML, image mapping, target VMID and template disk size.",
+            422 if path.starts_with("/api/v1/provisioning/") => "Cannot preview this configuration. Check the YAML, image mapping, target VMID and template disk size.",
+            503 if path == "/api/v1/provisioning/preflight" => "Configure the Proxmox provider and POCKETLAB_TEMPLATES on the control plane before checking provisioning.",
             503 if path == "/api/v1/provisioning/plan" => "Configure POCKETLAB_TEMPLATES on the control plane before previewing provisioning.",
             422 => "Definition is invalid. Check its schema, resource limits and inline public SSH key.",
             503 if path == "/api/v1/provider/inventory" => "The control plane is reachable. Configure Proxmox on the server, then retry.",
             503 => "Control-plane storage is unavailable. Check the control plane and retry.",
             502 => "The control plane cannot read Proxmox. Check its token permissions, endpoint and TLS trust.",
-            504 => "Proxmox inventory timed out. Check the server connection and retry.",
+            504 => "Proxmox checks timed out. Check the server connection and retry.",
             _ => "The control plane rejected the request. Check that you are connecting to PocketLab.",
         }.into());
     }
