@@ -1,0 +1,21 @@
+apiVersion: pocketlab.dev/v1
+kind: Environment
+metadata:
+  name: kernel-lab
+  description: Linux development environment
+spec:
+  image: debian-13
+  resources:
+    cpu: 4
+    memoryMiB: 8192
+    diskGiB: 40
+  provisioning:
+    cloudInit: true
+    sshAuthorizedKeys:
+      # Public demonstration key only. Replace with your own public key.
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA pocketlab-example
+    packages:
+      - build-essential
+      - git
+  lifecycle:
+    snapshotAfterProvisioning: false
