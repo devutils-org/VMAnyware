@@ -299,7 +299,7 @@ Tasks:
 - [ ] Define lifecycle and operation states.
 - [x] Add YAML schema parsing and deterministic serialization.
 - [x] Add SQLite schema and migrations.
-- [ ] Add structured tracing and safe error handling.
+- [x] Add structured tracing and safe error handling. (Allowlisted JSON request/lifecycle events and fixed errors; subprocess redaction/shutdown tests pass.)
 - [x] Add a development configuration example that contains no secrets.
 
 **Acceptance criteria:**

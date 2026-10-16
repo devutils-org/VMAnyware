@@ -1,6 +1,7 @@
 pub mod config;
 pub mod definition;
 mod definitions_api;
+pub mod diagnostics;
 mod inventory;
 pub mod operation;
 mod operations_api;
@@ -77,6 +78,7 @@ pub fn router_with_catalog(
             store,
             catalog,
         })
+        .layer(axum::middleware::from_fn(diagnostics::request))
 }
 
 #[derive(Serialize)]

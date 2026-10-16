@@ -7,7 +7,9 @@ Updated: 2026-10-16. Keep this file short; historical decisions belong in ADRs.
 - Tauri 2/React/TypeScript/Vite shell with a `runtime_platform` native command.
   Browser preview disables the native bridge check.
 - Local Axum service: health endpoint, safe errors, loopback-only binding,
-  validated port and graceful Ctrl-C shutdown.
+  validated port, safe JSON request/lifecycle diagnostics, generated request IDs
+  and graceful Unix SIGINT/SIGTERM shutdown. Subprocess tests verify redaction
+  and same-database restart/lock release. Windows source remains untested.
 - Verified-TLS, read-only Proxmox client and local inventory endpoint/UI.
 - Strict versioned YAML definitions, deterministic exports/hashes, SQLite
   migration and persistent create/list/read APIs; native YAML editor/catalog.

@@ -84,7 +84,9 @@ curl --fail-with-body http://127.0.0.1:8080/api/v1/health
 make check-server
 ```
 
-Ctrl-C requests graceful shutdown. Production service lifecycle and deployment
+SIGINT/Ctrl-C and Unix SIGTERM request graceful shutdown. Request and lifecycle
+events are safe JSON on stderr; see [diagnostics](diagnostics.md) for fields,
+fixed startup error codes and recovery behavior. Production service lifecycle and deployment
 remain outside this initial slice. `make check-server` builds/tests only the
 server package, without requiring native Tauri libraries or frontend assets;
 Cargo still resolves the shared workspace dependency lock.
