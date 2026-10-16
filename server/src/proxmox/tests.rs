@@ -27,6 +27,16 @@ impl Fixture {
     }
 
     async fn routes(status: &str, routes: &[(&str, &str)], headers: &str, delay: Duration) -> Self {
+        Self::responses(status, routes, headers, delay, false).await
+    }
+
+    async fn responses(
+        status: &str,
+        routes: &[(&str, &str)],
+        headers: &str,
+        delay: Duration,
+        sequential: bool,
+    ) -> Self {
         let key = rcgen::generate_simple_self_signed(vec!["localhost".into()]).unwrap();
         let ca = key.cert.pem().into_bytes();
         let config = rustls::ServerConfig::builder()
@@ -48,6 +58,7 @@ impl Fixture {
         )).collect();
         let (sender, requests) = mpsc::unbounded_channel();
         let task = tokio::spawn(async move {
+            let mut response_index = 0;
             while let Ok((socket, _)) = listener.accept().await {
                 let Ok(mut stream) = acceptor.accept(socket).await else {
                     continue;
@@ -65,7 +76,14 @@ impl Fixture {
                 }
                 let request = String::from_utf8_lossy(&request).into_owned();
                 let path = request.split_whitespace().nth(1).unwrap_or("");
-                let response = responses
+                let candidates = if sequential {
+                    let index = response_index.min(responses.len() - 1);
+                    response_index += 1;
+                    &responses[index..=index]
+                } else {
+                    &responses[..]
+                };
+                let response = candidates
                     .iter()
                     .find(|(route, _)| route == path || route == "*")
                     .map(|(_, body)| body.as_str())
@@ -445,5 +463,185 @@ async fn preflight_reports_failed_metadata_and_unknown_absent_fields() {
     .unwrap();
     for item in report["checks"].as_array().unwrap() {
         assert_ne!(item["status"], "passed");
+    }
+}
+
+const TEST_UPID: &str = "UPID:pve-1:00000001:00000002:00000003:qmclone:201:reader@pve!lab:";
+
+fn task_body(status: &str, exit: Option<&str>) -> String {
+    let mut value = serde_json::json!({"data":{"node":"pve-1","upid":TEST_UPID,"status":status}});
+    if let Some(exit) = exit {
+        value["data"]["exitstatus"] = exit.into();
+    }
+    value.to_string()
+}
+
+#[test]
+fn task_reference_and_poll_configuration_reject_unsafe_values() {
+    use super::{TaskPollOptions, TaskReference};
+    assert!(TaskReference::new("pve-1", TEST_UPID).is_ok());
+    assert!(TaskReference::new("pve-1", &TEST_UPID.replace("00000002", "100000002")).is_ok());
+    for (node, upid) in [
+        ("pve-2", TEST_UPID),
+        ("..", TEST_UPID),
+        ("pve-1", "UPID:pve-1:../secret"),
+        (
+            "pve-1",
+            "UPID:pve-1:GGGGGGGG:00000002:00000003:qmclone:201:a@pve:",
+        ),
+    ] {
+        assert_eq!(
+            TaskReference::new(node, upid).unwrap_err(),
+            Error::Configuration
+        );
+    }
+    for (interval, timeout) in [
+        (0, 1000),
+        (99, 1000),
+        (1000, 999),
+        (60001, 100000),
+        (100, 3600001),
+    ] {
+        assert_eq!(
+            TaskPollOptions::new(
+                Duration::from_millis(interval),
+                Duration::from_millis(timeout)
+            )
+            .unwrap_err(),
+            Error::Configuration
+        );
+    }
+}
+
+#[tokio::test]
+async fn task_status_uses_verified_tls_and_redacts_failure_details() {
+    use super::{TaskReference, TaskStatus};
+    let task = TaskReference::new("pve-1", TEST_UPID).unwrap();
+    for (status, exit, expected) in [
+        ("running", None, TaskStatus::Running),
+        ("stopped", Some("OK"), TaskStatus::Succeeded),
+        (
+            "stopped",
+            Some("secret-provider-failure"),
+            TaskStatus::Failed,
+        ),
+    ] {
+        let mut fixture =
+            Fixture::new("200 OK", &task_body(status, exit), "", Duration::ZERO).await;
+        let outcome = fixture.client().task_status(&task).await.unwrap();
+        assert_eq!(outcome, expected);
+        assert!(!format!("{outcome:?}").contains("secret"));
+        let request = fixture.requests.recv().await.unwrap();
+        assert!(request.starts_with("GET /api2/json/nodes/pve-1/tasks/UPID:pve-1:"));
+        assert!(request
+            .split_whitespace()
+            .nth(1)
+            .unwrap()
+            .ends_with("/status"));
+    }
+}
+
+#[tokio::test]
+async fn malformed_or_mismatched_task_status_never_reports_success() {
+    use super::TaskReference;
+    let task = TaskReference::new("pve-1", TEST_UPID).unwrap();
+    let mut mismatch: serde_json::Value =
+        serde_json::from_str(&task_body("stopped", Some("OK"))).unwrap();
+    mismatch["data"]["node"] = "pve-2".into();
+    let mut wrong_upid = mismatch.clone();
+    wrong_upid["data"]["node"] = "pve-1".into();
+    wrong_upid["data"]["upid"] = "other".into();
+    for body in [
+        task_body("stopped", None),
+        task_body("stopped", Some("")),
+        task_body("stopped", Some(" ")),
+        task_body("running", Some("OK")),
+        task_body("unknown", Some("OK")),
+        mismatch.to_string(),
+        wrong_upid.to_string(),
+        r#"{"data":{"status":"stopped","exitstatus":"OK"}}"#.into(),
+    ] {
+        let fixture = Fixture::new("200 OK", &body, "", Duration::ZERO).await;
+        assert_eq!(
+            fixture.client().task_status(&task).await.unwrap_err(),
+            Error::InvalidResponse
+        );
+    }
+}
+
+#[tokio::test]
+async fn task_poll_observes_terminal_status_without_mutations_or_extra_requests() {
+    use super::{TaskPollOptions, TaskReference, TaskStatus};
+    let task = TaskReference::new("pve-1", TEST_UPID).unwrap();
+    let running = task_body("running", None);
+    for (exit, expected) in [
+        ("OK", TaskStatus::Succeeded),
+        ("secret-provider-failure", TaskStatus::Failed),
+    ] {
+        let stopped = task_body("stopped", Some(exit));
+        let mut fixture = Fixture::responses(
+            "200 OK",
+            &[("*", &running), ("*", &stopped)],
+            "",
+            Duration::ZERO,
+            true,
+        )
+        .await;
+        let result = fixture
+            .client()
+            .wait_for_task(
+                &task,
+                TaskPollOptions::new(Duration::from_millis(100), Duration::from_secs(2)).unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(result, expected);
+        for _ in 0..2 {
+            assert!(fixture.requests.recv().await.unwrap().starts_with("GET "));
+        }
+        assert!(fixture.requests.try_recv().is_err());
+    }
+}
+
+#[tokio::test]
+async fn task_poll_deadline_covers_request_time_and_stops_on_provider_errors() {
+    use super::{TaskPollOptions, TaskReference};
+    let task = TaskReference::new("pve-1", TEST_UPID).unwrap();
+    let options =
+        TaskPollOptions::new(Duration::from_millis(100), Duration::from_millis(250)).unwrap();
+    for delay in [Duration::ZERO, Duration::from_secs(2)] {
+        let mut fixture = Fixture::new("200 OK", &task_body("running", None), "", delay).await;
+        let start = tokio::time::Instant::now();
+        assert_eq!(
+            fixture
+                .client()
+                .wait_for_task(&task, options)
+                .await
+                .unwrap_err(),
+            Error::Timeout
+        );
+        assert!(start.elapsed() < Duration::from_secs(1));
+        let mut count = 0;
+        while fixture.requests.try_recv().is_ok() {
+            count += 1;
+        }
+        assert!((1..=3).contains(&count));
+    }
+    for (status, expected) in [
+        ("401 Unauthorized", Error::Unauthorized),
+        ("403 Forbidden", Error::Forbidden),
+        ("500 Internal Server Error", Error::Provider),
+    ] {
+        let mut fixture = Fixture::new(status, "secret-provider-failure", "", Duration::ZERO).await;
+        assert_eq!(
+            fixture
+                .client()
+                .wait_for_task(&task, options)
+                .await
+                .unwrap_err(),
+            expected
+        );
+        assert!(fixture.requests.recv().await.unwrap().starts_with("GET "));
+        assert!(fixture.requests.try_recv().is_err());
     }
 }

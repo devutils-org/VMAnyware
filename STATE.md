@@ -24,6 +24,9 @@ Updated: 2026-10-16. Keep this file short; historical decisions belong in ADRs.
   Cloud-Init drive, storage/capacity, bridge and candidate VMID observations,
   with explicit passed/failed/unknown results bound to the preview hash. No
   mutation, reservation or execution approval is implemented.
+- Read-only Proxmox task status/polling validates UPID/node identity, redacts
+  failure details and bounds request/poll time. Local TLS fixtures passed;
+  no durable provider-task linkage or live task observation is claimed.
 - Debian 13 amd64 template preparation guide: dated image/checksum evidence,
   unbooted import, explicit catalog mapping and optional disposable-clone
   validation. Official syntax/artifacts reviewed; no host commands executed.
@@ -100,13 +103,9 @@ Phase 0 is not complete; no unsupported roadmap acceptance claims are made.
 
 ## Next single task
 
-Prepare bounded read-only Proxmox task-status observation with local TLS
-fixtures, distinguishing running, successful and failed provider tasks from
-guest readiness. This is a prerequisite for future asynchronous mutations;
-do not add mutation methods yet. Live inventory/preflight still awaits the
-user's disposable PC, explicitly approved endpoint and template catalog.
-Use `docs/debian-template.md` for preparation. Real clone/configure/start work
-requires approval of the concrete target and operations.
+Finish integrated safe service diagnostics/shutdown and expose standalone YAML
+validation in the native editor. Then add credential-free CI for the already
+verified local commands. Live inventory/preflight still needs the user's PC.
 
 ## Open inputs
 

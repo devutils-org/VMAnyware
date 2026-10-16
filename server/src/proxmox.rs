@@ -4,6 +4,9 @@ use reqwest::{header, redirect::Policy, Certificate, Client, StatusCode, Url};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{fmt, time::Duration};
 
+mod task;
+pub use task::{TaskPollOptions, TaskReference, TaskStatus};
+
 const MAX_RESPONSE_BYTES: usize = 2 * 1024 * 1024;
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
