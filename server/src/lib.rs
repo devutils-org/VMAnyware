@@ -66,7 +66,7 @@ pub fn router_with_catalog(
         )
         .route(
             "/api/v1/definitions/validate",
-            post(definitions_api::validate),
+            get(definitions_api::get_validate).post(definitions_api::validate),
         )
         .route("/api/v1/definitions/{name}", get(definitions_api::get))
         .layer(DefaultBodyLimit::max(definition::MAX_YAML_BYTES))

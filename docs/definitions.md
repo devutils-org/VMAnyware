@@ -50,6 +50,10 @@ that unpinned package repositories produce identical software.
 | `GET` | `/api/v1/definitions` | List records sorted by name |
 | `GET` | `/api/v1/definitions/{name}` | Read a saved record; missing names return HTTP 404 |
 
+`validate` is also a valid definition name. `GET /api/v1/definitions/validate`
+reads that saved definition (or returns `definition_not_found`); only `POST` on
+the same path validates YAML without saving it.
+
 POST requires `Content-Type: application/yaml`. Requests carrying an `Origin`
 header are refused: browser previews cannot mutate this local API. No CORS
 permission is granted. The native application uses its Rust HTTP client.

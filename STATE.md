@@ -11,6 +11,8 @@ Updated: 2026-10-16. Keep this file short; historical decisions belong in ADRs.
 - Verified-TLS, read-only Proxmox client and local inventory endpoint/UI.
 - Strict versioned YAML definitions, deterministic exports/hashes, SQLite
   migration and persistent create/list/read APIs; native YAML editor/catalog.
+- Definitions named `validate` can be read through the existing static route;
+  POST on that path still validates without saving. No names were reserved.
 - Durable inventory jobs: queued/running/terminal states, idempotent enqueue,
   background worker, status API, native polling/resume cache and startup recovery.
 - SQLite migration 2 and an exclusive database service lock prevent duplicate
@@ -44,7 +46,11 @@ Apple developer directory: `/Library/Developer/CommandLineTools`.
 
 - `make doctor`: passed. The old missing-tool/network restrictions are resolved.
 - `make check-client`: passed TypeScript checking and Vite production build.
-- Latest `make check-server`: passed fmt, Clippy with warnings denied and 41 server tests.
+- Latest `make check-server`: passed fmt, Clippy with warnings denied and 42 server tests.
+- Definition route regression reproduced HTTP 405 before the fix. The new HTTP
+  test verifies missing-name 404, side-effect-free POST validation, create 201
+  and exact saved-record retrieval 200 for the valid name `validate`. This slice
+  changed server routing only; no native rebuild or live-host test was needed.
 - Latest client verification: `make check-client`, native Clippy with warnings
   denied and all 8 native HTTP tests passed (49 tests across server/client).
 - Preflight fixtures cover full router POST over verified localhost TLS, four
@@ -94,11 +100,13 @@ Phase 0 is not complete; no unsupported roadmap acceptance claims are made.
 
 ## Next single task
 
-Once the user's disposable Proxmox PC is ready, run opt-in read-only inventory
-and preflight against its explicitly approved endpoint and catalog. Use
-`docs/debian-template.md` to prepare and record the template first. Live checks
-await those inputs. Actual clone/configure/start work still requires approval of
-the concrete target and operations; no real infrastructure has been tested.
+Prepare bounded read-only Proxmox task-status observation with local TLS
+fixtures, distinguishing running, successful and failed provider tasks from
+guest readiness. This is a prerequisite for future asynchronous mutations;
+do not add mutation methods yet. Live inventory/preflight still awaits the
+user's disposable PC, explicitly approved endpoint and template catalog.
+Use `docs/debian-template.md` for preparation. Real clone/configure/start work
+requires approval of the concrete target and operations.
 
 ## Open inputs
 

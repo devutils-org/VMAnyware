@@ -227,3 +227,48 @@ async fn validation_and_rejected_requests_never_save_definitions() {
         .unwrap();
     assert_eq!(json(response).await, serde_json::json!([]));
 }
+
+#[tokio::test]
+async fn definition_named_validate_can_be_read_without_changing_validation_behavior() {
+    let app = router();
+    let read = || {
+        Request::get("/api/v1/definitions/validate")
+            .body(Body::empty())
+            .unwrap()
+    };
+    let missing = app.clone().oneshot(read()).await.unwrap();
+    assert_eq!(missing.status(), StatusCode::NOT_FOUND);
+    assert_eq!(json(missing).await["error"]["code"], "definition_not_found");
+
+    let yaml = SAMPLE.replace("name: kernel-lab", "name: validate");
+    let post = |path: &str| {
+        Request::post(path)
+            .header("content-type", "application/yaml")
+            .body(Body::from(yaml.clone()))
+            .unwrap()
+    };
+    let validated = app
+        .clone()
+        .oneshot(post("/api/v1/definitions/validate"))
+        .await
+        .unwrap();
+    assert_eq!(validated.status(), StatusCode::OK);
+    let validated = json(validated).await;
+    // Validation must not create the definition, including for this route name.
+    assert_eq!(
+        app.clone().oneshot(read()).await.unwrap().status(),
+        StatusCode::NOT_FOUND
+    );
+    let saved = app
+        .clone()
+        .oneshot(post("/api/v1/definitions"))
+        .await
+        .unwrap();
+    assert_eq!(saved.status(), StatusCode::CREATED);
+    let saved = json(saved).await;
+    assert_eq!(saved["name"], "validate");
+    assert_eq!(saved["hash"], validated["hash"]);
+    let loaded = app.oneshot(read()).await.unwrap();
+    assert_eq!(loaded.status(), StatusCode::OK);
+    assert_eq!(json(loaded).await, saved);
+}

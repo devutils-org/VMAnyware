@@ -108,6 +108,11 @@ pub async fn list(State(state): State<AppState>) -> Response {
     }
 }
 
+// The static validation route takes precedence over /definitions/{name}.
+pub async fn get_validate(state: State<AppState>) -> Response {
+    get(state, Path("validate".to_owned())).await
+}
+
 pub async fn get(State(state): State<AppState>, Path(name): Path<String>) -> Response {
     match tokio::task::spawn_blocking(move || state.store.get(&name)).await {
         Ok(Ok(Some(record))) => Json(record).into_response(),
