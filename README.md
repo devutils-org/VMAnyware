@@ -67,7 +67,9 @@ in [provider task observation](docs/provider-tasks.md). The
 [interim feasibility report](docs/feasibility.md) separates local evidence from
 remaining infrastructure and platform tests. The opt-in
 [SSH/PTY experiment](experiments/ssh/README.md) exercises a disposable localhost
-server and real local shell; run it separately with `make check-ssh`.
+server and real local shell; run it separately with `make check-ssh`. Its
+[persistent host-trust API](docs/ssh-host-trust.md) is tested separately from
+the still-pending native confirmation UI.
 
 The native build requires `apps/client/src-tauri/icons/icon.png`. Its editable
 source is `icons/source.svg` in the same directory. Regenerate it from the root:

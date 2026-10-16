@@ -4,7 +4,9 @@ This is an opt-in Unix test crate with its own workspace and lockfile. It does
 not add dependencies to PocketLab's application/server or start a persistent
 service. It binds an ephemeral IPv4 loopback port, generates Ed25519 host and
 client keys in memory, and closes its fixture on completion. It never reads
-SSH configuration, credentials or known-host files. No private key is serialized.
+personal SSH configuration, credentials or OpenSSH known-host files. Only the
+experiment's temporary managed public-key records are persisted/read. No private
+key is serialized.
 
 From the repository root:
 
@@ -46,7 +48,7 @@ or reconfigured. Fixture commands are fixed source literals, not user input.
 ## Verification and limits
 
 Verified on 2026-10-16, macOS arm64 (Apple M1), Rust/Cargo 1.99.1:
-formatting and Clippy with warnings denied passed; all four tests passed.
+formatting and Clippy with warnings denied passed; all ten tests passed.
 During development, an initial native-PTY run hit its ten-second overall limit;
 its precise cause was not established. Subsequent tests passed, including eight
 consecutive runs after explicit reader shutdown was added. Per-stage output
@@ -56,7 +58,7 @@ fresh reconnection to the real-shell fixture.
 This proves a local desktop Rust SSH/PTY transport and native Unix terminal path.
 It does **not** prove interoperability with a Proxmox guest/OpenSSH server,
 PocketLab's Tauri/WebView terminal, terminal rendering or keyboard handling,
-known-host persistence/first-use confirmation, platform key storage, long-lived
+a first-use confirmation UI, platform key storage, long-lived
 backpressure/recovery, installers, Windows, iOS or Android. It does not complete
 roadmap Phase 0E/0F. The application still has no SSH terminal.
 
@@ -67,6 +69,47 @@ roadmap Phase 0E/0F. The application still has no SSH terminal.
 - [russh channel methods](https://docs.rs/russh/0.64.1/russh/struct.Channel.html)
 - [portable-pty native PTY API](https://docs.rs/portable-pty/0.9.0/portable_pty/)
 
-Next: connect a desktop terminal renderer through Tauri to a disposable,
-verified-host-key SSH endpoint, then separately repeat essential interactions
-on real iOS/Android toolchains and devices.
+## Persisted trust experiment
+
+`trust::Store` explicitly creates a private managed directory; reopening requires
+an initialized `trust.json`. Missing, malformed, oversized or unreadable content
+fails closed. It never discovers or modifies `~/.ssh`. Tests create temporary
+managed directories and delete them afterwards. Only endpoint and public-key
+records are persisted, never private keys or credentials.
+
+`inspect` returns trusted, an opaque unknown-key observation, or changed-key
+failure. Unknown hosts are rejected during key exchange before authentication.
+The caller must explicitly pass the exact displayed SHA-256 fingerprint to
+`confirm`; dropping the observation cancels with no write. Confirmation checks
+the latest store again under a file lock. There is no key-replacement API.
+This is a tested confirmation API, not an implemented user confirmation dialog.
+
+Version 1 JSON stores `entries` containing `endpoint: {host, port}` and
+`public_key` in comment-free OpenSSH format. Unknown fields, duplicate endpoint
+records, noncanonical endpoints and invalid keys are rejected. Limits are
+64 KiB and 128 entries. DNS names are ASCII/lowercase, trailing dots rejected;
+IP strings normalize without DNS lookups. Different ports and DNS aliases are
+separate identities. SSH certificates are unsupported and rejected.
+
+The managed directory must be private (0700); files must have no group/other
+permissions (created 0600). Symlink leaves are rejected and file opens use
+`O_NOFOLLOW`. Cooperating processes hold an exclusive stable `trust.lock` across
+reads and atomic same-directory tempfile replacement, file sync and directory
+sync. Lock acquisition is bounded to 250 ms with a fixed busy error; this fixture
+uses synchronous filesystem operations, pending async-boundary integration.
+Concurrent distinct updates survive; identical confirmations are
+idempotent; conflicting first-use confirmations cannot overwrite a winner.
+This is a managed local filesystem boundary, not a defense against malicious
+same-user processes renaming ancestor directories or lock files, nor a claim
+about network-filesystem lock/durability behavior.
+
+Tests cover persistence/reopen, cancellation, wrong confirmation, endpoint scope,
+malformed/oversized/missing/insecure stores, stale and concurrent confirmations.
+A real local russh fixture proves rejection before authentication, exact
+fingerprint confirmation, reopened-store authentication, and changed-key
+rejection without replacing the original record. The changed-key fixture uses
+an injected new transport address for the same logical endpoint; it does not
+perform a DNS or network takeover.
+
+Next: choose platform credential access and connect a desktop terminal renderer
+through Tauri, then repeat essential interactions on real iOS/Android devices.

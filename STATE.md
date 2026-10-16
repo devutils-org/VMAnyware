@@ -29,6 +29,10 @@ Updated: 2026-10-16. Historical evidence and decisions are in Git and docs.
   application dependency graph. Generated in-memory keys and localhost fixture
   prove strict host-key checks, signed authentication, real local shell output,
   resize, Ctrl-C foreground interruption and fresh reconnect. See ADR 0008.
+- Experimental persistent endpoint-scoped host trust with fingerprint-bound
+  explicit confirmation, reopen, changed-key refusal and concurrent update
+  protection. Store failures reject trust; no personal SSH files are read.
+  Confirmation is an experimental API, not an implemented native dialog.
 
 ## Current verification
 
@@ -49,12 +53,17 @@ Apple CommandLineTools. Dependency locks and compiler pin are committed.
   safe field hints, redaction, previews and preflight result decoding.
 - CI YAML passed actionlint 1.7.12 using a temporary checksum-verified binary.
   Its commands passed locally; no GitHub/Linux/native/mobile CI result is claimed.
-- `make check-ssh` passed isolated formatting, locked Clippy and all four SSH
+- Latest `make check-ssh` passed isolated formatting, locked Clippy and all ten SSH
   tests on macOS arm64. The real PTY test uses two fresh connections, observes
   stty size changes and requires foreground sleep interruption/status 130 within
   two seconds. Fixture cleanup leaves no owned shell/sleep processes. An early
   development timeout remains undiagnosed and is documented honestly; repeated
   final checks passed. The experiment has no existing credentials or config.
+- Trust tests cover exact confirmation/reopen/authentication, rejection before
+  authentication, changed keys, port/DNS/IP scope, corrupted/missing/insecure
+  data, bounded 250 ms locking, stale/concurrent claims and endpoint validation
+  after deserialization. Generated public keys persist only in temporary stores.
+  Only the isolated crate/docs changed; application tests were not rerun.
 - The running local service was rebuilt/restarted with the current code; a real
   validation POST returned HTTP 200, canonical hash and generated request ID.
   Current UI features compile; their manual native walkthrough remains pending.
@@ -71,11 +80,12 @@ No Proxmox infrastructure has been contacted. Phase 0 remains incomplete.
 
 ## Next single task
 
-Prepare desktop terminal integration starting with persisted endpoint-scoped
-host-key trust and explicit first-use confirmation/changed-key rejection, tested
-against the local fixture. Choose platform credential access before connecting
-real hosts. The isolated candidate is not yet a production/mobile library choice.
-Live Proxmox inventory/preflight still awaits the approved PC and catalog.
+Prepare native host-key inspection/confirmation through Rust-owned, expiring
+IPC challenges bound to the exact endpoint/key, with an explicit first-use
+confirmation view and distinct changed-key errors. Keep authentication and
+terminal commands separate until platform credential access is chosen. See
+`docs/ssh-host-trust.md`; the isolated candidate is not a production/mobile
+library decision. Live Proxmox checks still await the approved PC/catalog.
 
 ## External inputs and limits
 

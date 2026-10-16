@@ -387,3 +387,108 @@ async fn pty_binary_data_ctrl_c_resize_disconnect_and_fresh_reconnect() {
 
 #[cfg(unix)]
 mod os_pty;
+
+mod trust;
+
+struct PersistedClient {
+    store: Arc<trust::Store>,
+    endpoint: trust::Endpoint,
+    observation: Arc<std::sync::Mutex<Option<trust::Confirmation>>>,
+}
+impl client::Handler for PersistedClient {
+    type Error = russh::Error;
+    async fn check_server_key(
+        &mut self,
+        actual: &PublicKeyOrCertificate,
+    ) -> Result<bool, Self::Error> {
+        let PublicKeyOrCertificate::PublicKey { key, .. } = actual else {
+            return Ok(false);
+        };
+        match self.store.inspect(self.endpoint.clone(), key) {
+            Ok(trust::Inspection::Trusted) => Ok(true),
+            Ok(trust::Inspection::Unknown(confirmation)) => {
+                *self.observation.lock().unwrap() = Some(confirmation);
+                Ok(false)
+            }
+            Err(_) => Ok(false),
+        }
+    }
+}
+#[tokio::test]
+async fn persisted_first_use_confirmation_reopen_and_changed_key_before_auth() {
+    timeout(LIMIT, async {
+        let fixture = Fixture::start().await;
+        let directory = tempfile::tempdir().unwrap();
+        let path = directory.path().join("managed");
+        let store = Arc::new(trust::Store::create(&path).unwrap());
+        let endpoint =
+            trust::Endpoint::new(&fixture.addr.ip().to_string(), fixture.addr.port()).unwrap();
+        let observed = Arc::new(std::sync::Mutex::new(None));
+        let connect_persisted = |store: Arc<trust::Store>, endpoint: trust::Endpoint| {
+            client::connect(
+                Arc::new(client::Config::default()),
+                fixture.addr,
+                PersistedClient {
+                    store,
+                    endpoint,
+                    observation: observed.clone(),
+                },
+            )
+        };
+        assert!(matches!(
+            connect_persisted(store.clone(), endpoint.clone()).await,
+            Err(russh::Error::UnknownKey)
+        ));
+        assert_eq!(fixture.auth_attempts.load(Ordering::SeqCst), 0);
+        let confirmation = observed.lock().unwrap().take().unwrap();
+        assert_eq!(
+            confirmation.fingerprint(),
+            fixture
+                .trusted_host
+                .fingerprint(russh::keys::HashAlg::Sha256)
+                .to_string()
+        );
+        let fingerprint = confirmation.fingerprint().to_owned();
+        store.confirm(confirmation, &fingerprint).unwrap();
+        drop(store);
+        let reopened = Arc::new(trust::Store::open(&path).unwrap());
+        let mut handle = connect_persisted(reopened.clone(), endpoint.clone())
+            .await
+            .unwrap();
+        assert!(handle
+            .authenticate_publickey(
+                "fixture",
+                PrivateKeyWithHashAlg::new(fixture.user_key.clone(), None)
+            )
+            .await
+            .unwrap()
+            .success());
+        handle
+            .disconnect(Disconnect::ByApplication, "fixture complete", "en")
+            .await
+            .unwrap();
+        assert_eq!(fixture.auth_attempts.load(Ordering::SeqCst), 1);
+        // A second independent server presents a different key for the same logical
+        // endpoint identity. The fixture transport is deliberately injectable.
+        let replacement = Fixture::start().await;
+        let result = client::connect(
+            Arc::new(client::Config::default()),
+            replacement.addr,
+            PersistedClient {
+                store: reopened.clone(),
+                endpoint: endpoint.clone(),
+                observation: observed.clone(),
+            },
+        )
+        .await;
+        assert!(matches!(result, Err(russh::Error::UnknownKey)));
+        assert_eq!(replacement.auth_attempts.load(Ordering::SeqCst), 0);
+        assert!(observed.lock().unwrap().is_none());
+        assert!(matches!(
+            reopened.inspect(endpoint, &fixture.trusted_host).unwrap(),
+            trust::Inspection::Trusted
+        ));
+    })
+    .await
+    .unwrap();
+}
