@@ -34,15 +34,64 @@ pub struct DefinitionRecord {
     updated_at: String,
 }
 
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+pub enum OperationStatus {
+    Queued,
+    Running,
+    Succeeded,
+    Failed,
+    Interrupted,
+}
+
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Operation {
+    id: String,
+    kind: String,
+    status: OperationStatus,
+    result: Option<Inventory>,
+    failure: Option<String>,
+    created_at: String,
+    updated_at: String,
+}
+
+#[tauri::command]
+pub async fn begin_inventory_refresh(port: u16, request_key: String) -> Result<Operation, String> {
+    if request_key.is_empty()
+        || request_key.len() > 64
+        || !request_key
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b"-_.".contains(&b))
+    {
+        return Err("Invalid inventory request key.".into());
+    }
+    request(
+        port,
+        "/api/v1/provider/inventory/refresh",
+        None,
+        Some(&request_key),
+    )
+    .await
+}
+
+#[tauri::command]
+pub async fn read_operation(port: u16, id: String) -> Result<Operation, String> {
+    if id.len() != 32 || !id.bytes().all(|b| b.is_ascii_hexdigit()) {
+        return Err("Invalid operation identifier.".into());
+    }
+    request(port, &format!("/api/v1/operations/{id}"), None, None).await
+}
+
 /// Initial local-only spike; arbitrary remote URLs are intentionally not exposed.
 #[tauri::command]
 pub async fn inspect_control_plane(port: u16) -> Result<Inventory, String> {
-    request(port, "/api/v1/provider/inventory", None).await
+    request(port, "/api/v1/provider/inventory", None, None).await
 }
 
 #[tauri::command]
 pub async fn list_definitions(port: u16) -> Result<Vec<DefinitionRecord>, String> {
-    request(port, "/api/v1/definitions", None).await
+    request(port, "/api/v1/definitions", None, None).await
 }
 
 #[tauri::command]
@@ -50,13 +99,14 @@ pub async fn save_definition(port: u16, yaml: String) -> Result<DefinitionRecord
     if yaml.len() > 64 * 1024 {
         return Err("Definition exceeds 64 KiB.".into());
     }
-    request(port, "/api/v1/definitions", Some(yaml)).await
+    request(port, "/api/v1/definitions", Some(yaml), None).await
 }
 
 async fn request<T: DeserializeOwned>(
     port: u16,
     path: &str,
     yaml: Option<String>,
+    request_key: Option<&str>,
 ) -> Result<T, String> {
     if port == 0 {
         return Err("Enter a port between 1 and 65535.".into());
@@ -68,19 +118,22 @@ async fn request<T: DeserializeOwned>(
         .build()
         .map_err(|_| "Cannot initialize the control-plane connection.")?;
     let url = format!("http://127.0.0.1:{port}{path}");
-    let builder = match yaml {
-        Some(yaml) => client
+    let builder = match (yaml, request_key) {
+        (_, Some(key)) => client.post(url).header("idempotency-key", key),
+        (Some(yaml), None) => client
             .post(url)
             .header("content-type", "application/yaml")
             .body(yaml),
-        None => client.get(url),
+        (None, None) => client.get(url),
     };
     let mut response = builder.send().await.map_err(|_| {
         "Cannot reach the local control plane. Start it with make server and check the port."
     })?;
     if !response.status().is_success() {
         return Err(match response.status().as_u16() {
-            409 => "A definition with this name already exists. Choose a new name; saved definitions are never overwritten.",
+            409 if path == "/api/v1/definitions" => "A definition with this name already exists. Choose a new name; saved definitions are never overwritten.",
+            409 => "Another inventory refresh is active. Wait briefly, then retry.",
+            404 => "This operation is not available on the selected control plane.",
             413 => "Definition exceeds 64 KiB.",
             422 => "Definition is invalid. Check its schema, resource limits and inline public SSH key.",
             503 if path == "/api/v1/provider/inventory" => "The control plane is reachable. Configure Proxmox on the server, then retry.",

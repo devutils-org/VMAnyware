@@ -11,6 +11,10 @@ Updated: 2026-10-16. Keep this file short; historical decisions belong in ADRs.
 - Verified-TLS, read-only Proxmox client and local inventory endpoint/UI.
 - Strict versioned YAML definitions, deterministic exports/hashes, SQLite
   migration and persistent create/list/read APIs; native YAML editor/catalog.
+- Durable inventory jobs: queued/running/terminal states, idempotent enqueue,
+  background worker, status API, native polling/resume cache and startup recovery.
+- SQLite migration 2 and an exclusive database service lock prevent duplicate
+  process ownership. No VM mutation jobs are implemented yet.
 - README, scoped Makefile checks, tool doctor, API contract, Phase 0 brief,
   agent instructions and architecture decisions. Original roadmap retained.
 
@@ -30,15 +34,20 @@ Apple developer directory: `/Library/Developer/CommandLineTools`.
 
 - `make doctor`: passed. The old missing-tool/network restrictions are resolved.
 - `make check-client`: passed TypeScript checking and Vite production build.
-- `make check-server`: passed fmt, Clippy with warnings denied and 21 server tests.
+- `make check-server`: passed fmt, Clippy with warnings denied and 29 server tests.
 - `make check-rust`: passed workspace fmt, Clippy with warnings denied and all
-  24 tests: 3 native HTTP tests, 10 server configuration/provider/TLS tests,
-  8 definition/storage tests and 3 service HTTP contract tests.
+  tests present at that run (32). One additional TLS-backed worker test then
+  passed in the scoped server checks: 33 tests total, including 4 native HTTP,
+  11 configuration/provider/TLS, 8 definitions, 3 service HTTP and 7 operations.
 - Live server started on an unused loopback port, returned HTTP 200 with
   `{"status":"ok"}`, and shut down on SIGINT with exit code 0.
 - Live HTTP/SQLite restart check passed using a temporary database: validation,
   save/list/read, duplicate HTTP 409, invalid definition HTTP 422, unconfigured
   provider HTTP 503, and unchanged saved record/hash after server restart.
+- Live operation smoke passed: HTTP 202, repeated request key returns the same
+  operation, failed result survives restart, second process cannot acquire the
+  same database, and a simulated pre-crash running record becomes interrupted
+  on actual service startup. No provider was configured for this process test.
 - `make dev`: compiled successfully and launched `target/debug/pocketlab-client`.
   The user confirmed the native window and button result:
   `Native bridge connected (macos)`. The desktop UI-to-Rust smoke check passes.
@@ -52,9 +61,10 @@ Phase 0 is not complete; no unsupported roadmap acceptance claims are made.
 
 ## Next single task
 
-Read-only provider prototype and definition storage are implemented. Complete
-real-host feasibility when the user supplies a test endpoint and template.
-Further VM mutations require a concrete approved disposable target.
+Prepare explicit image-to-template mapping and a reviewable provisioning plan
+before any clone implementation/live mutation. Read-only live verification is
+still pending the user's test endpoint. Real VM mutations require a concrete
+approved disposable target.
 
 ## Open inputs
 
@@ -65,7 +75,8 @@ Further VM mutations require a concrete approved disposable target.
 ## Remaining scope
 
 Real Proxmox, provisioning, snapshots and desktop/mobile SSH remain untested.
-Operation orchestration, VM instances, authenticated remote control planes and
-release packaging are not implemented. Autonomous source work has not been
+Inventory operation orchestration is implemented; VM orchestration/instances,
+authenticated remote control planes and release packaging are not implemented.
+Autonomous source work has not been
 treated as evidence for those milestones. Phase 0 is still open; independent
 definition work is recorded in ADR 0004 rather than marking feasibility complete.

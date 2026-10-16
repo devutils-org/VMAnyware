@@ -2,8 +2,12 @@ pub mod config;
 pub mod definition;
 mod definitions_api;
 mod inventory;
+pub mod operation;
+mod operations_api;
 pub mod proxmox;
+pub mod service_lock;
 pub mod store;
+pub mod worker;
 
 use axum::{
     extract::DefaultBodyLimit,
@@ -29,6 +33,11 @@ pub fn router_with_services(provider: Option<proxmox::Proxmox>, store: store::St
     Router::new()
         .route("/api/v1/health", get(health))
         .route("/api/v1/provider/inventory", get(inventory::get))
+        .route(
+            "/api/v1/provider/inventory/refresh",
+            post(operations_api::enqueue),
+        )
+        .route("/api/v1/operations/{id}", get(operations_api::get))
         .route(
             "/api/v1/definitions",
             get(definitions_api::list).post(definitions_api::create),

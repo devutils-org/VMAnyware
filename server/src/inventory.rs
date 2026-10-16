@@ -40,10 +40,8 @@ pub(crate) async fn get(
             "Configure Proxmox on the control plane before reading inventory.",
         )
     })?;
-    let inventory = tokio::time::timeout(Duration::from_secs(20), collect(&provider))
+    let inventory = refresh(&provider)
         .await
-        .map_err(|_| crate::proxmox::Error::Timeout)
-        .and_then(|result| result)
         .map_err(|err| {
             use crate::proxmox::Error;
             let (status, code) = match err {
@@ -61,6 +59,12 @@ pub(crate) async fn get(
             error(status, code, message)
         })?;
     Ok(Json(inventory))
+}
+
+pub(crate) async fn refresh(provider: &Proxmox) -> Result<Inventory, crate::proxmox::Error> {
+    tokio::time::timeout(Duration::from_secs(20), collect(provider))
+        .await
+        .map_err(|_| crate::proxmox::Error::Timeout)?
 }
 
 async fn collect(provider: &Proxmox) -> Result<Inventory, crate::proxmox::Error> {

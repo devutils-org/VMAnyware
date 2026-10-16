@@ -70,7 +70,8 @@ future work. This initial API is for a small local homelab catalog.
 `POCKETLAB_DATABASE` selects the SQLite file; default `pocketlab.sqlite` relative
 to the server's working directory. The application does not load dotenv files.
 The first launch applies `migrations/0001_definitions.sql` in a transaction and
-sets `user_version=1`. Reopening reuses the schema and existing records. A newer
+sets `user_version=1`, then applies `0002_operations.sql` to reach version 2.
+Reopening reuses the schema and existing records. A newer
 unknown schema is refused rather than downgraded. Database errors are redacted.
 SQLite work runs on blocking workers, not the asynchronous HTTP executor.
 

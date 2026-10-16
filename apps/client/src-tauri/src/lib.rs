@@ -12,7 +12,9 @@ pub fn run() {
             runtime_platform,
             control_plane::inspect_control_plane,
             control_plane::list_definitions,
-            control_plane::save_definition
+            control_plane::save_definition,
+            control_plane::begin_inventory_refresh,
+            control_plane::read_operation
         ])
         .run(tauri::generate_context!())
         .expect("failed to run PocketLab");

@@ -11,6 +11,8 @@ local service; credentials are never sent to the WebView.
 
 Definition validation/create/list/read routes are documented in
 [the definition API and schema](definitions.md). They operate without Proxmox.
+Asynchronous inventory requests and persisted statuses are described in
+[durable operations](operations.md).
 
 ## Read-only inventory
 

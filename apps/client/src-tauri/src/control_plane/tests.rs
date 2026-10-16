@@ -1,4 +1,7 @@
-use super::{inspect_control_plane, list_definitions, save_definition};
+use super::{
+    begin_inventory_refresh, inspect_control_plane, list_definitions, read_operation,
+    save_definition, OperationStatus,
+};
 use std::{
     io::{Read, Write},
     net::TcpListener,
@@ -49,6 +52,44 @@ fn response(
         request
     });
     (port, task)
+}
+
+#[test]
+fn inventory_jobs_send_idempotency_key_and_poll_by_validated_id() {
+    let id = "a".repeat(32);
+    let job = serde_json::json!({"id":id,"kind":"inventory_refresh","status":"queued","result":null,"failure":null,"createdAt":"2026-10-16","updatedAt":"2026-10-16"});
+    let (port, task) = response(
+        "POST",
+        "/api/v1/provider/inventory/refresh",
+        "202 Accepted",
+        &job.to_string(),
+    );
+    let queued =
+        tauri::async_runtime::block_on(begin_inventory_refresh(port, "test-request-key".into()))
+            .unwrap();
+    assert!(matches!(queued.status, OperationStatus::Queued));
+    assert!(task
+        .join()
+        .unwrap()
+        .to_ascii_lowercase()
+        .contains("idempotency-key: test-request-key\r\n"));
+    let (port, task) = response(
+        "GET",
+        &format!("/api/v1/operations/{id}"),
+        "200 OK",
+        &job.to_string(),
+    );
+    assert_eq!(
+        tauri::async_runtime::block_on(read_operation(port, id))
+            .unwrap()
+            .id,
+        queued.id
+    );
+    task.join().unwrap();
+    assert!(tauri::async_runtime::block_on(read_operation(port, "../escape".into())).is_err());
+    assert!(
+        tauri::async_runtime::block_on(begin_inventory_refresh(port, "bad key".into())).is_err()
+    );
 }
 
 #[test]

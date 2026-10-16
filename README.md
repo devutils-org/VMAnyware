@@ -14,6 +14,8 @@ nodes/templates in read-only mode. Configure the server using
 [the Proxmox setup guide](docs/proxmox-setup.md), run `make server`, then click
 **Connect** in the native app. Missing configuration is reported explicitly.
 Real Proxmox verification is pending; default tests use localhost TLS fixtures.
+Inventory refreshes run as persisted background operations, with status polling,
+idempotent requests and restart recovery. See [operation behavior](docs/operations.md).
 
 You can also edit, save and reload reusable YAML definitions without Proxmox.
 The server validates the schema and persists definitions in SQLite, without

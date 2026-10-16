@@ -23,3 +23,4 @@ input:focus-visible { outline: 3px solid #9fdbbc; outline-offset: 3px; }
 li { margin-block: .5rem; overflow-wrap: anywhere; }
 textarea { display: block; width: 100%; min-height: 24rem; margin-top: .5rem; padding: .75rem; font: .9rem/1.5 ui-monospace, monospace; border: 1px solid #8193a5; border-radius: .4rem; resize: vertical; }
 textarea:focus-visible { outline: 3px solid #9fdbbc; outline-offset: 3px; }
+.operation-id { font-family: ui-monospace, monospace; overflow-wrap: anywhere; }

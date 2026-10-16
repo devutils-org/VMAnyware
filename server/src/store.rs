@@ -1,4 +1,5 @@
 use crate::definition::Definition;
+mod operations;
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::Serialize;
 use std::{
@@ -13,6 +14,7 @@ pub enum Error {
     Unavailable,
     Conflict,
     InvalidDefinition,
+    InvalidOperation,
 }
 impl fmt::Display for Error {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
@@ -20,6 +22,7 @@ impl fmt::Display for Error {
             Self::Unavailable => "Definition storage is unavailable.",
             Self::Conflict => "A definition with this name already exists.",
             Self::InvalidDefinition => "Definition is invalid.",
+            Self::InvalidOperation => "Invalid operation or transition.",
         })
     }
 }
@@ -60,17 +63,24 @@ impl Store {
         let version: u32 = transaction
             .pragma_query_value(None, "user_version", |row| row.get(0))
             .map_err(|_| Error::Unavailable)?;
-        match version {
-            0 => {
-                transaction
-                    .execute_batch(include_str!("../../migrations/0001_definitions.sql"))
-                    .map_err(|_| Error::Unavailable)?;
-                transaction
-                    .pragma_update(None, "user_version", 1)
-                    .map_err(|_| Error::Unavailable)?;
-            }
-            1 => {}
-            _ => return Err(Error::Unavailable),
+        if version > 2 {
+            return Err(Error::Unavailable);
+        }
+        if version < 1 {
+            transaction
+                .execute_batch(include_str!("../../migrations/0001_definitions.sql"))
+                .map_err(|_| Error::Unavailable)?;
+            transaction
+                .pragma_update(None, "user_version", 1)
+                .map_err(|_| Error::Unavailable)?;
+        }
+        if version < 2 {
+            transaction
+                .execute_batch(include_str!("../../migrations/0002_operations.sql"))
+                .map_err(|_| Error::Unavailable)?;
+            transaction
+                .pragma_update(None, "user_version", 2)
+                .map_err(|_| Error::Unavailable)?;
         }
         transaction.commit().map_err(|_| Error::Unavailable)?;
         Ok(Self(Arc::new(Mutex::new(connection))))

@@ -20,6 +20,34 @@ type Inventory = {
   templates: { node: string; vmid: number; name: string | null }[];
 };
 
+type Operation = {
+  id: string;
+  kind: string;
+  status: "queued" | "running" | "succeeded" | "failed" | "interrupted";
+  result: Inventory | null;
+  failure: string | null;
+};
+
+const failureMessages: Record<string, string> = {
+  provider_not_configured: "Configure Proxmox on the control plane before reading inventory.",
+  provider_unauthorized: "Proxmox rejected the configured API token.",
+  provider_forbidden: "The Proxmox token lacks inventory permissions.",
+  provider_timeout: "Proxmox inventory timed out. Check the connection and retry.",
+  provider_unavailable: "Cannot read Proxmox inventory. Check the endpoint and TLS trust.",
+  process_interrupted: "The service stopped during this refresh. Its outcome is unconfirmed; retry to start a new read-only refresh.",
+};
+
+function savedRequestKey(key: string): string | null {
+  try { return localStorage.getItem(key); } catch { return null; }
+}
+
+function rememberRequestKey(key: string, value: string | null) {
+  try {
+    if (value === null) localStorage.removeItem(key);
+    else localStorage.setItem(key, value);
+  } catch { /* Resume caching is optional; backend operation records remain durable. */ }
+}
+
 function App() {
   const [status, setStatus] = useState("Not checked");
   const [checking, setChecking] = useState(false);
@@ -28,6 +56,7 @@ function App() {
   const [inventory, setInventory] = useState<Inventory | null>(null);
   const [connectionError, setConnectionError] = useState("");
   const [connecting, setConnecting] = useState(false);
+  const [operation, setOperation] = useState<Operation | null>(null);
   const [yaml, setYaml] = useState(sampleDefinition);
   const [definitions, setDefinitions] = useState<DefinitionRecord[]>([]);
   const [definitionBusy, setDefinitionBusy] = useState(false);
@@ -68,8 +97,22 @@ function App() {
     setConnecting(true);
     setInventory(null);
     setConnectionError("");
+    const cacheKey = `pocketlab.inventory.request.${value}`;
     try {
-      setInventory(await invoke<Inventory>("inspect_control_plane", { port: value }));
+      const requestKey = savedRequestKey(cacheKey) ?? crypto.randomUUID();
+      rememberRequestKey(cacheKey, requestKey);
+      let current = await invoke<Operation>("begin_inventory_refresh", { port: value, requestKey });
+      setOperation(current);
+      const deadline = Date.now() + 60_000;
+      while (current.status === "queued" || current.status === "running") {
+        if (Date.now() >= deadline) throw "Monitoring paused. Connect again to resume the same operation.";
+        await new Promise(resolve => setTimeout(resolve, 400));
+        current = await invoke<Operation>("read_operation", { port: value, id: current.id });
+        setOperation(current);
+      }
+      rememberRequestKey(cacheKey, null);
+      if (current.status === "succeeded" && current.result) setInventory(current.result);
+      else setConnectionError(failureMessages[current.failure ?? ""] ?? "The inventory operation did not return a result. Please retry.");
     } catch (error) {
       setConnectionError(typeof error === "string" ? error : "Connection failed. Please retry.");
     } finally {
@@ -105,6 +148,7 @@ function App() {
                 setPort(event.target.value);
                 setInventory(null);
                 setConnectionError("");
+                setOperation(null);
                 setDefinitions([]);
                 setDefinitionMessage("");
                 setDefinitionError("");
@@ -116,6 +160,7 @@ function App() {
         </form>
         {!native && <p>Open the native application to connect to the local service.</p>}
         {connectionError && <p role="alert" className="error">{connectionError}</p>}
+        {operation && <p role="status">Inventory refresh: {operation.status} · <span className="operation-id">{operation.id}</span></p>}
         {inventory && <div role="status"><p>Connected · Proxmox {inventory.version}</p></div>}
       </section>
       <section aria-labelledby="definitions-heading" aria-busy={definitionBusy}>

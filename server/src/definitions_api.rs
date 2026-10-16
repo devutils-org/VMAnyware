@@ -134,6 +134,11 @@ fn storage_error(e: store::Error) -> (StatusCode, Json<ApiError>) {
             "invalid_definition",
             "Definition is invalid.",
         ),
+        store::Error::InvalidOperation => (
+            StatusCode::BAD_REQUEST,
+            "invalid_operation",
+            "Invalid operation.",
+        ),
         store::Error::Unavailable => (
             StatusCode::SERVICE_UNAVAILABLE,
             "storage_unavailable",

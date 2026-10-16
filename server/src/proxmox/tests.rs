@@ -98,6 +98,58 @@ impl Fixture {
 }
 
 #[tokio::test]
+async fn worker_persists_inventory_result_and_does_not_replay_completed_requests() {
+    let mut fixture = Fixture::routes(
+        "200 OK",
+        &[
+            (
+                "/api2/json/version",
+                r#"{"data":{"version":"9.0.1","release":"9.0"}}"#,
+            ),
+            (
+                "/api2/json/nodes",
+                r#"{"data":[{"node":"pve-1","status":"online"}]}"#,
+            ),
+            (
+                "/api2/json/nodes/pve-1/qemu",
+                r#"{"data":[{"vmid":9000,"name":"debian","status":"stopped","template":1}]}"#,
+            ),
+        ],
+        "",
+        Duration::ZERO,
+    )
+    .await;
+    let store = crate::store::Store::memory().unwrap();
+    let id = store
+        .enqueue_inventory("inventory-operation-test")
+        .unwrap()
+        .id;
+    assert!(crate::worker::run_one(&store, Some(&fixture.client()))
+        .await
+        .unwrap());
+    let completed = store.operation(&id).unwrap().unwrap();
+    assert_eq!(completed.status, crate::operation::Status::Succeeded);
+    let inventory = completed.result.unwrap();
+    assert_eq!(inventory["version"], "9.0.1");
+    assert_eq!(inventory["templates"][0]["vmid"], 9000);
+    assert_eq!(
+        store
+            .enqueue_inventory("inventory-operation-test")
+            .unwrap()
+            .id,
+        id
+    );
+    assert!(!crate::worker::run_one(&store, Some(&fixture.client()))
+        .await
+        .unwrap());
+    let mut count = 0;
+    while fixture.requests.try_recv().is_ok() {
+        count += 1
+    }
+    assert_eq!(count, 3);
+}
+
+#[tokio::test]
 async fn api_inventory_maps_visible_templates_and_skips_offline_nodes() {
     use axum::{
         body::{to_bytes, Body},

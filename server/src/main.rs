@@ -1,4 +1,5 @@
 use pocketlab_server::{config::Config, proxmox::Proxmox, router_with_services, store::Store};
+use std::future::IntoFuture;
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -16,12 +17,26 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         Err(std::env::VarError::NotPresent) => "pocketlab.sqlite".into(),
         _ => return Err("Invalid POCKETLAB_DATABASE configuration".into()),
     };
+    let _database_lock =
+        pocketlab_server::service_lock::ServiceLock::acquire(std::path::Path::new(&database))?;
     let store = Store::open(database)?;
     let listener = tokio::net::TcpListener::bind(config.address()).await?;
+    store.recover_interrupted_operations()?;
     eprintln!("PocketLab listening on http://{}", listener.local_addr()?);
-    axum::serve(listener, router_with_services(provider, store))
+    let mut worker = tokio::spawn(pocketlab_server::worker::run(
+        store.clone(),
+        provider.clone(),
+    ));
+    let server = axum::serve(listener, router_with_services(provider, store))
         .with_graceful_shutdown(shutdown())
-        .await?;
+        .into_future();
+    tokio::select! {
+        result = server => { worker.abort(); result?; }
+        result = &mut worker => {
+            result.map_err(|_| "Operation worker stopped unexpectedly")??;
+            return Err("Operation worker stopped unexpectedly".into());
+        }
+    }
     Ok(())
 }
 
