@@ -27,3 +27,7 @@ These tests retire part of the desktop transport risk. They do not validate an
 integrated terminal, Windows/mobile behavior, a remote Proxmox guest or Phase 0
 exit. Keep the initial unexplained development timeout and actual verification
 scope in the experiment README; do not claim reliability beyond the evidence.
+
+Follow-up: [ADR 0010](0010-native-ssh-host-inspection.md) promotes only the
+handshake/trust path into a macOS native prototype after the fixture evidence.
+The shell fixture and mobile/platform decisions remain separate.

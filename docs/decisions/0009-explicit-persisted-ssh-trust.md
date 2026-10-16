@@ -1,8 +1,9 @@
 # ADR 0009 — Persist explicit endpoint-scoped SSH host trust in the experiment
 
 Date: 2026-10-16
-Status: Experimental implementation; native confirmation UI and production
-credential/trust integration remain pending.
+Status: Proven local store implementation; native inspection/confirmation
+integration follows in [ADR 0010](0010-native-ssh-host-inspection.md). Production
+credential handling and remote/mobile validation remain pending.
 
 Extend the working localhost SSH fixture before adopting a product SSH stack.
 Use a separate managed public-key store with explicit creation and reopening,

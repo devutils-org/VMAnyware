@@ -388,6 +388,7 @@ async fn pty_binary_data_ctrl_c_resize_disconnect_and_fresh_reconnect() {
 #[cfg(unix)]
 mod os_pty;
 
+#[path = "../../../apps/client/src-tauri/src/ssh/trust.rs"]
 mod trust;
 
 struct PersistedClient {

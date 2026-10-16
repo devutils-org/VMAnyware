@@ -68,8 +68,9 @@ in [provider task observation](docs/provider-tasks.md). The
 remaining infrastructure and platform tests. The opt-in
 [SSH/PTY experiment](experiments/ssh/README.md) exercises a disposable localhost
 server and real local shell; run it separately with `make check-ssh`. Its
-[persistent host-trust API](docs/ssh-host-trust.md) is tested separately from
-the still-pending native confirmation UI.
+[persistent host-trust policy](docs/ssh-host-trust.md) is shared with the
+[native macOS inspection/confirmation prototype](docs/ssh-host-inspection.md).
+Inspection never logs in or opens a shell; manual UI verification remains pending.
 
 The native build requires `apps/client/src-tauri/icons/icon.png`. Its editable
 source is `icons/source.svg` in the same directory. Regenerate it from the root:

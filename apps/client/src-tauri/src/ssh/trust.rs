@@ -1,4 +1,4 @@
-//! Fixture-only managed trust. Never reads SSH configuration or private keys.
+//! Managed public host trust. Never reads SSH configuration or private keys.
 use russh::keys::{HashAlg, PublicKey};
 use serde::{Deserialize, Serialize};
 use std::{
@@ -41,6 +41,12 @@ pub struct Endpoint {
     port: u16,
 }
 impl Endpoint {
+    pub fn host(&self) -> &str {
+        &self.host
+    }
+    pub fn port(&self) -> u16 {
+        self.port
+    }
     pub fn new(host: &str, port: u16) -> Result<Self, Error> {
         if port == 0 || host.len() > 253 || host.is_empty() {
             return Err(Error::InvalidEndpoint);
@@ -269,7 +275,9 @@ fn check_private(path: &Path, directory: bool) -> Result<(), Error> {
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::ephemeral_key;
+    fn ephemeral_key() -> russh::keys::PrivateKey {
+        russh::keys::PrivateKey::random(&mut rand::rng(), russh::keys::Algorithm::Ed25519).unwrap()
+    }
     fn setup() -> (tempfile::TempDir, Store) {
         let root = tempfile::tempdir().unwrap();
         let store = Store::create(&root.path().join("managed")).unwrap();
@@ -290,6 +298,8 @@ mod tests {
         let (_root, store) = setup();
         let key = ephemeral_key();
         let endpoint = Endpoint::new("EXAMPLE.test", 22).unwrap();
+        assert_eq!(endpoint.host(), "example.test");
+        assert_eq!(endpoint.port(), 22);
         assert!(endpoint == Endpoint::new("example.test", 22).unwrap());
         let cancelled = observation(&store, endpoint.clone(), key.public_key());
         drop(cancelled);

@@ -1,8 +1,10 @@
 # Isolated desktop SSH/PTY feasibility experiment
 
 This is an opt-in Unix test crate with its own workspace and lockfile. It does
-not add dependencies to PocketLab's application/server or start a persistent
-service. It binds an ephemeral IPv4 loopback port, generates Ed25519 host and
+not add the shell fixture dependencies to the application/server or start a
+persistent service. The macOS native host-inspection prototype now uses the same
+SSH candidate and shares the trust source at
+`apps/client/src-tauri/src/ssh/trust.rs`; this experiment imports that file. It binds an ephemeral IPv4 loopback port, generates Ed25519 host and
 client keys in memory, and closes its fixture on completion. It never reads
 personal SSH configuration, credentials or OpenSSH known-host files. Only the
 experiment's temporary managed public-key records are persisted/read. No private
@@ -58,7 +60,8 @@ fresh reconnection to the real-shell fixture.
 This proves a local desktop Rust SSH/PTY transport and native Unix terminal path.
 It does **not** prove interoperability with a Proxmox guest/OpenSSH server,
 PocketLab's Tauri/WebView terminal, terminal rendering or keyboard handling,
-a first-use confirmation UI, platform key storage, long-lived
+a manual walkthrough of the native first-use confirmation UI, platform key
+storage, long-lived
 backpressure/recovery, installers, Windows, iOS or Android. It does not complete
 roadmap Phase 0E/0F. The application still has no SSH terminal.
 

@@ -16,7 +16,7 @@ been demonstrated. See `STATE.md` for current counts and commands.
 | CI | Pinned workflow, local command checks and actionlint | First actual GitHub/Linux run; native/mobile runners |
 | VM provisioning | Explicit plan and template preparation procedure | Clone/configuration implementation plus approved disposable-host tests |
 | Snapshot/restore | Declared intent only | Storage capability evidence, implementation and separately approved restore |
-| Desktop SSH/PTY | Isolated macOS protocol, real shell/PTY and persistent host-trust API tests | Native terminal/confirmation UI and platform credentials |
+| Desktop SSH/PTY | Native macOS host inspection/confirmation plus isolated protocol and real shell/PTY tests | Manual native confirmation walkthrough, terminal integration and platform credentials |
 | Mobile | No runtime evidence | SDKs, devices/simulators, SSH crypto/PTY build and lifecycle checks |
 
 ## Decisions that remain open

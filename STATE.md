@@ -1,6 +1,6 @@
 # PocketLab — current state
 
-Updated: 2026-10-16. Historical evidence and decisions are in Git and docs.
+Updated: 2026-10-17. Historical evidence and decisions are in Git and docs.
 
 ## Implemented
 
@@ -29,10 +29,14 @@ Updated: 2026-10-16. Historical evidence and decisions are in Git and docs.
   application dependency graph. Generated in-memory keys and localhost fixture
   prove strict host-key checks, signed authentication, real local shell output,
   resize, Ctrl-C foreground interruption and fresh reconnect. See ADR 0008.
-- Experimental persistent endpoint-scoped host trust with fingerprint-bound
-  explicit confirmation, reopen, changed-key refusal and concurrent update
-  protection. Store failures reject trust; no personal SSH files are read.
-  Confirmation is an experimental API, not an implemented native dialog.
+- Shared native/experimental persistent endpoint-scoped SSH host trust. On
+  macOS, the native UI inspects keys and offers explicit first-use confirmation;
+  known keys require a completed verified handshake, while changed keys cannot
+  be approved. No authentication, private-key loading or terminal is implemented.
+- Rust-owned window/endpoint/key-bound UUID challenges expire after 120 seconds,
+  are consumed once and invalidate on new inspection, cancellation or window
+  destruction. Owner/probe limits are eight each; probes have a ten-second
+  overall deadline. Trust initializes lazily in the client app-local directory.
 
 ## Current verification
 
@@ -40,7 +44,7 @@ Environment: macOS arm64, Rust/Cargo 1.99.1, Node 26.11.1, npm 11.20.0,
 Apple CommandLineTools. Dependency locks and compiler pin are committed.
 
 - Latest `make check` passed frontend TypeScript/Vite build, workspace formatting,
-  all-target Clippy with warnings denied and all 60 tests: 49 server, 11 native.
+  all-target Clippy with warnings denied and all 70 tests: 49 server, 21 native.
 - Provider tests use generated localhost TLS fixtures, never runtime credentials.
   They cover certificate/hostname/authentication failures, time/size bounds,
   inventory, preflight, task status validation and bounded polling.
@@ -63,7 +67,12 @@ Apple CommandLineTools. Dependency locks and compiler pin are committed.
   authentication, changed keys, port/DNS/IP scope, corrupted/missing/insecure
   data, bounded 250 ms locking, stale/concurrent claims and endpoint validation
   after deserialization. Generated public keys persist only in temporary stores.
-  Only the isolated crate/docs changed; application tests were not rerun.
+  The native client and isolated fixture now import the same trust source.
+- New native manager tests cover handshake/confirmation/reopen/changed keys with
+  zero authentication attempts, replay/wrong-owner/fingerprint/expiry/cancel,
+  invalidation and out-of-order results, capacity and corrupt storage. Window
+  destruction cleanup also prevents reuse of an old label reviving a challenge.
+  Non-macOS wrappers are source-prepared, not cross-compiled or tested.
 - The running local service was rebuilt/restarted with the current code; a real
   validation POST returned HTTP 200, canonical hash and generated request ID.
   Current UI features compile; their manual native walkthrough remains pending.
@@ -80,12 +89,11 @@ No Proxmox infrastructure has been contacted. Phase 0 remains incomplete.
 
 ## Next single task
 
-Prepare native host-key inspection/confirmation through Rust-owned, expiring
-IPC challenges bound to the exact endpoint/key, with an explicit first-use
-confirmation view and distinct changed-key errors. Keep authentication and
-terminal commands separate until platform credential access is chosen. See
-`docs/ssh-host-trust.md`; the isolated candidate is not a production/mobile
-library decision. Live Proxmox checks still await the approved PC/catalog.
+Prototype desktop SSH-agent authentication against a disposable local agent
+and fixture, without reading personal credential files or accessing the user's
+agent. Use that evidence to choose platform key access before adding terminal
+sessions. Current native host inspection needs a manual walkthrough; see
+`docs/ssh-host-inspection.md`. Live Proxmox checks await the approved PC/catalog.
 
 ## External inputs and limits
 
@@ -103,4 +111,6 @@ library decision. Live Proxmox checks still await the approved PC/catalog.
 
 Application provisioning, VM instances/lifecycle, snapshots, desktop/mobile SSH,
 authenticated remote control planes and signed distribution are not implemented.
-Default tests continue to work without Proxmox, credentials or mutable VMs.
+Default tests work without configured Proxmox, user credentials or mutable VMs.
+The macOS native target now includes the pinned russh candidate for handshake/
+trust only (ADR 0010); no production/mobile library guarantee is implied.

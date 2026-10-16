@@ -16,3 +16,13 @@ reqwest = { version = "0.13", default-features = false, features = ["json"] }
 serde = { version = "1", features = ["derive"] }
 serde_json = "1"
 tauri = { version = "2", features = [] }
+
+[target.'cfg(target_os = "macos")'.dependencies]
+russh = { version = "=0.64.1", default-features = false, features = ["ring"] }
+tokio = { version = "1", features = ["net", "sync", "time"] }
+uuid = { version = "1", features = ["v4"] }
+tempfile = "3"
+libc = "0.2"
+
+[target.'cfg(target_os = "macos")'.dev-dependencies]
+rand = "0.10"
