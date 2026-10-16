@@ -266,13 +266,13 @@ Tasks:
 
 - [x] Create the repository and minimal Rust workspace.
 - [x] Create a minimal Tauri 2 app and verify development/build setup. (macOS arm64: dev/release builds pass; user confirmed native bridge returns `macos`.)
-- [ ] Document the supported OS versions and toolchain.
+- [x] Document the supported OS versions and toolchain. (Current macOS development baseline and unverified targets in docs/platforms.md; no release/minimum-OS guarantee.)
 - [ ] Connect a Rust prototype to a disposable/test Proxmox VE environment using a dedicated least-privilege API token.
 - [ ] Verify TLS certificate handling and API-token permissions.
 - [ ] Read VM inventory and inspect a known template.
 - [ ] Prototype clone → Cloud-Init configuration → start → poll task → verify readiness.
 - [ ] Prototype create/list/restore snapshot on a disposable VM.
-- [ ] Test SSH authentication, host-key verification, interactive PTY and terminal resizing on desktop.
+- [ ] Test SSH authentication, host-key verification, interactive PTY and terminal resizing on desktop. (Isolated macOS SSH/real-shell fixture passes; native terminal integration and remote guest validation pending.)
 - [ ] Test whether the chosen terminal and SSH approach works on both iOS and Android.
 - [ ] Record mobile limitations and any platform-specific implementation required.
 - [ ] Write short ADRs for the decisions that materially affect architecture.

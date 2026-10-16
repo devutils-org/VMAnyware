@@ -7,7 +7,7 @@ the working product name used in the roadmap.
 **Status: Phase 0.** The frontend build, workspace Rust checks/tests and local
 control-plane HTTP smoke check pass on macOS arm64. The native development
 process starts; the user confirmed the UI bridge returns `macos`.
-VM management and SSH are not implemented.
+VM management and an integrated SSH terminal are not implemented.
 
 The native client can now connect to the local control plane and list Proxmox
 nodes/templates in read-only mode. Configure the server using
@@ -55,14 +55,19 @@ returned by Rust. Browser preview deliberately disables that check.
 Resolved dependencies are recorded in `apps/client/package-lock.json` and
 `Cargo.lock`. Rust is pinned to `1.99.1` in `rust-toolchain.toml`.
 Use `npm --prefix apps/client ci` to reproduce the frontend installation.
-See `STATE.md` for actual build and runtime verification. The prepared
+See `STATE.md` for actual build and runtime verification and the
+[platform/toolchain matrix](docs/platforms.md) for tested targets. The prepared
 [CI workflow](docs/ci.md) runs server and frontend checks without Proxmox;
 GitHub execution and native/mobile CI remain unverified.
 
 The native editor also provides **Validate YAML**, which checks the current
 definition without saving. Server diagnostics and shutdown behavior are
 documented in [diagnostics](docs/diagnostics.md), and the read-only task helper
-in [provider task observation](docs/provider-tasks.md).
+in [provider task observation](docs/provider-tasks.md). The
+[interim feasibility report](docs/feasibility.md) separates local evidence from
+remaining infrastructure and platform tests. The opt-in
+[SSH/PTY experiment](experiments/ssh/README.md) exercises a disposable localhost
+server and real local shell; run it separately with `make check-ssh`.
 
 The native build requires `apps/client/src-tauri/icons/icon.png`. Its editable
 source is `icons/source.svg` in the same directory. Regenerate it from the root:

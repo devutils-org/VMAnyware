@@ -13,6 +13,11 @@ Each row is one bounded task; update `STATE.md` with its evidence before moving 
 | 0F | Mobile SSH/PTY feasibility | Repeat essential terminal checks on iOS and Android; record OS/device/toolchain versions, keyboard/special keys and suspend/resume behavior |
 | 0G | Risk report and next architecture decision | Identify proven behavior, remaining unknowns and supported MVP platforms; record any deliberate mobile limitation before Phase 1 |
 
+## Evidence review
+
+[Interim feasibility report](feasibility.md) distinguishes tested local behavior
+from real-host and platform gates. It does not close Phase 0.
+
 ## First slice: 0A
 
 Prepared source: a Cargo workspace with one Tauri client, React/Vite frontend,

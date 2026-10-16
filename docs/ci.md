@@ -18,7 +18,9 @@ Rustup reads `rust-toolchain.toml`, so changing the pinned compiler does not
 require copying its version into the workflow. Update the Node version and the
 action commit pins deliberately when updating the tested toolchain.
 
-The YAML structure and commands were checked locally on macOS. The workflow
+The YAML structure passed actionlint 1.7.12 on macOS (temporary binary checked
+against its published checksum manifest), and the configured commands passed
+locally. The workflow
 has not been pushed or executed on GitHub, and Linux test success has not been
 claimed. Native Tauri builds, signed installers, mobile builds, live Proxmox and
 SSH/PTY validation are outside these jobs. Run `make check` locally for the

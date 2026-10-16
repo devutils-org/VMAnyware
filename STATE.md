@@ -23,8 +23,12 @@ Updated: 2026-10-16. Historical evidence and decisions are in Git and docs.
   SIGTERM request graceful shutdown; startup failures emit fixed stage codes.
 - Prepared GitHub Actions server/frontend checks with pinned actions and locks;
   workflow not pushed or executed, Linux success remains unverified.
-- Debian Cloud-Init template guide and configuration/API/operation/task/diagnostic
-  documentation. No real template preparation commands have been executed.
+- Debian Cloud-Init template guide, platform/toolchain evidence matrix and
+  interim feasibility report. No real template preparation was executed.
+- Isolated opt-in desktop SSH/PTY experiment, outside the root workspace and
+  application dependency graph. Generated in-memory keys and localhost fixture
+  prove strict host-key checks, signed authentication, real local shell output,
+  resize, Ctrl-C foreground interruption and fresh reconnect. See ADR 0008.
 
 ## Current verification
 
@@ -43,8 +47,17 @@ Apple CommandLineTools. Dependency locks and compiler pin are committed.
   hashes, migrations, reopen, idempotent jobs, terminal persistence and recovery.
 - Native HTTP tests cover typed requests, validation/provisioning input bounds,
   safe field hints, redaction, previews and preflight result decoding.
-- CI YAML triggers/jobs parsed locally. Its commands have passed locally; no
-  GitHub runner, native packaging or mobile CI result is claimed.
+- CI YAML passed actionlint 1.7.12 using a temporary checksum-verified binary.
+  Its commands passed locally; no GitHub/Linux/native/mobile CI result is claimed.
+- `make check-ssh` passed isolated formatting, locked Clippy and all four SSH
+  tests on macOS arm64. The real PTY test uses two fresh connections, observes
+  stty size changes and requires foreground sleep interruption/status 130 within
+  two seconds. Fixture cleanup leaves no owned shell/sleep processes. An early
+  development timeout remains undiagnosed and is documented honestly; repeated
+  final checks passed. The experiment has no existing credentials or config.
+- The running local service was rebuilt/restarted with the current code; a real
+  validation POST returned HTTP 200, canonical hash and generated request ID.
+  Current UI features compile; their manual native walkthrough remains pending.
 - Template guide: seven shell blocks passed syntax checks without execution;
   links/catalog sample reviewed; official dated image/manifest/build metadata
   exist. No cloud image was downloaded and no VM operation was executed.
@@ -58,11 +71,11 @@ No Proxmox infrastructure has been contacted. Phase 0 remains incomplete.
 
 ## Next single task
 
-Run an isolated local SSH/PTY feasibility spike with generated ephemeral fixture
-keys, explicit host-key trust, changed-key rejection, authentication, data,
-resize and reconnect. Keep experimental dependencies outside the root workspace
-until working evidence supports an architecture decision. A protocol fixture
-alone must not be presented as a real interactive shell or mobile validation.
+Prepare desktop terminal integration starting with persisted endpoint-scoped
+host-key trust and explicit first-use confirmation/changed-key rejection, tested
+against the local fixture. Choose platform credential access before connecting
+real hosts. The isolated candidate is not yet a production/mobile library choice.
+Live Proxmox inventory/preflight still awaits the approved PC and catalog.
 
 ## External inputs and limits
 
