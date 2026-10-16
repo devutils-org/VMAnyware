@@ -1,129 +1,83 @@
 # PocketLab — current state
 
-Updated: 2026-10-16. Keep this file short; historical decisions belong in ADRs.
+Updated: 2026-10-16. Historical evidence and decisions are in Git and docs.
 
 ## Implemented
 
-- Tauri 2/React/TypeScript/Vite shell with a `runtime_platform` native command.
-  Browser preview disables the native bridge check.
-- Local Axum service: health endpoint, safe errors, loopback-only binding,
-  validated port, safe JSON request/lifecycle diagnostics, generated request IDs
-  and graceful Unix SIGINT/SIGTERM shutdown. Subprocess tests verify redaction
-  and same-database restart/lock release. Windows source remains untested.
-- Verified-TLS, read-only Proxmox client and local inventory endpoint/UI.
-- Strict versioned YAML definitions, deterministic exports/hashes, SQLite
-  migration and persistent create/list/read APIs; native YAML editor/catalog
-  with standalone validation without save and safe field-specific error hints.
-- Definitions named `validate` can be read through the existing static route;
-  POST on that path still validates without saving. No names were reserved.
-- Durable inventory jobs: queued/running/terminal states, idempotent enqueue,
-  background worker, status API, native polling/resume cache and startup recovery.
-- SQLite migration 2 and an exclusive database service lock prevent duplicate
-  process ownership. No VM mutation jobs are implemented yet.
-- Explicit server-owned image/template catalog and stateless offline provisioning
-  plans. Native preview shows source/target/resources/storage/network/access,
-  binds inputs with deterministic hashes, and hides stale results after edits.
-- Read-only provisioning preflight in server/native UI: current template/disk,
-  Cloud-Init drive, storage/capacity, bridge and candidate VMID observations,
-  with explicit passed/failed/unknown results bound to the preview hash. No
-  mutation, reservation or execution approval is implemented.
-- Read-only Proxmox task status/polling validates UPID/node identity, redacts
-  failure details and bounds request/poll time. Local TLS fixtures passed;
-  no durable provider-task linkage or live task observation is claimed.
-- Debian 13 amd64 template preparation guide: dated image/checksum evidence,
-  unbooted import, explicit catalog mapping and optional disposable-clone
-  validation. Official syntax/artifacts reviewed; no host commands executed.
-- README, scoped Makefile checks, tool doctor, API contract, Phase 0 brief,
-  agent instructions and architecture decisions. Original roadmap retained.
+- Tauri 2/React/TypeScript native shell; user confirmed the macOS native bridge.
+- Loopback-only Axum service, validated runtime configuration, verified-TLS
+  Proxmox reads and safe errors. No provider mutation methods are implemented.
+- Strict versioned YAML definitions, deterministic exports/hashes and SQLite
+  create/list/read storage. Native editor validates without saving and provides
+  safe field hints. Definitions named `validate` can also be read normally.
+- Durable inventory jobs with idempotent enqueue, background worker, polling,
+  terminal persistence and interruption recovery. SQLite migration 2 and an
+  exclusive process lock protect database ownership.
+- Explicit server template catalog, deterministic offline provisioning preview,
+  and read-only preflight for template/disk/Cloud-Init/storage/bridge/VMID.
+  Results are passed/failed/unknown and bound to current inputs/plan hash.
+- Read-only provider task observation with validated UPID/node identity,
+  redacted failure status and bounded polling. No durable provider-task linkage
+  or guest readiness is implied by this helper.
+- Safe JSON request/lifecycle events and generated request IDs. Unix SIGINT and
+  SIGTERM request graceful shutdown; startup failures emit fixed stage codes.
+- Prepared GitHub Actions server/frontend checks with pinned actions and locks;
+  workflow not pushed or executed, Linux success remains unverified.
+- Debian Cloud-Init template guide and configuration/API/operation/task/diagnostic
+  documentation. No real template preparation commands have been executed.
 
-## Fixes from the first real build
+## Current verification
 
-- Formatted the server HTTP contract test with rustfmt.
-- Added the required RGBA `icons/icon.png` and editable SVG source. The missing
-  icon previously made `tauri::generate_context!()` panic during compilation.
-- Changed the provisional bundle ID to `dev.pocketlab.client`, removing the
-  warning about the `.app` suffix on macOS.
-- Pinned Rust to the tested `1.99.1`. Both Cargo and npm lockfiles now exist.
+Environment: macOS arm64, Rust/Cargo 1.99.1, Node 26.11.1, npm 11.20.0,
+Apple CommandLineTools. Dependency locks and compiler pin are committed.
 
-## Verification
+- Latest `make check` passed frontend TypeScript/Vite build, workspace formatting,
+  all-target Clippy with warnings denied and all 60 tests: 49 server, 11 native.
+- Provider tests use generated localhost TLS fixtures, never runtime credentials.
+  They cover certificate/hostname/authentication failures, time/size bounds,
+  inventory, preflight, task status validation and bounded polling.
+- Actual server subprocess tests passed safe log-field allowlists/redaction,
+  unknown routes/methods, generated IDs, SIGTERM/SIGINT exit zero and restart
+  with the same database after lock release. Tests clear the child environment.
+- HTTP/storage tests cover YAML validation, save/list/read/conflicts, canonical
+  hashes, migrations, reopen, idempotent jobs, terminal persistence and recovery.
+- Native HTTP tests cover typed requests, validation/provisioning input bounds,
+  safe field hints, redaction, previews and preflight result decoding.
+- CI YAML triggers/jobs parsed locally. Its commands have passed locally; no
+  GitHub runner, native packaging or mobile CI result is claimed.
+- Template guide: seven shell blocks passed syntax checks without execution;
+  links/catalog sample reviewed; official dated image/manifest/build metadata
+  exist. No cloud image was downloaded and no VM operation was executed.
 
-Environment: macOS arm64, Rust/Cargo 1.99.1, Node v26.11.1, npm 11.20.0.
-Apple developer directory: `/Library/Developer/CommandLineTools`.
-
-- `make doctor`: passed. The old missing-tool/network restrictions are resolved.
-- `make check-client`: passed TypeScript checking and Vite production build.
-- Latest `make check-server`: passed fmt, Clippy with warnings denied and 42 server tests.
-- Definition route regression reproduced HTTP 405 before the fix. The new HTTP
-  test verifies missing-name 404, side-effect-free POST validation, create 201
-  and exact saved-record retrieval 200 for the valid name `validate`. This slice
-  changed server routing only; no native rebuild or live-host test was needed.
-- Latest client verification: `make check-client`, native Clippy with warnings
-  denied and all 8 native HTTP tests passed (49 tests across server/client).
-- Preflight fixtures cover full router POST over verified localhost TLS, four
-  GET-only provider calls, plan-hash binding, denied reads, invalid and missing
-  metadata, failed capability checks and request guards. No real host is used.
-- Latest `cargo build -p pocketlab-server --locked` passed. Actual binary smoke
-  with an explicit example catalog and temporary SQLite database passed: offline
-  plan HTTP 200, preflight without provider 503, Origin 403, invalid VMID 422,
-  no definition/operation writes, graceful SIGINT shutdown.
-- Documentation-only template slice: seven shell blocks passed `bash -n`
-  without execution; local Markdown links resolved; catalog sample matched
-  the repository example schema. The dated official Debian manifest listed
-  the qcow2 artifact and build metadata listed Cloud-Init, OpenSSH server and
-  disk-growth utilities. No image download, VM operation or runtime test was
-  performed for this documentation change.
-- Earlier baseline checks before preflight:
-- `make check-rust`: passed workspace fmt, Clippy with warnings denied and all
-  42 tests: 6 native HTTP, 11 configuration/provider/TLS, 8 definitions,
-  3 service HTTP, 7 operations and 7 provisioning/catalog tests.
-- Live server started on an unused loopback port, returned HTTP 200 with
-  `{"status":"ok"}`, and shut down on SIGINT with exit code 0.
-- Live HTTP/SQLite restart check passed using a temporary database: validation,
-  save/list/read, duplicate HTTP 409, invalid definition HTTP 422, unconfigured
-  provider HTTP 503, and unchanged saved record/hash after server restart.
-- Live operation smoke passed: HTTP 202, repeated request key returns the same
-  operation, failed result survives restart, second process cannot acquire the
-  same database, and a simulated pre-crash running record becomes interrupted
-  on actual service startup. No provider was configured for this process test.
-- Live provisioning-preview smoke passed with the example catalog, temporary
-  database and no provider: explicit mapping loaded, stable plan hash, requested
-  resources/VMID returned, disk shrink/source VMID/unknown fields rejected,
-  no definitions or operations written. Invalid catalog refused binary startup
-  without echoing configuration values. Plans explicitly remain unverified and
-  do not reserve VMIDs or enable creation.
-- `make dev`: compiled successfully and launched `target/debug/pocketlab-client`.
-  The user confirmed the native window and button result:
-  `Native bridge connected (macos)`. The desktop UI-to-Rust smoke check passes.
-- `npm --prefix apps/client run tauri build -- --no-bundle`: passed; optimized
-  native executable generated at `target/release/pocketlab-client`. Installers,
-  signing and distribution bundles were not built.
-- The preview/preflight UI is compiled; a manual walkthrough with the user's real
-  template catalog and live host validation are still pending.
-
-The initial implementation is versioned in Git; see `git log` for the commit.
-No Proxmox infrastructure has been contacted. Mobile and SSH remain untested.
-Phase 0 is not complete; no unsupported roadmap acceptance claims are made.
+Earlier runtime evidence: `make doctor`, actual local HTTP/SQLite restart smokes,
+`make dev` native launch and user-confirmed `Native bridge connected (macos)`.
+`tauri build -- --no-bundle` produced an optimized binary before the latest
+features; current native frontend changes compile but await manual walkthrough.
+Windows shutdown code is source-prepared, not compiled or tested on Windows.
+No Proxmox infrastructure has been contacted. Phase 0 remains incomplete.
 
 ## Next single task
 
-Finish integrated safe service diagnostics/shutdown and expose standalone YAML
-validation in the native editor. Then add credential-free CI for the already
-verified local commands. Live inventory/preflight still needs the user's PC.
+Run an isolated local SSH/PTY feasibility spike with generated ephemeral fixture
+keys, explicit host-key trust, changed-key rejection, authentication, data,
+resize and reconnect. Keep experimental dependencies outside the root workspace
+until working evidence supports an architecture decision. A protocol fixture
+alone must not be presented as a real interactive shell or mobile validation.
 
-## Open inputs
+## External inputs and limits
 
+- User will install Proxmox on another PC. The current Apple M1 Mac supports
+  native virtualization but reports nested virtualization unsupported; no local
+  VM was installed or changed.
+- Live inventory/preflight needs an explicitly approved test endpoint, trusted
+  CA, dedicated token and prepared catalog. Follow `docs/debian-template.md`.
+- Real clone/configure/start/snapshot/restore/cleanup operations need approval of
+  the concrete disposable target and operations. Guest readiness remains untested.
+- SSH/PTY on a real guest and iOS/Android require their own hosts/devices/toolchains.
 - `../omniscient` and `../atfq` were inspected; `../distroproof` was not found.
-- User will set up Proxmox on another PC. Current Apple M1 Mac reports native
-  virtualization supported but nested virtualization unsupported; no local VM
-  was installed or changed.
-- Test Proxmox endpoint, template, storage/network and approved mutation scope.
-- iOS/Android build and test devices/simulators for terminal feasibility.
 
 ## Remaining scope
 
-Real Proxmox, provisioning, snapshots and desktop/mobile SSH remain untested.
-Inventory operation orchestration is implemented; VM orchestration/instances,
-authenticated remote control planes and release packaging are not implemented.
-Autonomous source work has not been
-treated as evidence for those milestones. Phase 0 is still open; independent
-definition work is recorded in ADR 0004 rather than marking feasibility complete.
+Application provisioning, VM instances/lifecycle, snapshots, desktop/mobile SSH,
+authenticated remote control planes and signed distribution are not implemented.
+Default tests continue to work without Proxmox, credentials or mutable VMs.

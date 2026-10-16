@@ -1,0 +1,47 @@
+name: Local checks
+
+'on':
+  push:
+  pull_request:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: checks-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  server:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Install repository-pinned Rust toolchain
+        run: rustup show active-toolchain
+      - name: Check formatting
+        run: cargo fmt -p pocketlab-server -- --check
+      - name: Check server with Clippy
+        run: cargo clippy --locked -p pocketlab-server --all-targets -- -D warnings
+      - name: Run server and local TLS/process tests
+        run: cargo test --locked -p pocketlab-server
+
+  frontend:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '26.11.1'
+          cache: npm
+          cache-dependency-path: apps/client/package-lock.json
+      - name: Install locked client dependencies
+        run: npm --prefix apps/client ci
+      - name: Check TypeScript and build frontend
+        run: make check-client

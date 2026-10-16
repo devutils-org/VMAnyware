@@ -55,7 +55,14 @@ returned by Rust. Browser preview deliberately disables that check.
 Resolved dependencies are recorded in `apps/client/package-lock.json` and
 `Cargo.lock`. Rust is pinned to `1.99.1` in `rust-toolchain.toml`.
 Use `npm --prefix apps/client ci` to reproduce the frontend installation.
-See `STATE.md` for actual build and runtime verification.
+See `STATE.md` for actual build and runtime verification. The prepared
+[CI workflow](docs/ci.md) runs server and frontend checks without Proxmox;
+GitHub execution and native/mobile CI remain unverified.
+
+The native editor also provides **Validate YAML**, which checks the current
+definition without saving. Server diagnostics and shutdown behavior are
+documented in [diagnostics](docs/diagnostics.md), and the read-only task helper
+in [provider task observation](docs/provider-tasks.md).
 
 The native build requires `apps/client/src-tauri/icons/icon.png`. Its editable
 source is `icons/source.svg` in the same directory. Regenerate it from the root:
