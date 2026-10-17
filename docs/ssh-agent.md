@@ -99,9 +99,9 @@ iOS or Android. Native default checks now also exercise the product selection/au
 path with generated keys, temporary trust stores and disposable agents. No new
 application dependency was needed. `STATE.md` records actual checks/results.
 
-The next native step is a bounded authenticated PTY/session transport. Preserve
-explicit endpoint/user/identity selection and host verification. A graphical
-terminal and real guest tests remain separate acceptance gates.
+The [bounded native PTY transport](ssh-sessions.md) now reuses this authentication
+path and has local protocol-fixture evidence. A graphical terminal and real guest
+tests remain separate acceptance gates.
 
 Primary references: [OpenSSH agent manual](https://man.openbsd.org/ssh-agent),
 [russh agent client](https://docs.rs/russh/0.64.1/russh/keys/agent/client/struct.AgentClient.html),

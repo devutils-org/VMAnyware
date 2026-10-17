@@ -74,7 +74,9 @@ Inspection never logs in or opens a shell; manual UI verification remains pendin
 The [macOS agent authentication check](docs/ssh-agent.md) lets you explicitly
 list identities and test one selected fingerprint after host verification. It
 closes the connection without opening a terminal. Default macOS Rust tests use
-disposable system agents; they never contact your configured agent.
+disposable system agents; they never contact your configured agent. The
+[bounded native PTY transport](docs/ssh-sessions.md) is fixture-tested; a graphical
+terminal is the next integration step.
 
 The native build requires `apps/client/src-tauri/icons/icon.png`. Its editable
 source is `icons/source.svg` in the same directory. Regenerate it from the root:

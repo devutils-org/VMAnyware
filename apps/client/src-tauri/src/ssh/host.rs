@@ -70,7 +70,12 @@ impl HostManager {
             tokio::net::TcpStream::from_std(socket).map_err(|_| "SSH connection failed")?;
         let handle = client::connect_stream(
             Arc::new(client::Config {
-                inactivity_timeout: Some(PROBE_LIMIT),
+                inactivity_timeout: Some(Duration::from_secs(300)),
+                keepalive_interval: Some(Duration::from_secs(30)),
+                keepalive_max: 3,
+                channel_buffer_size: 16,
+                window_size: 256 * 1024,
+                maximum_packet_size: 32 * 1024,
                 ..Default::default()
             }),
             socket,

@@ -1,4 +1,14 @@
-//! macOS host trust and explicit agent authentication. No terminal channels.
+//! macOS host trust, explicit agent authentication and bounded PTY transport.
+#[cfg(target_os = "macos")]
+mod session;
+#[cfg(target_os = "macos")]
+pub use session::{Event as SessionEvent, SessionManager, Started};
+#[cfg(not(target_os = "macos"))]
+pub struct SessionManager;
+#[cfg(not(target_os = "macos"))]
+pub type Started = ();
+#[cfg(not(target_os = "macos"))]
+pub type SessionEvent = ();
 #[cfg(target_os = "macos")]
 mod agent;
 #[cfg(target_os = "macos")]
@@ -147,5 +157,94 @@ pub fn cancel_ssh_authentication(
     #[cfg(not(target_os = "macos"))]
     {
         let _ = (window, manager, selection_id);
+    }
+}
+
+#[tauri::command]
+pub async fn start_ssh_session(
+    window: tauri::WebviewWindow,
+    manager: tauri::State<'_, SessionManager>,
+    selection_id: String,
+    fingerprint: String,
+    cols: u32,
+    rows: u32,
+) -> Result<Started, String> {
+    #[cfg(target_os = "macos")]
+    {
+        manager
+            .start(window.label(), &selection_id, &fingerprint, cols, rows)
+            .await
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = (window, manager, selection_id, fingerprint, cols, rows);
+        Err("SSH sessions are supported on macOS only".into())
+    }
+}
+#[tauri::command]
+pub async fn read_ssh_session(
+    window: tauri::WebviewWindow,
+    manager: tauri::State<'_, SessionManager>,
+    session_id: String,
+) -> Result<Option<SessionEvent>, String> {
+    #[cfg(target_os = "macos")]
+    {
+        manager.read(window.label(), &session_id).await
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = (window, manager, session_id);
+        Err("SSH sessions are supported on macOS only".into())
+    }
+}
+#[tauri::command]
+pub fn write_ssh_session(
+    window: tauri::WebviewWindow,
+    manager: tauri::State<'_, SessionManager>,
+    session_id: String,
+    bytes: Vec<u8>,
+) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    {
+        manager.write(window.label(), &session_id, bytes)
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = (window, manager, session_id, bytes);
+        Err("SSH sessions are supported on macOS only".into())
+    }
+}
+#[tauri::command]
+pub fn resize_ssh_session(
+    window: tauri::WebviewWindow,
+    manager: tauri::State<'_, SessionManager>,
+    session_id: String,
+    cols: u32,
+    rows: u32,
+) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    {
+        manager.resize(window.label(), &session_id, cols, rows)
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = (window, manager, session_id, cols, rows);
+        Err("SSH sessions are supported on macOS only".into())
+    }
+}
+#[tauri::command]
+pub fn close_ssh_session(
+    window: tauri::WebviewWindow,
+    manager: tauri::State<'_, SessionManager>,
+    session_id: String,
+) -> Result<(), String> {
+    #[cfg(target_os = "macos")]
+    {
+        manager.close(window.label(), &session_id)
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        let _ = (window, manager, session_id);
+        Err("SSH sessions are supported on macOS only".into())
     }
 }

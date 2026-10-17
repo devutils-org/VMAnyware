@@ -42,6 +42,10 @@ Updated: 2026-10-17. Historical evidence and decisions are in Git and docs.
   persisted host trust is verified before each agent access. Only one selected
   identity is tried, and success closes the connection without a terminal.
   Startup and host inspection never access the configured agent.
+- Native Rust PTY/session transport with window-bound IDs, positive PTY/shell
+  acknowledgments, bounded byte input/output, resize and explicit close. Startup
+  reuses the same selected-agent authentication path. Window destruction aborts
+  its actor and closes its owned socket. No graphical terminal is wired yet.
 - Rust-owned window/endpoint/key-bound UUID challenges expire after 120 seconds,
   are consumed once and invalidate on new inspection, cancellation or window
   destruction. Owner/probe limits are eight each; probes have a ten-second
@@ -52,8 +56,10 @@ Updated: 2026-10-17. Historical evidence and decisions are in Git and docs.
 Environment: macOS arm64, Rust/Cargo 1.99.1, Node 26.11.1, npm 11.20.0,
 Apple CommandLineTools. Dependency locks and compiler pin are committed.
 
-- Latest `make check` passed frontend TypeScript/Vite build, workspace formatting,
-  all-target Clippy with warnings denied and all 76 tests: 49 server, 27 native.
+- Latest frontend check passed TypeScript/Vite build. Latest `make check-rust`
+  passed formatting, all-target Clippy with warnings denied and all 80 workspace
+  tests: 49 server, 31 native. The preceding full `make check` passed 76 tests
+  before the transport-only slice; frontend sources did not change in that slice.
 - Provider tests use generated localhost TLS fixtures, never runtime credentials.
   They cover certificate/hostname/authentication failures, time/size bounds,
   inventory, preflight, task status validation and bounded polling.
@@ -91,6 +97,13 @@ Apple CommandLineTools. Dependency locks and compiler pin are committed.
   and unresponsive-agent timeout/socket closure. No personal agent was accessed.
   The isolated experiment remains at sixteen passing tests; no new dependency
   was added. Native screens compile but their manual walkthrough is pending.
+- Native PTY slice: `make check-rust` passed all 80 tests. Two localhost
+  protocol tests prove binary NUL/255/Ctrl-C round trips, 32 KiB input, resize,
+  positive PTY/shell acknowledgments and explicit refusals, exit/EOF/close,
+  wrong-window refusal, disconnect/reconnect and zero remaining owned fixture
+  connections after explicit close/window destruction. Two policy tests cover
+  queue saturation, single-reader enforcement, capacity and invalid dimensions.
+  This is protocol echo, not a native graphical or actual remote OS shell test.
 - The running local service was rebuilt/restarted with the current code; a real
   validation POST returned HTTP 200, canonical hash and generated request ID.
   Current UI features compile; their manual native walkthrough remains pending.
@@ -107,12 +120,11 @@ No Proxmox infrastructure has been contacted. Phase 0 remains incomplete.
 
 ## Next single task
 
-Implement a bounded native SSH PTY/session transport reusing the selected-agent
-authentication path. Keep session ownership in Rust, preserve binary data and
-backpressure, and prove resize, Ctrl-C, disconnect/reconnect and cleanup against
-local fixtures before adding a graphical terminal. No generic signing API or
-automatic login. Native host/authentication screens still need a manual
-walkthrough; live Proxmox checks await the approved PC/catalog.
+Connect a graphical macOS terminal to the bounded native PTY commands. Consume
+bytes incrementally with backpressure; bind input/resize/close to the current
+session and ignore stale results. Test frontend lifecycle and simulated IPC
+separately from the existing real native transport fixtures. Native walkthrough
+and real guest/Proxmox tests still await deliberate external setup.
 
 ## External inputs and limits
 

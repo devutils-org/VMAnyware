@@ -21,13 +21,17 @@ pub fn run() {
                         })?
                         .join("ssh-host-trust-v1"),
                 );
-                app.manage(ssh::AgentManager::new(hosts.clone()));
+                let agents = ssh::AgentManager::new(hosts.clone());
+                app.manage(ssh::SessionManager::new(agents.clone()));
+                app.manage(agents);
                 app.manage(hosts);
             }
             #[cfg(not(target_os = "macos"))]
             app.manage(ssh::HostManager);
             #[cfg(not(target_os = "macos"))]
             app.manage(ssh::AgentManager);
+            #[cfg(not(target_os = "macos"))]
+            app.manage(ssh::SessionManager);
             Ok(())
         })
         .on_window_event(|window, event| {
@@ -38,6 +42,9 @@ pub fn run() {
                 }
                 if let Some(manager) = window.try_state::<ssh::AgentManager>() {
                     manager.cancel(window.label());
+                }
+                if let Some(manager) = window.try_state::<ssh::SessionManager>() {
+                    manager.forget_owner(window.label());
                 }
             }
             #[cfg(not(target_os = "macos"))]
@@ -52,6 +59,11 @@ pub fn run() {
             ssh::list_ssh_identities,
             ssh::check_ssh_authentication,
             ssh::cancel_ssh_authentication,
+            ssh::start_ssh_session,
+            ssh::read_ssh_session,
+            ssh::write_ssh_session,
+            ssh::resize_ssh_session,
+            ssh::close_ssh_session,
             control_plane::inspect_control_plane,
             control_plane::list_definitions,
             control_plane::save_definition,

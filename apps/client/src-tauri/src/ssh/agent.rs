@@ -49,6 +49,11 @@ pub struct Authentication {
     username: String,
     fingerprint: String,
 }
+pub(super) struct Authenticated {
+    pub handle: russh::client::Handle<super::host::ProbeClient>,
+    pub shutdown: super::host::ProbeSocket,
+    pub identity: Authentication,
+}
 struct Ticket {
     endpoint: Endpoint,
     username: String,
@@ -209,6 +214,28 @@ impl AgentManager {
         id: &str,
         selected: &str,
     ) -> Result<Authentication, String> {
+        tokio::time::timeout(LIMIT, async {
+            let connection = self.connect_authenticated(owner, id, selected).await?;
+            connection
+                .handle
+                .disconnect(
+                    Disconnect::ByApplication,
+                    "authentication check complete",
+                    "en",
+                )
+                .await
+                .map_err(|_| "SSH disconnect failed")?;
+            Ok(connection.identity)
+        })
+        .await
+        .map_err(|_| "SSH authentication check timed out")?
+    }
+    pub(super) async fn connect_authenticated(
+        &self,
+        owner: &str,
+        id: &str,
+        selected: &str,
+    ) -> Result<Authenticated, String> {
         if id.len() > 64 || selected.len() > 128 {
             return Err(STALE.into());
         }
@@ -261,19 +288,15 @@ impl AgentManager {
                 return Err("SSH authentication rejected for the selected identity".into());
             }
             ensure_active(&active)?;
-            handle
-                .disconnect(
-                    Disconnect::ByApplication,
-                    "authentication check complete",
-                    "en",
-                )
-                .await
-                .map_err(|_| "SSH disconnect failed")?;
-            Ok(Authentication {
-                host: ticket.endpoint.host().into(),
-                port: ticket.endpoint.port(),
-                username: ticket.username,
-                fingerprint: fingerprint(&selected),
+            Ok(Authenticated {
+                handle,
+                shutdown: _shutdown,
+                identity: Authentication {
+                    host: ticket.endpoint.host().into(),
+                    port: ticket.endpoint.port(),
+                    username: ticket.username,
+                    fingerprint: fingerprint(&selected),
+                },
             })
         })
         .await
