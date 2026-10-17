@@ -45,8 +45,15 @@ fn start(database: &std::path::Path, port: u16) -> (Process, mpsc::Receiver<Stri
 }
 
 fn stop(process: &mut Process, signal: &str) {
-    assert!(Command::new("kill")
-        .args([signal, &process.0.id().to_string()])
+    assert!(Command::new("/bin/sh")
+        // POSIX shells provide kill even when minimal images omit its executable.
+        .args([
+            "-c",
+            "kill -s \"$1\" \"$2\"",
+            "pocketlab-test-signal",
+            signal.trim_start_matches('-'),
+            &process.0.id().to_string(),
+        ])
         .status()
         .unwrap()
         .success());

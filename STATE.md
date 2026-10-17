@@ -189,6 +189,13 @@ resources; normal app startup/distribution and real guest tests remain open.
 Windows shutdown code is source-prepared, not compiled or tested on Windows.
 No Proxmox infrastructure has been contacted. Phase 0 remains incomplete.
 
+- Linux preparation: the pinned Debian 12 arm64 container compiled the server
+  and passed Clippy, but diagnostics tests failed. The image has a POSIX shell
+  kill builtin and no external kill executable; tests now send signals through
+  the shell builtin with separately passed arguments. All 50 server tests and
+  server formatting/Clippy pass again on macOS. Linux rerun remains pending.
+  The opt-in runner checks committed HEAD with an isolated local Docker client.
+
 ## Next single task
 
 Check Linux server feasibility using the explicitly local Docker socket and an

@@ -1,4 +1,4 @@
-.PHONY: doctor install-client dev web server check check-client check-rust check-server check-ssh check-terminal-webkit check-terminal-native
+.PHONY: doctor install-client dev web server check check-client check-rust check-server check-ssh check-terminal-webkit check-terminal-native check-linux-server
 
 .DEFAULT_GOAL := doctor
 
@@ -36,6 +36,10 @@ check-rust:
 	cargo fmt --all -- --check
 	cargo clippy --workspace --all-targets -- -D warnings
 	cargo test --workspace
+
+# Opt-in local Docker Linux arm64 check of committed source, with no credentials.
+check-linux-server:
+	node scripts/check-linux-server.mjs
 
 check-server:
 	cargo fmt -p pocketlab-server -- --check

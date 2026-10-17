@@ -43,3 +43,16 @@ Proxmox tests will use the user's separate PC.
 For platform setup, consult [official Tauri prerequisites](https://v2.tauri.app/start/prerequisites/).
 Use upstream instructions as prerequisites and record actual project results
 before changing the table. See [interim feasibility](feasibility.md) for open risks.
+
+## Isolated Linux server check
+
+`make check-linux-server` checks committed HEAD, not working-tree edits, using
+an anonymous Docker configuration and the explicit local Unix socket. It archives
+tracked source into a disposable directory and runs locked server formatting,
+Clippy and tests in the digest-pinned Rust 1.99.1 Debian 12 arm64 image. The
+container has two CPUs, 2 GiB RAM, a PID limit, no extra capabilities and no
+published ports. No personal configuration, credentials or Docker socket is
+mounted. Public image/component/crate downloads require network access.
+The container and temporary source are removed afterward; the image remains in
+the local Docker cache. This opt-in check is separate from default checks and
+provides neither GitHub Actions nor Linux desktop evidence.
