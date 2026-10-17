@@ -226,6 +226,31 @@ No Proxmox infrastructure has been contacted. Phase 0 remains incomplete.
   WebKit IPC covers unavailable/retry/reset with zero inventory calls. These
   are separate transport/UI checks, not a normal-app end-to-end walkthrough.
 
+- Local server handoff: the previously owned PID 25304 held the default SQLite
+  lock and port 8080, causing the user's second server launch to fail. It was
+  stopped with SIGTERM. A cleared-environment server reopened the same database,
+  emitted server_listening on 8080, then exited zero on SIGTERM. No lock file or
+  database was deleted. No agent-owned server remains; the user can run make server.
+
+## Session handoff — 2026-10-17
+
+- User explicitly stopped the session; do not continue background development.
+- Latest implementation commit: 557ff7f (independent local-service check/retry).
+  Checks passed: 84 Rust tests, seven JavaScript tests, Clippy/formatting/build,
+  two simulated-IPC WebKit scenarios. Linux server/frontend checks passed in
+  earlier slices; no Linux native desktop or iOS application proof.
+- The duplicate database-lock failure was resolved by stopping the known local
+  server and verifying reopen/clean exit against the same database. The user
+  may subsequently start their own server; inspect current ownership before
+  starting or stopping anything. Never delete the lock to bypass an active owner.
+- Demo commands: make server and make dev in separate terminals. Run only one
+  Vite/Tauri development session on port 1420. Check local service works without
+  Proxmox; Connect requests Proxmox inventory and requires provider configuration.
+- Agreed priority: improve/verify the macOS demo while the user prepares Proxmox
+  on another PC. Keep macOS as the primary development host; use isolated Linux
+  checks. An iOS UI demo is a later feasibility step requiring full Xcode;
+  current SSH-agent authentication is macOS-specific.
+
 ## Next single task
 
 Verify normal macOS application startup and unavailable-service behavior in an
