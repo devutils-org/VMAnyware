@@ -232,6 +232,14 @@ No Proxmox infrastructure has been contacted. Phase 0 remains incomplete.
   emitted server_listening on 8080, then exited zero on SIGTERM. No lock file or
   database was deleted. No agent-owned server remains; the user can run make server.
 
+## Remote repository
+
+Private GitHub repository: https://github.com/moha-bekh/VMAnyware
+Local remote: origin (HTTPS). Created at the user's explicit request to publish
+existing commits. Main is the branch to push; verify remote HEAD after transfer.
+Pushing the prepared workflow may trigger GitHub Actions; local checks are not
+proof of a successful hosted run.
+
 ## Session handoff — 2026-10-17
 
 - User explicitly stopped the session; do not continue background development.
