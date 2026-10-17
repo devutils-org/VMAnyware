@@ -272,7 +272,7 @@ Tasks:
 - [ ] Read VM inventory and inspect a known template.
 - [ ] Prototype clone → Cloud-Init configuration → start → poll task → verify readiness.
 - [ ] Prototype create/list/restore snapshot on a disposable VM.
-- [ ] Test SSH authentication, host-key verification, interactive PTY and terminal resizing on desktop. (Isolated macOS SSH/real-shell fixture passes; native terminal integration and remote guest validation pending.)
+- [ ] Test SSH authentication, host-key verification, interactive PTY and terminal resizing on desktop. (Native macOS manager/agent/real-shell fixtures and isolated WebKit renderer checks pass; integrated Tauri UI/IPC and remote guest validation pending.)
 - [ ] Test whether the chosen terminal and SSH approach works on both iOS and Android.
 - [ ] Record mobile limitations and any platform-specific implementation required.
 - [ ] Write short ADRs for the decisions that materially affect architecture.

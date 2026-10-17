@@ -64,10 +64,10 @@ Apple CommandLineTools. Dependency locks and compiler pin are committed.
 
 - Latest `make check` passed frontend TypeScript/Vite build, seven Node terminal
   controller tests, Rust formatting/all-target Clippy with warnings denied and
-  all 80 workspace tests: 49 server, 31 native. Latest `make check-rust` passed
-  82 tests: 49 server, 33 native. Latest `make check-terminal-webkit` passed the
-  frontend build/seven controller tests and both WebKit scenarios. The main
-  bundle is now ~246 KiB and the lazy terminal ~335 KiB; no chunk-size warning.
+  all 83 workspace tests: 50 server, 33 native. Latest `make check-ssh` passed
+  sixteen isolated tests. `make check-terminal-webkit` passed both isolated
+  development scenarios. The main bundle is ~246 KiB and the lazy terminal
+  ~335 KiB before gzip; no chunk-size warning.
 - Provider tests use generated localhost TLS fixtures, never runtime credentials.
   They cover certificate/hostname/authentication failures, time/size bounds,
   inventory, preflight, task status validation and bounded polling.
@@ -150,9 +150,11 @@ Apple CommandLineTools. Dependency locks and compiler pin are committed.
   deadline, emits only the fixed timeout/stopped events, closes its socket and
   restarts with the same database/port. An idle restart still exits on SIGINT in
   under two seconds. The bound covers HTTP drain, not arbitrary blocking OS I/O.
-- The running local service was rebuilt/restarted with the current code; a real
-  validation POST returned HTTP 200, canonical hash and generated request ID.
-  Current UI features compile; their manual native walkthrough remains pending.
+- The owned local service was restarted with current shutdown code on loopback
+  8080 and the existing local database, with provider/catalog variables unset. A
+  real GET /api/v1/health returned {"status":"ok"}. Earlier validation POST
+  evidence returned HTTP 200/canonical hash/request ID. Current native screens
+  still await the integrated application walkthrough.
 - Template guide: seven shell blocks passed syntax checks without execution;
   links/catalog sample reviewed; official dated image/manifest/build metadata
   exist. No cloud image was downloaded and no VM operation was executed.
@@ -160,18 +162,19 @@ Apple CommandLineTools. Dependency locks and compiler pin are committed.
 Earlier runtime evidence: `make doctor`, actual local HTTP/SQLite restart smokes,
 `make dev` native launch and user-confirmed `Native bridge connected (macos)`.
 Latest `npm --prefix apps/client run tauri build -- --no-bundle` passed and
-produced the current optimized `target/release/pocketlab-client` (1m15s Rust
-release build). It was not launched for an integrated SSH walkthrough. The
+produced the current optimized `target/release/pocketlab-client` (1m02s Rust
+release build), confirmed Mach-O arm64, including stall handling/lazy rendering. It was not launched for an integrated SSH walkthrough. The
 renderer smoke uses its own isolated WebKit host, not the packaged native app.
 Windows shutdown code is source-prepared, not compiled or tested on Windows.
 No Proxmox infrastructure has been contacted. Phase 0 remains incomplete.
 
 ## Next single task
 
-Run a final complete local verification and refresh the optimized native build
-for the stalled-output/deferred-renderer changes. Then the next feasibility gate
-is an explicitly selected native Tauri UI/IPC/shell walkthrough; keep the real
-Proxmox, mobile and packaged-runtime evidence gaps visible.
+Perform an explicitly selected packaged Tauri UI/IPC/shell walkthrough using the
+existing host-trust and agent workflow. Automated real-shell native-manager and
+WebKit renderer evidence now pass separately; do not present them as proof of
+that complete chain. Real Proxmox operations and mobile feasibility remain
+external gates; do not advance Phase 0 on assumed parity or fabricate success.
 
 ## External inputs and limits
 
