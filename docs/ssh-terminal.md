@@ -57,9 +57,18 @@ Rust tests exercise the product agent/PTY path against both generated protocol
 fixtures and an actual local OS shell, including real resize/Ctrl-C and owned
 process cleanup. `make check-ssh` retains its separate actual-shell exercise.
 
-A manual native application walkthrough combining the renderer, Tauri IPC and an
-approved disposable shell endpoint is still pending, as are packaged-runtime CSP,
-actual keyboard mappings, real guest/agent interoperability and mobile lifecycle.
+`make check-terminal-native` exercises the compiled frontend, lazy terminal/CSS,
+Tauri's actual IPC/custom asset protocol and existing CSP in a separate optimized
+macOS example with private trust, an incognito WebView and a disposable agent/
+real shell. The scenario verifies first-use confirmation against generated public
+metadata, trusted reinspection, exact identity selection, actual stdout/stty rows
+after resize, Ctrl-C/status 130 within two seconds and disconnect/reconnect.
+See [native fixture boundaries](../experiments/terminal-native/README.md).
+
+Normal application startup configuration, physical keyboard/IME behavior, real
+guest/OpenSSH/agent interoperability, installers/signing and mobile lifecycle
+still require their own walkthroughs. The example uses the product command source
+and frontend but does not replace those platform/infrastructure gates.
 The main bundle is about 246 KiB and the lazy terminal about 335 KiB before gzip;
 the original large-main-chunk warning is gone. `STATE.md` records actual build
 and test evidence; none of these local fixtures closes the real-host Phase 0 gate.

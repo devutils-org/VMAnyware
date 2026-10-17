@@ -1,4 +1,4 @@
-.PHONY: doctor install-client dev web server check check-client check-rust check-server check-ssh check-terminal-webkit
+.PHONY: doctor install-client dev web server check check-client check-rust check-server check-ssh check-terminal-webkit check-terminal-native
 
 .DEFAULT_GOAL := doctor
 
@@ -26,6 +26,11 @@ check-client:
 # Opt-in macOS renderer smoke; simulated IPC, never a user agent or real SSH host.
 check-terminal-webkit: check-client
 	node experiments/terminal-webkit/check.mjs
+
+# Real bundled Tauri/IPC/agent/shell fixture. macOS GUI session required.
+check-terminal-native: check-client
+	cargo build --locked --release -p pocketlab-client --example terminal_smoke --features tauri/custom-protocol
+	node experiments/terminal-native/check.mjs
 
 check-rust:
 	cargo fmt --all -- --check

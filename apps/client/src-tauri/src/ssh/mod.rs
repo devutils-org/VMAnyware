@@ -22,7 +22,7 @@ pub type Authentication = ();
 #[cfg(target_os = "macos")]
 mod host;
 #[cfg(target_os = "macos")]
-mod trust;
+pub(crate) mod trust;
 #[cfg(target_os = "macos")]
 pub use host::HostManager;
 #[cfg(not(target_os = "macos"))]

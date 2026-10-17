@@ -75,12 +75,12 @@ pub struct AgentManager {
     socket: Option<PathBuf>,
 }
 impl AgentManager {
-    pub fn new(hosts: HostManager) -> Self {
+    pub fn new(hosts: HostManager, socket: Option<PathBuf>) -> Self {
         Self {
             hosts,
             owners: Arc::default(),
             permits: Arc::new(tokio::sync::Semaphore::new(8)),
-            socket: None,
+            socket,
         }
     }
     pub fn cancel(&self, owner: &str) {

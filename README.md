@@ -80,6 +80,9 @@ disposable system agents; they never contact your configured agent. The
 [graphical terminal prototype](docs/ssh-terminal.md). `make check-terminal-webkit`
 optionally tests actual macOS WebKit rendering with isolated simulated IPC; it
 never connects to an agent or SSH host.
+`make check-terminal-native` runs a separate macOS Tauri example with real native
+IPC, a disposable agent and an actual local shell; see its
+[fixture boundaries](experiments/terminal-native/README.md).
 
 The native build requires `apps/client/src-tauri/icons/icon.png`. Its editable
 source is `icons/source.svg` in the same directory. Regenerate it from the root:

@@ -21,7 +21,7 @@ pub fn run() {
                         })?
                         .join("ssh-host-trust-v1"),
                 );
-                let agents = ssh::AgentManager::new(hosts.clone());
+                let agents = ssh::AgentManager::new(hosts.clone(), None);
                 app.manage(ssh::SessionManager::new(agents.clone()));
                 app.manage(agents);
                 app.manage(hosts);

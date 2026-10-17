@@ -1,12 +1,12 @@
 # Platform and toolchain evidence
 
-PocketLab has one validated development baseline as of 2026-10-16. No signed
+PocketLab has one validated development baseline as of 2026-10-17. No signed
 release or broad minimum-OS support guarantee is available yet. Future roadmap
 targets must be proven separately; upstream Tauri support alone is insufficient.
 
 | Target | Current evidence | Still required |
 | --- | --- | --- |
-| macOS 27.0.1 arm64, Apple M1 | Native dev launch and user-confirmed bridge; frontend/workspace tests; earlier release executable | Manual walkthrough of latest UI, signing, installer and release testing |
+| macOS 27.0.1 arm64, Apple M1 | Native dev launch/bridge; workspace tests/release executable; real Tauri/IPC/bundled-terminal/disposable-agent/shell smoke | Normal startup with deliberately selected real agent/guest, physical keyboard, signing/installers |
 | Linux | Ubuntu 24.04 server/frontend CI prepared only | First CI run; native WebKit dependencies, desktop launch and terminal tests |
 | Windows | Portable source plus Ctrl-C handling prepared | MSVC/WebView2 setup, compilation, launch, process/terminal tests |
 | iOS | No application build/runtime evidence | Full Xcode, signing, simulator/device and SSH/terminal/lifecycle proof |

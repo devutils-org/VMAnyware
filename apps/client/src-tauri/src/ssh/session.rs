@@ -309,7 +309,7 @@ mod tests {
     fn manager() -> (tempfile::TempDir, SessionManager) {
         let root = tempfile::tempdir().unwrap();
         let hosts = crate::ssh::HostManager::new(root.path().join("unused"));
-        (root, SessionManager::new(AgentManager::new(hosts)))
+        (root, SessionManager::new(AgentManager::new(hosts, None)))
     }
     #[tokio::test]
     async fn bounded_input_single_reader_and_owner_cleanup() {

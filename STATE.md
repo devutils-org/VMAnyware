@@ -150,11 +150,24 @@ Apple CommandLineTools. Dependency locks and compiler pin are committed.
   deadline, emits only the fixed timeout/stopped events, closes its socket and
   restarts with the same database/port. An idle restart still exits on SIGINT in
   under two seconds. The bound covers HTTP drain, not arbitrary blocking OS I/O.
+- Real native Tauri slice: the optimized macOS Cargo example passed the full
+  compiled frontend/lazy-xterm → real Tauri IPC → generated-key SSH peer → real
+  disposable agent → /bin/sh chain. First-use trust is confirmed only against
+  fixture-generated public metadata, then rechecked before exact identity use.
+  Two sessions render actual stdout, match stty rows to the resized renderer,
+  interrupt sleep/status 130 within two seconds and disconnect/reconnect. Rust
+  confirms resize observations, zero owned SSH connections and closed/reaped
+  shell fixtures. The child environment, trust store, agent and incognito WebView
+  are isolated. No new dependency, production test flag, fake IPC or CSP bypass.
+  `make check` still passed 83 Rust/seven frontend tests; all-target Clippy passed.
+  Two development assertions were corrected (DOM row concatenation and assuming
+  uncoalesced resize counts); final native scenario passed all checks.
 - The owned local service was restarted with current shutdown code on loopback
   8080 and the existing local database, with provider/catalog variables unset. A
   real GET /api/v1/health returned {"status":"ok"}. Earlier validation POST
   evidence returned HTTP 200/canonical hash/request ID. Current native screens
-  still await the integrated application walkthrough.
+  have an isolated real-Tauri walkthrough; normal startup/user-agent behavior
+  and real guest interoperability still require their own checks.
 - Template guide: seven shell blocks passed syntax checks without execution;
   links/catalog sample reviewed; official dated image/manifest/build metadata
   exist. No cloud image was downloaded and no VM operation was executed.
@@ -164,17 +177,18 @@ Earlier runtime evidence: `make doctor`, actual local HTTP/SQLite restart smokes
 Latest `npm --prefix apps/client run tauri build -- --no-bundle` passed and
 produced the current optimized `target/release/pocketlab-client` (1m02s Rust
 release build), confirmed Mach-O arm64, including stall handling/lazy rendering. It was not launched for an integrated SSH walkthrough. The
-renderer smoke uses its own isolated WebKit host, not the packaged native app.
+older renderer smoke uses an isolated WebKit host. The new optimized Cargo
+example now proves real Tauri IPC/custom-protocol/CSP integration with disposable
+resources; normal app startup/distribution and real guest tests remain open.
 Windows shutdown code is source-prepared, not compiled or tested on Windows.
 No Proxmox infrastructure has been contacted. Phase 0 remains incomplete.
 
 ## Next single task
 
-Perform an explicitly selected packaged Tauri UI/IPC/shell walkthrough using the
-existing host-trust and agent workflow. Automated real-shell native-manager and
-WebKit renderer evidence now pass separately; do not present them as proof of
-that complete chain. Real Proxmox operations and mobile feasibility remain
-external gates; do not advance Phase 0 on assumed parity or fabricate success.
+Extend the real native fixture with changed-host-key rejection through the UI,
+using only its generated localhost endpoint. Require no new authentication or
+trust overwrite after fixture key rotation; keep real guests/agents and physical
+keyboard/mobile behavior outside the claimed evidence.
 
 ## External inputs and limits
 
