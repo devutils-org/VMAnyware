@@ -68,6 +68,11 @@
         button("Disconnect").click();
         await wait(() => document.body.textContent.includes("Disconnected"), "explicit disconnect");
       }
+      await invoke("smoke_rotate_host");
+      button("Inspect host key").click();
+      await wait(() => document.body.textContent.includes("This host key differs from the trusted key"), "changed host key rejected");
+      check(!button("Trust this host key"), "Changed key offered trust overwrite");
+      check(!button("List agent identities"), "Changed host offered agent access");
       await invoke("smoke_report", { ok: true, step });
     } catch (error) {
       console.error(String(error));

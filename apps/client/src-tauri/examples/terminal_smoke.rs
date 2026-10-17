@@ -21,6 +21,27 @@ mod smoke {
         agent: Mutex<Option<fixture::DisposableAgent>>,
         directory: Mutex<Option<tempfile::TempDir>>,
         reported: AtomicBool,
+        trust_before_rotation: Mutex<Option<Vec<u8>>>,
+    }
+    #[tauri::command]
+    async fn smoke_rotate_host(state: tauri::State<'_, State>) -> Result<(), String> {
+        tokio::time::timeout(std::time::Duration::from_secs(3), async {
+            while state.fixture.connections.load(Ordering::SeqCst) != 0 {
+                tokio::time::sleep(std::time::Duration::from_millis(10)).await;
+            }
+        })
+        .await
+        .map_err(|_| "Fixture connection did not close")?;
+        let directory = state.directory.lock().unwrap();
+        let path = directory
+            .as_ref()
+            .ok_or("Fixture directory unavailable")?
+            .path()
+            .join("trust/trust.json");
+        let bytes = std::fs::read(path).map_err(|_| "Fixture trust unavailable")?;
+        *state.trust_before_rotation.lock().unwrap() = Some(bytes);
+        *state.fixture.host_key.lock().unwrap() = fixture::key();
+        Ok(())
     }
     #[tauri::command]
     async fn smoke_report(
@@ -54,11 +75,18 @@ mod smoke {
             .filter(|event| matches!(event, fixture::Protocol::Resize(_, _)))
             .count()
             >= 2;
+        let unchanged = {
+            let directory = state.directory.lock().unwrap();
+            let current = directory
+                .as_ref()
+                .and_then(|dir| std::fs::read(dir.path().join("trust/trust.json")).ok());
+            current.is_some() && *state.trust_before_rotation.lock().unwrap() == current
+        };
         state.fixture.shutdown();
         state.agent.lock().unwrap().take();
         state.directory.lock().unwrap().take();
-        let passed = ok && clean && shells_closed && authenticated && resized;
-        eprintln!("Native Tauri smoke: {} (real IPC/agent/shell; step={step}, cleanup={clean}, shells={shells_closed}, auth={authenticated}, resize={resized})", if passed { "passed" } else { "FAILED" });
+        let passed = ok && clean && shells_closed && authenticated && resized && unchanged;
+        eprintln!("Native Tauri smoke: {} (real IPC/agent/shell; step={step}, cleanup={clean}, shells={shells_closed}, auth={authenticated}, resize={resized}, trust_unchanged={unchanged})", if passed { "passed" } else { "FAILED" });
         app.exit(if passed { 0 } else { 1 });
         Ok(())
     }
@@ -105,6 +133,7 @@ mod smoke {
                 agent: Mutex::new(Some(agent)),
                 directory: Mutex::new(Some(directory)),
                 reported: AtomicBool::new(false),
+                trust_before_rotation: Mutex::new(None),
             })
             .invoke_handler(tauri::generate_handler![
                 ssh::ssh_host_support,
@@ -119,7 +148,8 @@ mod smoke {
                 ssh::write_ssh_session,
                 ssh::resize_ssh_session,
                 ssh::close_ssh_session,
-                smoke_report
+                smoke_report,
+                smoke_rotate_host
             ])
             .setup(move |app| {
                 let handle = app.handle().clone();

@@ -63,6 +63,8 @@ macOS example with private trust, an incognito WebView and a disposable agent/
 real shell. The scenario verifies first-use confirmation against generated public
 metadata, trusted reinspection, exact identity selection, actual stdout/stty rows
 after resize, Ctrl-C/status 130 within two seconds and disconnect/reconnect.
+Generated host-key rotation is refused through the actual UI with no further
+authentication or persisted-trust overwrite.
 See [native fixture boundaries](../experiments/terminal-native/README.md).
 
 Normal application startup configuration, physical keyboard/IME behavior, real

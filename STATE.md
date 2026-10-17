@@ -162,6 +162,12 @@ Apple CommandLineTools. Dependency locks and compiler pin are committed.
   `make check` still passed 83 Rust/seven frontend tests; all-target Clippy passed.
   Two development assertions were corrected (DOM row concatenation and assuming
   uncoalesced resize counts); final native scenario passed all checks.
+- Native changed-key slice: the real Tauri example also rotates only its generated
+  localhost server key after two terminal sessions. The actual UI refuses the
+  changed key and offers neither overwrite nor identity listing. Native report
+  confirms exactly two authentications and byte-identical temporary trust data
+  before/after rotation. Optimized native smoke, formatting and all-target Clippy
+  passed. This adds no production command or real infrastructure operation.
 - The owned local service was restarted with current shutdown code on loopback
   8080 and the existing local database, with provider/catalog variables unset. A
   real GET /api/v1/health returned {"status":"ok"}. Earlier validation POST
@@ -185,10 +191,10 @@ No Proxmox infrastructure has been contacted. Phase 0 remains incomplete.
 
 ## Next single task
 
-Extend the real native fixture with changed-host-key rejection through the UI,
-using only its generated localhost endpoint. Require no new authentication or
-trust overwrite after fixture key rotation; keep real guests/agents and physical
-keyboard/mobile behavior outside the claimed evidence.
+Check Linux server feasibility using the explicitly local Docker socket and an
+isolated client configuration, never personal Docker credentials/remote contexts.
+Verify availability of the exact pinned compiler image before any test; record
+actual Linux evidence or the external toolchain blocker without claiming CI ran.
 
 ## External inputs and limits
 

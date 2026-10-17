@@ -29,7 +29,10 @@ opens the terminal and observes shell stdout rendered by xterm. It resizes the
 container and requires actual stty row count to match the renderer, sends Ctrl-C
 to foreground sleep and requires rendered status 130 in under two seconds, then
 disconnects/reconnects. Rust independently checks two authenticated connections,
-resize observations, closed SSH connections and reaped shell fixtures.
+resize observations, closed SSH connections and reaped shell fixtures. The
+example then rotates only the generated localhost host key: the UI must reject
+it with no overwrite/identity action. Rust requires no additional authentication
+and byte-identical temporary trust data before/after rotation.
 
 The example-only report command and scenario are never registered/embedded in
 the normal application. No runtime test flag, TLS/host-key bypass, generic signing
