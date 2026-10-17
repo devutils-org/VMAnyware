@@ -1,4 +1,4 @@
-.PHONY: doctor install-client dev web server check check-client check-rust check-server check-ssh check-terminal-webkit check-terminal-native check-linux-server
+.PHONY: doctor install-client dev web server check check-client check-rust check-server check-ssh check-terminal-webkit check-terminal-native check-linux-server check-linux-client
 
 .DEFAULT_GOAL := doctor
 
@@ -39,7 +39,10 @@ check-rust:
 
 # Opt-in local Docker Linux arm64 check of committed source, with no credentials.
 check-linux-server:
-	node scripts/check-linux-server.mjs
+	node scripts/check-linux.mjs server
+
+check-linux-client:
+	node scripts/check-linux.mjs client
 
 check-server:
 	cargo fmt -p pocketlab-server -- --check

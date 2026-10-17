@@ -7,7 +7,7 @@ targets must be proven separately; upstream Tauri support alone is insufficient.
 | Target | Current evidence | Still required |
 | --- | --- | --- |
 | macOS 27.0.1 arm64, Apple M1 | Native dev launch/bridge; workspace tests/release executable; real Tauri/IPC/bundled-terminal/disposable-agent/shell smoke | Normal startup with deliberately selected real agent/guest, physical keyboard, signing/installers |
-| Linux | Debian 12 arm64 container: server fmt, locked Clippy and 50 tests passed (Rust 1.99.1); Ubuntu 24.04 CI prepared | First CI run; frontend/Linux desktop dependencies, launch and terminal tests |
+| Linux | Debian 12 arm64 container: server fmt, locked Clippy and 50 tests; frontend locked install, build and seven tests passed (Rust 1.99.1 / Node 26.11.1); Ubuntu 24.04 CI prepared | First CI run; Linux desktop dependencies, launch and terminal tests |
 | Windows | Portable source plus Ctrl-C handling prepared | MSVC/WebView2 setup, compilation, launch, process/terminal tests |
 | iOS | No application build/runtime evidence | Full Xcode, signing, simulator/device and SSH/terminal/lifecycle proof |
 | Android | No application build/runtime evidence | SDK/NDK, Rust targets, emulator/device and SSH/terminal/lifecycle proof |
@@ -56,3 +56,9 @@ mounted. Public image/component/crate downloads require network access.
 The container and temporary source are removed afterward; the image remains in
 the local Docker cache. This opt-in check is separate from default checks and
 provides neither GitHub Actions nor Linux desktop evidence.
+
+`make check-linux-client` uses the same isolation and cleanup, with the pinned
+Node 26.11.1 Debian 12 arm64 image. It runs `npm ci --no-audit --no-fund`, the
+TypeScript/Vite build and seven controller tests in the disposable source copy.
+Node 26.11.1/npm 11.20.0 passed these checks on 2026-10-17. Native Tauri is not
+built or launched by this target. Both Linux targets share `scripts/check-linux.mjs`.

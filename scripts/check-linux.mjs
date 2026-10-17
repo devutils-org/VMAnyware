@@ -4,7 +4,25 @@ import { mkdtemp, mkdir, rm } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { randomUUID } from "node:crypto";
-const image = "rust@sha256:30c510257fde8a66d5b486c6c3459f9272e76546a7bd76613e6b4de38ebc9994";
+const target = process.argv[2] ?? "server";
+if (!["server", "client"].includes(target)) {
+  throw new Error("Expected server or client");
+}
+const image = target === "server"
+  ? "rust@sha256:30c510257fde8a66d5b486c6c3459f9272e76546a7bd76613e6b4de38ebc9994"
+  : "node@sha256:a22d4bb2667bdee11b2b8f7f912c55c2298d0b2deae627b854fecdf02038b4b9";
+const commands = target === "server" ? [
+  "rustc --version", "cargo --version",
+  "rustup component add --toolchain 1.99.1 rustfmt clippy",
+  "cargo fmt -p pocketlab-server -- --check",
+  "cargo clippy --locked -p pocketlab-server --all-targets -- -D warnings",
+  "cargo test --locked -p pocketlab-server",
+] : [
+  "node --version", "npm --version",
+  "npm --prefix apps/client ci --no-audit --no-fund",
+  "npm --prefix apps/client run build",
+  "npm --prefix apps/client test",
+];
 const directory = await mkdtemp(join(tmpdir(), "pocketlab-linux-"));
 const source = join(directory, "source"), config = join(directory, "docker");
 await mkdir(source); await mkdir(config);
@@ -42,22 +60,18 @@ try {
   const revision = (await run("git", ["rev-parse", "HEAD"], { capture: true })).toString().trim();
   const archive = await run("git", ["archive", "--format=tar", "HEAD"], { capture: true });
   await run("tar", ["-xf", "-", "-C", source], { input: archive });
-  console.log(`Checking committed revision ${revision} in isolated Linux arm64 (${image})`);
+  console.log(`Checking ${target} at committed revision ${revision} in isolated Linux arm64 (${image})`);
   await run("docker", [...docker, "version", "--format", "{{.Server.Os}} {{.Server.Arch}}"], { timeout: 10000 });
-  console.log("Fetching the pinned public compiler image (no login/personal Docker configuration)");
+  console.log("Fetching the pinned public toolchain image (no login/personal Docker configuration)");
   await run("docker", [...docker, "pull", "--platform", "linux/arm64", image], { capture: true });
   await run("docker", [...docker, "run", "--rm", "--name", container,
     "--platform", "linux/arm64", "--cpus", "2", "--memory", "2g", "--pids-limit", "256",
     "--cap-drop", "ALL", "--security-opt", "no-new-privileges",
     "--mount", `type=bind,src=${source},dst=/work`, "--workdir", "/work",
     "--env", "CARGO_BUILD_JOBS=2", image, "/bin/sh", "-eu", "-c", [
-      "uname -sm", "cat /etc/os-release", "rustc --version", "cargo --version",
-      "rustup component add --toolchain 1.99.1 rustfmt clippy",
-      "cargo fmt -p pocketlab-server -- --check",
-      "cargo clippy --locked -p pocketlab-server --all-targets -- -D warnings",
-      "cargo test --locked -p pocketlab-server",
+      "uname -sm", "cat /etc/os-release", ...commands,
     ].join("\n")]);
-  console.log("Linux server check passed (container only; not GitHub Actions or native Linux desktop)");
+  console.log(`Linux ${target} check passed (container only; not GitHub Actions or native Linux desktop)`);
 } finally {
   process.off("SIGINT", interrupt); process.off("SIGTERM", interrupt);
   await run("docker", [...docker, "rm", "--force", container], { capture: true, timeout: 10000 }).catch(() => {});

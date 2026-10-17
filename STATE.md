@@ -199,11 +199,19 @@ No Proxmox infrastructure has been contacted. Phase 0 remains incomplete.
   Container/source were removed. No personal credentials or infrastructure were
   accessed. This is not GitHub Actions, Linux frontend or desktop evidence.
 
+- Linux frontend slice: `make check-linux-client` passed against committed
+  revision a1ceead in Debian 12 aarch64 with Node 26.11.1/npm 11.20.0: locked
+  npm installation, TypeScript/Vite build and all seven controller tests. No
+  application code or dependency changes were needed. The server/client targets
+  share the isolated Docker runner, with separate digest-pinned public images.
+  This does not validate Linux native Tauri or GitHub Actions. Temporary sources
+  and container were removed; public images remain cached locally.
+
 ## Next single task
 
-Verify the frontend build and controller tests in an isolated Linux container,
-with a pinned public Node image, locked npm install and no personal configuration.
-Keep this separate from Linux native desktop and GitHub Actions evidence.
+Verify normal macOS application startup and unavailable-service behavior in an
+isolated app-data environment without accessing a personal SSH agent. Record
+actual launch/UI evidence separately from the existing real-IPC test example.
 
 ## External inputs and limits
 
