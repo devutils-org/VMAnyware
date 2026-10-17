@@ -207,6 +207,13 @@ No Proxmox infrastructure has been contacted. Phase 0 remains incomplete.
   This does not validate Linux native Tauri or GitHub Actions. Temporary sources
   and container were removed; public images remain cached locally.
 
+- Development launch recovery: a second `make dev` failed because an existing
+  project Vite/Tauri session already owned port 1420. The identified old session
+  and remaining native child were stopped, leaving the API untouched. A fresh
+  `make dev` passed Vite startup, compiled the native client and launched
+  target/debug/pocketlab-client. README documents single-session recovery.
+  No application code changed; native UI interaction was not asserted here.
+
 ## Next single task
 
 Verify normal macOS application startup and unavailable-service behavior in an

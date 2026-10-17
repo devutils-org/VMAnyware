@@ -53,6 +53,12 @@ Run the development commands separately: they share port 1420. In the native
 window, click **Check native bridge**. Success must report the actual platform
 returned by Rust. Browser preview deliberately disables that check.
 
+If `make dev` reports `Port 1420 is already in use`, check whether an existing
+native development session or `make web` is running. Reuse its window, or stop
+that session with Ctrl-C in its terminal before starting another. To identify
+the listener on macOS, run `lsof -nP -iTCP:1420 -sTCP:LISTEN`. Stop only the
+identified project session; the API on port 8080 runs independently.
+
 Resolved dependencies are recorded in `apps/client/package-lock.json` and
 `Cargo.lock`. Rust is pinned to `1.99.1` in `rust-toolchain.toml`.
 Use `npm --prefix apps/client ci` to reproduce the frontend installation.
