@@ -1,7 +1,8 @@
 # ADR 0011 — Prefer explicit agent-backed authentication for the desktop prototype
 
 Date: 2026-10-17
-Status: Local feasibility implementation; native authentication UI pending.
+Status: Native macOS authentication check implemented and fixture-tested; manual
+walkthrough and real-agent/guest interoperability pending.
 
 Keep the next authentication experiment outside the product until a real agent
 can complete SSH authentication with a selected public identity. Use a disposable
@@ -26,3 +27,20 @@ macOS software Ed25519 keys are the proven experimental baseline. Do not infer
 Keychain integration, hardware-key behavior, Windows named-pipe support or a
 mobile credential strategy from it. Preserve those as separate platform gates
 before committing to a cross-platform authentication architecture.
+
+The native bridge now keeps a two-minute, one-use selection in Rust, bound to
+its window, endpoint, login name, socket snapshot and listed public keys. A new
+listing invalidates the previous selection. Authentication repeats the persisted
+host-trust handshake, re-lists the same agent and signs only for the selected key.
+Window destruction/cancellation invalidates pending results and prevents a later
+signing request; a signature already handed to an agent cannot be revoked.
+Operations have a ten-second overall deadline and owned SSH socket shutdown.
+There are at most eight concurrent operations and eight window owners, with a
+128-identity limit in addition to the library's 256 KiB agent-frame limit.
+
+Resolve SSH_AUTH_SOCK only after a deliberate list action and trusted handshake;
+never send its path, comments, private keys or signing payloads to the WebView.
+A checkbox grants access for the check, and no identity is preselected. Native
+tests inject fresh disposable sockets rather than inspecting the environment.
+The existing macOS dependencies suffice; no generic credential framework or
+terminal transport was added.

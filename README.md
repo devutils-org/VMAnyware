@@ -71,8 +71,10 @@ server and real local shell; run it separately with `make check-ssh`. Its
 [persistent host-trust policy](docs/ssh-host-trust.md) is shared with the
 [native macOS inspection/confirmation prototype](docs/ssh-host-inspection.md).
 Inspection never logs in or opens a shell; manual UI verification remains pending.
-The separate [disposable SSH-agent tests](docs/ssh-agent.md) now prove agent-backed
-authentication locally, ahead of native authentication integration.
+The [macOS agent authentication check](docs/ssh-agent.md) lets you explicitly
+list identities and test one selected fingerprint after host verification. It
+closes the connection without opening a terminal. Default macOS Rust tests use
+disposable system agents; they never contact your configured agent.
 
 The native build requires `apps/client/src-tauri/icons/icon.png`. Its editable
 source is `icons/source.svg` in the same directory. Regenerate it from the root:

@@ -12,14 +12,22 @@ pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
             #[cfg(target_os = "macos")]
-            app.manage(ssh::HostManager::new(
-                app.path()
-                    .app_local_data_dir()
-                    .map_err(|_| std::io::Error::other("SSH application data path unavailable"))?
-                    .join("ssh-host-trust-v1"),
-            ));
+            {
+                let hosts = ssh::HostManager::new(
+                    app.path()
+                        .app_local_data_dir()
+                        .map_err(|_| {
+                            std::io::Error::other("SSH application data path unavailable")
+                        })?
+                        .join("ssh-host-trust-v1"),
+                );
+                app.manage(ssh::AgentManager::new(hosts.clone()));
+                app.manage(hosts);
+            }
             #[cfg(not(target_os = "macos"))]
             app.manage(ssh::HostManager);
+            #[cfg(not(target_os = "macos"))]
+            app.manage(ssh::AgentManager);
             Ok(())
         })
         .on_window_event(|window, event| {
@@ -27,6 +35,9 @@ pub fn run() {
             if matches!(event, tauri::WindowEvent::Destroyed) {
                 if let Some(manager) = window.try_state::<ssh::HostManager>() {
                     manager.forget_owner(window.label());
+                }
+                if let Some(manager) = window.try_state::<ssh::AgentManager>() {
+                    manager.cancel(window.label());
                 }
             }
             #[cfg(not(target_os = "macos"))]
@@ -38,6 +49,9 @@ pub fn run() {
             ssh::inspect_ssh_host,
             ssh::confirm_ssh_host,
             ssh::cancel_ssh_host,
+            ssh::list_ssh_identities,
+            ssh::check_ssh_authentication,
+            ssh::cancel_ssh_authentication,
             control_plane::inspect_control_plane,
             control_plane::list_definitions,
             control_plane::save_definition,

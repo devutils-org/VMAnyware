@@ -32,11 +32,16 @@ Updated: 2026-10-17. Historical evidence and decisions are in Git and docs.
 - Isolated macOS OpenSSH-agent authentication proves exact public-fingerprint
   selection, delegated signatures, no identity fallback and rejection of
   untrusted hosts before agent access. Agents/keys/sockets are disposable;
-  no user agent or credential file is accessed. Native authentication is pending.
+  no user agent or credential file is accessed.
 - Shared native/experimental persistent endpoint-scoped SSH host trust. On
   macOS, the native UI inspects keys and offers explicit first-use confirmation;
   known keys require a completed verified handshake, while changed keys cannot
-  be approved. No authentication, private-key loading or terminal is implemented.
+  be approved. Host inspection never authenticates or loads private keys.
+- Explicit macOS agent-identity listing and an authentication-only native check.
+  Rust keeps expiring, one-use window/endpoint/user/socket/key selections; fresh
+  persisted host trust is verified before each agent access. Only one selected
+  identity is tried, and success closes the connection without a terminal.
+  Startup and host inspection never access the configured agent.
 - Rust-owned window/endpoint/key-bound UUID challenges expire after 120 seconds,
   are consumed once and invalidate on new inspection, cancellation or window
   destruction. Owner/probe limits are eight each; probes have a ten-second
@@ -48,7 +53,7 @@ Environment: macOS arm64, Rust/Cargo 1.99.1, Node 26.11.1, npm 11.20.0,
 Apple CommandLineTools. Dependency locks and compiler pin are committed.
 
 - Latest `make check` passed frontend TypeScript/Vite build, workspace formatting,
-  all-target Clippy with warnings denied and all 70 tests: 49 server, 21 native.
+  all-target Clippy with warnings denied and all 76 tests: 49 server, 27 native.
 - Provider tests use generated localhost TLS fixtures, never runtime credentials.
   They cover certificate/hostname/authentication failures, time/size bounds,
   inventory, preflight, task status validation and bounded polling.
@@ -77,12 +82,15 @@ Apple CommandLineTools. Dependency locks and compiler pin are committed.
   invalidation and out-of-order results, capacity and corrupt storage. Window
   destruction cleanup also prevents reuse of an old label reviving a challenge.
   Non-macOS wrappers are source-prepared, not cross-compiled or tested.
-- Agent slice: `make check-ssh` passed isolated fmt, locked Clippy and all
-  16 tests, including six real/disposable-agent and timeout scenarios. Processes
-  start with `-D -U -a`, cleared environment and private temporary sockets.
-  Authenticated reconnections open protocol PTYs; the separate shell fixture
-  still proves actual terminal resize/Ctrl-C. No new dependency or product
-  command was added; application checks were not rerun for this isolated change.
+- Native agent slice: `make check` passed frontend build, fmt, Clippy and all
+  76 workspace tests. Six native agent tests use cleared-environment disposable
+  system agents with `-D -U -a`, in-memory fixture keys and temporary trust.
+  They cover exact selection/no fallback/no channels, unknown/changed hosts
+  before agent access, fresh verification before authentication, removed keys,
+  wrong-window/expired/cancelled/replayed selections, stale cancellation, bounds
+  and unresponsive-agent timeout/socket closure. No personal agent was accessed.
+  The isolated experiment remains at sixteen passing tests; no new dependency
+  was added. Native screens compile but their manual walkthrough is pending.
 - The running local service was rebuilt/restarted with the current code; a real
   validation POST returned HTTP 200, canonical hash and generated request ID.
   Current UI features compile; their manual native walkthrough remains pending.
@@ -99,12 +107,12 @@ No Proxmox infrastructure has been contacted. Phase 0 remains incomplete.
 
 ## Next single task
 
-Integrate explicit macOS agent-identity selection and an authentication-only
-native check. Verify fresh persisted host trust before agent access; select one
-public fingerprint with no fallback, keep signing inside Rust and close the
-connection after success. No terminal/session transport or generic signing API
-yet. Native host inspection still needs a manual walkthrough; live Proxmox
-checks await the approved PC/catalog. See `docs/ssh-agent.md` and ADR 0011.
+Implement a bounded native SSH PTY/session transport reusing the selected-agent
+authentication path. Keep session ownership in Rust, preserve binary data and
+backpressure, and prove resize, Ctrl-C, disconnect/reconnect and cleanup against
+local fixtures before adding a graphical terminal. No generic signing API or
+automatic login. Native host/authentication screens still need a manual
+walkthrough; live Proxmox checks await the approved PC/catalog.
 
 ## External inputs and limits
 
@@ -124,4 +132,4 @@ Application provisioning, VM instances/lifecycle, snapshots, desktop/mobile SSH,
 authenticated remote control planes and signed distribution are not implemented.
 Default tests work without configured Proxmox, user credentials or mutable VMs.
 The macOS native target now includes the pinned russh candidate for handshake/
-trust only (ADR 0010); no production/mobile library guarantee is implied.
+trust and explicit agent authentication (ADRs 0010/0011); no production/mobile library guarantee is implied.

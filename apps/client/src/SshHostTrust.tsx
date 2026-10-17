@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { SshAuthentication } from "./SshAuthentication";
 
 type Inspection = {
   host: string;
@@ -124,7 +125,7 @@ export function SshHostTrust({ native }: { native: boolean }) {
   const seconds = Math.max(0, Math.ceil((deadline - now) / 1000));
   return <section aria-labelledby="ssh-trust-heading" aria-busy={busy}>
     <h2 id="ssh-trust-heading">SSH host trust</h2>
-    <p>Inspect a host key before choosing whether to trust it. This prototype does not log in or open a terminal.</p>
+    <p>Inspect and verify a host key before choosing an SSH identity. A separate authentication check is available after host verification.</p>
     {!native ? <p>Open the native application to inspect SSH hosts.</p> : supported === false ? <p>SSH host inspection is available only in the supported macOS prototype.</p> : supported === null && <p>Checking SSH inspection support…</p>}
     <form onSubmit={inspect}>
       <label htmlFor="ssh-host">Hostname or IP address</label>
@@ -142,7 +143,10 @@ export function SshHostTrust({ native }: { native: boolean }) {
         <dt>SHA-256 fingerprint</dt><dd className="operation-id">{inspection.fingerprint}</dd>
       </dl>
       {inspection.status === "changed" && <p role="alert" className="error">This host key differs from the trusted key. Connection is refused. Verify the change with the host administrator through an independent trusted channel.</p>}
-      {inspection.status === "trusted" && <p role="status">The observed key matches the trusted key for this endpoint. No login or shell was opened.</p>}
+      {inspection.status === "trusted" && <>
+        <p role="status">The observed key matches the trusted key for this endpoint. No login or shell was opened.</p>
+        <SshAuthentication key={`${inspection.host}:${inspection.port}`} host={inspection.host} port={inspection.port} />
+      </>}
       {inspection.status === "unknown" && <>
         <p>This endpoint has no trusted key. Compare this fingerprint with the host administrator or a trusted local console through an independent channel before confirming.</p>
         <p>{seconds > 0 && inspection.challengeId ? `Confirmation expires in ${seconds} seconds.` : "This confirmation is unavailable or expired. Inspect again to request a new one."}</p>

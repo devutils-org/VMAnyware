@@ -16,7 +16,7 @@ been demonstrated. See `STATE.md` for current counts and commands.
 | CI | Pinned workflow, local command checks and actionlint | First actual GitHub/Linux run; native/mobile runners |
 | VM provisioning | Explicit plan and template preparation procedure | Clone/configuration implementation plus approved disposable-host tests |
 | Snapshot/restore | Declared intent only | Storage capability evidence, implementation and separately approved restore |
-| Desktop SSH/PTY | Native host trust plus isolated protocol, real shell/PTY and disposable OpenSSH-agent authentication tests | Manual native walkthrough, agent-selection/authentication UI and terminal integration |
+| Desktop SSH/PTY | Native host trust and explicit agent authentication with disposable-agent tests; isolated protocol and real shell/PTY tests | Manual native walkthrough, native terminal integration and real guest interoperability |
 | Mobile | No runtime evidence | SDKs, devices/simulators, SSH crypto/PTY build and lifecycle checks |
 
 ## Decisions that remain open

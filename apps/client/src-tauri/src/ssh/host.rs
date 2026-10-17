@@ -54,6 +54,49 @@ impl HostManager {
             owners.remove(owner);
         }
     }
+    pub(super) async fn connect_trusted(
+        &self,
+        endpoint: trust::Endpoint,
+    ) -> Result<(client::Handle<ProbeClient>, ProbeSocket), String> {
+        let store = self.store().await?;
+        let observed = Arc::new(Mutex::new(None));
+        let socket = tokio::net::TcpStream::connect((endpoint.host(), endpoint.port()))
+            .await
+            .map_err(|_| "SSH connection failed")?
+            .into_std()
+            .map_err(|_| "SSH connection failed")?;
+        let shutdown = ProbeSocket(socket.try_clone().map_err(|_| "SSH connection failed")?);
+        let socket =
+            tokio::net::TcpStream::from_std(socket).map_err(|_| "SSH connection failed")?;
+        let handle = client::connect_stream(
+            Arc::new(client::Config {
+                inactivity_timeout: Some(PROBE_LIMIT),
+                ..Default::default()
+            }),
+            socket,
+            ProbeClient {
+                store,
+                endpoint,
+                observed: observed.clone(),
+            },
+        )
+        .await
+        .map_err(|_| "SSH host verification failed; inspect and verify the host first")?;
+        let trusted = matches!(
+            observed
+                .lock()
+                .map_err(|_| "SSH verification unavailable")?
+                .as_ref(),
+            Some(Ok(Observed {
+                inspection: Checked::Trusted,
+                ..
+            }))
+        );
+        if !trusted {
+            return Err("SSH host verification failed".into());
+        }
+        Ok((handle, shutdown))
+    }
     fn begin(&self, owner: &str) -> Result<Uuid, String> {
         let mut owners = self
             .inner
@@ -243,7 +286,7 @@ struct Observed {
     fingerprint: String,
     inspection: Checked,
 }
-struct ProbeClient {
+pub(super) struct ProbeClient {
     store: Arc<trust::Store>,
     endpoint: trust::Endpoint,
     observed: Arc<Mutex<Option<Result<Observed, String>>>>,
@@ -288,7 +331,7 @@ impl client::Handler for ProbeClient {
 }
 // Own socket shutdown even when a timeout drops connect_stream while russh's
 // internal session task is still running.
-struct ProbeSocket(std::net::TcpStream);
+pub(super) struct ProbeSocket(std::net::TcpStream);
 impl Drop for ProbeSocket {
     fn drop(&mut self) {
         let _ = self.0.shutdown(std::net::Shutdown::Both);

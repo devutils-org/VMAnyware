@@ -1,8 +1,42 @@
-# Disposable desktop SSH-agent feasibility
+# macOS SSH-agent authentication
 
-This experiment checks authentication through a real macOS OpenSSH agent. It is
-not yet a native application authentication feature. The current native host-key
-inspection commands still never open an agent or authenticate to a server.
+The native application now offers an authentication-only check after SSH host
+verification. The separate host-inspection action still never opens an agent or
+authenticates. Both the native path and isolated experiment are tested against
+disposable macOS OpenSSH agents, not the user's agent.
+
+## Native workflow
+
+1. Inspect the endpoint; independently verify and explicitly trust an unknown
+   fingerprint. Inspect again to complete a fresh verified handshake.
+2. Under **Test SSH authentication**, enter the login name and allow access to
+   the configured agent. Click **List agent identities**.
+3. Choose one displayed SHA-256 fingerprint, then **Check selected identity**.
+   Success closes the connection without opening a terminal. Retry requires a
+   new identity listing; a rejected key never falls back to another identity.
+
+The application reads SSH_AUTH_SOCK only after the explicit listing action and
+a completed persisted-trust handshake. A GUI launch may not inherit your shell's
+agent configuration; start `make dev` from a shell with a configured agent if
+needed. The socket must be an absolute path. No personal SSH config, key file or
+known-host file is imported, and the control plane is not involved.
+
+Rust binds the listed keys, socket, endpoint and username to a two-minute,
+one-use window selection. Authentication repeats host verification and checks
+that the selected key remains in the same agent. Ed25519 software keys are the
+tested baseline. Only algorithms and fingerprints reach the WebView. There is
+no generic signing API or agent forwarding.
+
+New listings invalidate earlier selections. Edits/unmount cancel a known
+selection; window destruction clears its state. Cancellation discards late
+results and prevents signing that has not yet started. It cannot revoke a
+signature already requested from an agent. Pending I/O remains bounded by a
+ten-second overall deadline; owned SSH sockets close on every exit. Limits are
+eight active operations/eight owners and 128 identities per bounded agent reply.
+The UI countdown is advisory; Rust enforces expiry.
+
+No agent access occurs on application startup or merely inspecting a host. A
+manual walkthrough with a deliberately selected real agent/guest is pending.
 
 ## Fixture boundary
 
@@ -23,7 +57,7 @@ parameter. Private fixture keys are dropped before the successful client flow.
 
 `make check-ssh` runs the existing trust/PTY checks and the additional agent tests
 on macOS. Other platforms do not compile the agent-specific module, and no agent
-support result is claimed for them. These opt-in tests require the system agent
+support result is claimed for them. Native default tests and these opt-in tests require the system agent
 and its `-U` flag; unsupported/missing tools fail rather than fabricate success.
 The installed companion client reports OpenSSH 10.3p1 / LibreSSL 3.3.6. The local
 agent does not implement the version-query flag, so an agent version was not
@@ -61,14 +95,13 @@ fixtures with an integrated graphical terminal.
 All network peers and agents are disposable and local. This does not establish
 interoperability with a real guest/OpenSSH server, the user's agent, Keychain,
 third-party or hardware agents, interactive approval/passphrase dialogs, Windows,
-iOS or Android. The normal application's dependency graph and default checks are
-unchanged by this experimental slice. `STATE.md` records actual checks/results.
+iOS or Android. Native default checks now also exercise the product selection/authentication
+path with generated keys, temporary trust stores and disposable agents. No new
+application dependency was needed. `STATE.md` records actual checks/results.
 
-The next native step should expose a deliberate identity-selection action and
-an authentication-only check: verify fresh host trust, then access the explicitly
-selected agent/key and close the connection. Keep private keys and authentication
-payloads out of the WebView/control plane, and implement no automatic agent use
-on application startup or host inspection.
+The next native step is a bounded authenticated PTY/session transport. Preserve
+explicit endpoint/user/identity selection and host verification. A graphical
+terminal and real guest tests remain separate acceptance gates.
 
 Primary references: [OpenSSH agent manual](https://man.openbsd.org/ssh-agent),
 [russh agent client](https://docs.rs/russh/0.64.1/russh/keys/agent/client/struct.AgentClient.html),
