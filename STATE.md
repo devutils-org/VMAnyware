@@ -586,3 +586,26 @@ production/mobile library guarantee is implied.
 - Next single frontend task: execute those checks in a macOS GUI session and
   record native workspace/terminal outcomes. Linux work can proceed later on
   the independent Debian template plan without treating native gates as passed.
+
+## Native navigation smoke correction — 2026-10-18
+
+- Reproduced the reported native failure at step 8 on macOS arm64 with
+  `node experiments/terminal-native/check.mjs`. Added example-only assertion
+  reporting to stderr; the exact failure was waiting for AFTER_NAVIGATION_OK
+  after workspace navigation. All four destination-focus/terminal-identity
+  assertions had already passed.
+- The navigation scrolls the terminal offscreen, where xterm defers rendering.
+  Corrected the scenario to scroll the retained terminal back into view before
+  typing/asserting fresh shell stdout. The same real IPC/agent/shell scenario
+  then passed step 21: two authentications, resize, Ctrl-C, reconnect, changed
+  host rejection, unchanged trust and owned socket/shell cleanup. No product
+  behavior, dependency, credential or infrastructure change was needed.
+- Full `make check-terminal-native` passed after the fix, including the
+  frontend TypeScript/Vite build, seven Node tests, release example build and
+  native step-21 scenario. Example-specific locked Clippy with warnings denied, Rust formatting, scenario syntax and
+  diff whitespace checks passed. The sandbox blocks the disposable agent;
+  native GUI execution requires the approved unsandboxed command.
+- This is local fixture evidence, not a real guest, personal agent, physical
+  keyboard, packaged distribution or mobile check. Next single frontend task:
+  run `make check-terminal-webkit` for the extended macOS simulated-IPC states;
+  the independent infrastructure task remains the Debian template plan.

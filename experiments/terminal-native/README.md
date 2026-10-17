@@ -53,6 +53,10 @@ platforms. Keep those gates open in STATE.md and the roadmap.
 
 The workspace navigation assertion retains the terminal element across four
 anchor destinations, checks destination focus, then requires fresh stdout from
-the same real shell before continuing resize/Ctrl-C/disconnect checks. This
-assertion was source-prepared on Linux; run the native target on macOS before
-claiming it passes. No simulated-IPC browser result substitutes for that run.
+the same real shell before continuing resize/Ctrl-C/disconnect checks. The
+scenario scrolls the terminal back into view before inspecting fresh stdout:
+xterm defers rendering while offscreen, so hidden DOM rows are not evidence of
+a stalled shell. This assertion passed on macOS arm64 after correcting that
+visibility precondition (see STATE.md). Failures include the scenario assertion
+in stderr, in addition to the step and Rust cleanup checks. No simulated-IPC
+browser result substitutes for this native run.

@@ -53,9 +53,11 @@
         for (const destination of ["definitions-heading", "plan-heading", "connection-heading", "ssh-trust-heading"]) {
           document.querySelector(`nav a[href="#${destination}"]`).click();
           await new Promise(resolve => setTimeout(resolve, 0));
-          check(document.activeElement.id === destination, "Workspace navigation did not focus its destination");
+          check(document.activeElement.id === destination, `Workspace navigation did not focus ${destination} (active=${document.activeElement?.id || document.activeElement?.tagName}, hash=${location.hash})`);
           check(document.querySelector(".ssh-terminal") === terminal, "Workspace navigation replaced the terminal");
         }
+        // xterm defers offscreen rendering; return before asserting visible shell output.
+        terminal.scrollIntoView();
         type("printf 'AFTER_%s_OK\\n' NAVIGATION\n");
         await wait(() => text().includes("AFTER_NAVIGATION_OK"), "same shell remains usable after workspace navigation");
         terminal.style.height = "320px";
@@ -85,7 +87,7 @@
     } catch (error) {
       console.error(String(error));
       document.body.append(document.createTextNode(`Native smoke failure: ${error}`));
-      await invoke("smoke_report", { ok: false, step });
+      await invoke("smoke_report", { ok: false, step, failure: String(error) });
     }
   });
 })();

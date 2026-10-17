@@ -49,9 +49,13 @@ mod smoke {
         state: tauri::State<'_, State>,
         ok: bool,
         step: u32,
+        failure: Option<String>,
     ) -> Result<(), ()> {
         if state.reported.swap(true, Ordering::SeqCst) {
             return Ok(());
+        }
+        if let Some(failure) = failure {
+            eprintln!("Native smoke assertion: {failure}");
         }
         app.state::<ssh::SessionManager>().forget_owner("main");
         let clean = tokio::time::timeout(std::time::Duration::from_secs(3), async {
