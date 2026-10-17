@@ -23,7 +23,7 @@ Updated: 2026-10-17. Historical evidence and decisions are in Git and docs.
   SIGTERM request graceful shutdown with a five-second HTTP drain limit; startup
   failures and drain timeout emit fixed stage codes.
 - Prepared GitHub Actions server/frontend checks with pinned actions and locks;
-  workflow not pushed or executed, Linux success remains unverified.
+  workflow not pushed or executed; local Linux server container checks pass.
 - Debian Cloud-Init template guide, platform/toolchain evidence matrix and
   interim feasibility report. No real template preparation was executed.
 - Isolated opt-in desktop SSH/PTY experiment, outside the root workspace and
@@ -79,7 +79,7 @@ Apple CommandLineTools. Dependency locks and compiler pin are committed.
 - Native HTTP tests cover typed requests, validation/provisioning input bounds,
   safe field hints, redaction, previews and preflight result decoding.
 - CI YAML passed actionlint 1.7.12 using a temporary checksum-verified binary.
-  Its commands passed locally; no GitHub/Linux/native/mobile CI result is claimed.
+  Its commands passed locally; no GitHub/native/mobile CI result is claimed.
 - Latest `make check-ssh` passed isolated formatting, locked Clippy and all sixteen SSH
   tests on macOS arm64. The real PTY test uses two fresh connections, observes
   stty size changes and requires foreground sleep interruption/status 130 within
@@ -189,19 +189,21 @@ resources; normal app startup/distribution and real guest tests remain open.
 Windows shutdown code is source-prepared, not compiled or tested on Windows.
 No Proxmox infrastructure has been contacted. Phase 0 remains incomplete.
 
-- Linux preparation: the pinned Debian 12 arm64 container compiled the server
-  and passed Clippy, but diagnostics tests failed. The image has a POSIX shell
-  kill builtin and no external kill executable; tests now send signals through
-  the shell builtin with separately passed arguments. All 50 server tests and
-  server formatting/Clippy pass again on macOS. Linux rerun remains pending.
-  The opt-in runner checks committed HEAD with an isolated local Docker client.
+- Linux server slice: `make check-linux-server` passed on committed revision
+  9f126f8: Debian 12 aarch64, Rust/Cargo 1.99.1, formatting, locked all-target
+  Clippy and all 50 server tests. The first run exposed an external kill-command
+  assumption in diagnostics tests; POSIX shell builtin signaling fixes it without
+  adding dependencies. `make check-server` also passed all 50 tests on macOS.
+  Docker used the explicit local socket, isolated anonymous configuration, pinned
+  public image, disposable tracked-source archive and bounded container resources.
+  Container/source were removed. No personal credentials or infrastructure were
+  accessed. This is not GitHub Actions, Linux frontend or desktop evidence.
 
 ## Next single task
 
-Check Linux server feasibility using the explicitly local Docker socket and an
-isolated client configuration, never personal Docker credentials/remote contexts.
-Verify availability of the exact pinned compiler image before any test; record
-actual Linux evidence or the external toolchain blocker without claiming CI ran.
+Verify the frontend build and controller tests in an isolated Linux container,
+with a pinned public Node image, locked npm install and no personal configuration.
+Keep this separate from Linux native desktop and GitHub Actions evidence.
 
 ## External inputs and limits
 
