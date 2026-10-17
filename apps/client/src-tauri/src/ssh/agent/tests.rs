@@ -1,3 +1,5 @@
+#[path = "../../../../../../experiments/ssh/src/shell.rs"]
+mod shell;
 use super::*;
 use crate::ssh::trust::{Inspection, Store};
 use russh::{
@@ -89,15 +91,27 @@ struct Fixture {
     task: tokio::task::JoinHandle<()>,
     events: Arc<Mutex<Vec<Protocol>>>,
     connections: Arc<AtomicUsize>,
+    shells: Arc<Mutex<Vec<Arc<Mutex<shell::Shell>>>>>,
 }
 #[derive(Clone)]
 struct Handler {
+    os_shell: bool,
+    size: (u16, u16),
+    shell: Option<Arc<Mutex<shell::Shell>>>,
+    shells: Arc<Mutex<Vec<Arc<Mutex<shell::Shell>>>>>,
     pty: bool,
     refuse: Option<&'static str>,
     events: Arc<Mutex<Vec<Protocol>>>,
     allowed: PublicKey,
     auth: Arc<AtomicUsize>,
     channels: Arc<AtomicUsize>,
+}
+impl Drop for Handler {
+    fn drop(&mut self) {
+        if let Some(shell) = &self.shell {
+            shell.lock().unwrap().close();
+        }
+    }
 }
 impl server::Handler for Handler {
     type Error = russh::Error;
@@ -139,6 +153,7 @@ impl server::Handler for Handler {
         session: &mut server::Session,
     ) -> Result<(), Self::Error> {
         self.events.lock().unwrap().push(Protocol::Pty(cols, rows));
+        self.size = (cols as u16, rows as u16);
         if self.refuse == Some("pty") {
             session.channel_failure(channel)?;
         } else {
@@ -156,6 +171,15 @@ impl server::Handler for Handler {
             session.channel_failure(channel)?;
         } else {
             session.channel_success(channel)?;
+            if self.os_shell {
+                let shell = Arc::new(Mutex::new(shell::Shell::start(
+                    self.size,
+                    channel,
+                    session.handle(),
+                )));
+                self.shells.lock().unwrap().push(shell.clone());
+                self.shell = Some(shell);
+            }
         }
         Ok(())
     }
@@ -172,6 +196,9 @@ impl server::Handler for Handler {
             .lock()
             .unwrap()
             .push(Protocol::Resize(cols, rows));
+        if let Some(shell) = &self.shell {
+            shell.lock().unwrap().resize(cols as u16, rows as u16);
+        }
         Ok(())
     }
     async fn data(
@@ -184,7 +211,9 @@ impl server::Handler for Handler {
             .lock()
             .unwrap()
             .push(Protocol::Data(data.to_vec()));
-        if data == b"fixture-exit" {
+        if let Some(shell) = &self.shell {
+            shell.lock().unwrap().write(data);
+        } else if data == b"fixture-exit" {
             session.exit_status_request(channel, 42)?;
             session.eof(channel)?;
             session.close(channel)?;
@@ -202,6 +231,14 @@ impl Fixture {
         Self::with_policy(allowed, pty, None).await
     }
     async fn with_policy(allowed: PublicKey, pty: bool, refuse: Option<&'static str>) -> Self {
+        Self::with_configuration(allowed, pty, refuse, false).await
+    }
+    async fn with_configuration(
+        allowed: PublicKey,
+        pty: bool,
+        refuse: Option<&'static str>,
+        os_shell: bool,
+    ) -> Self {
         let listener = TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, 0))
             .await
             .unwrap();
@@ -213,7 +250,12 @@ impl Fixture {
         let events = Arc::new(Mutex::new(Vec::new()));
         let connections = Arc::new(AtomicUsize::new(0));
         let active = connections.clone();
+        let shells = Arc::new(Mutex::new(Vec::new()));
         let handler = Handler {
+            os_shell,
+            size: (80, 24),
+            shell: None,
+            shells: shells.clone(),
             pty,
             refuse,
             events: events.clone(),
@@ -250,6 +292,7 @@ impl Fixture {
             task,
             events,
             connections,
+            shells,
         }
     }
     fn trust(&self, store: &Store) {
@@ -269,6 +312,9 @@ impl Fixture {
 }
 impl Drop for Fixture {
     fn drop(&mut self) {
+        for shell in self.shells.lock().unwrap().iter() {
+            shell.lock().unwrap().close();
+        }
         self.task.abort();
     }
 }
@@ -757,4 +803,143 @@ async fn native_pty_remote_exit_and_window_cleanup_close_owned_transport() {
         );
         wait_closed(&refusing).await;
     }
+}
+
+async fn shell_output_until(
+    sessions: &crate::ssh::session::SessionManager,
+    id: &str,
+    expected: &str,
+) -> String {
+    use crate::ssh::session::Event;
+    tokio::time::timeout(Duration::from_secs(2), async {
+        let mut output = Vec::new();
+        loop {
+            match sessions.read("main", id).await.unwrap() {
+                Some(Event::Data { bytes } | Event::Stderr { bytes }) => output.extend(bytes),
+                Some(Event::Closed | Event::Failed) => {
+                    panic!("shell transport closed before expected output")
+                }
+                _ => {}
+            }
+            assert!(output.len() <= 65536, "shell output exceeded fixture bound");
+            let text = String::from_utf8_lossy(&output);
+            if text.contains(expected) {
+                return text.into_owned();
+            }
+        }
+    })
+    .await
+    .unwrap_or_else(|_| panic!("missing real shell output: {expected}"))
+}
+#[tokio::test]
+async fn native_agent_pty_real_shell_resize_interrupt_reconnect_and_process_cleanup() {
+    use crate::ssh::session::SessionManager;
+    let agent = DisposableAgent::start().await;
+    let allowed = key();
+    let selected = fingerprint(allowed.public_key());
+    agent.add(&allowed).await;
+    let fixture = Fixture::with_configuration(allowed.public_key().clone(), true, None, true).await;
+    drop(allowed);
+    let (_root, manager, _store) = manager(agent.socket.clone());
+    let inspected = manager
+        .hosts
+        .inspect("main", "127.0.0.1", fixture.port)
+        .await
+        .unwrap();
+    assert_eq!(inspected.status, "unknown");
+    manager
+        .hosts
+        .confirm(
+            "main",
+            inspected.challenge_id.as_deref().unwrap(),
+            &inspected.fingerprint,
+        )
+        .await
+        .unwrap();
+    let sessions = SessionManager::new(manager.clone());
+    for destroy_window in [false, true] {
+        let selection = manager
+            .list("main", "127.0.0.1", fixture.port, "fixture")
+            .await
+            .unwrap();
+        let started = sessions
+            .start("main", &selection.id, &selected, 80, 24)
+            .await
+            .unwrap();
+        let id = serde_json::to_value(started).unwrap()["id"]
+            .as_str()
+            .unwrap()
+            .to_owned();
+        shell_output_until(&sessions, &id, "fixture> ").await;
+        sessions
+            .write("main", &id, b"stty -echo; printf 'READY\\n'\n".to_vec())
+            .unwrap();
+        shell_output_until(&sessions, &id, "\r\nREADY\r\n").await;
+        sessions
+            .write("main", &id, b"printf 'STDOUT_OK\\n'; stty size\n".to_vec())
+            .unwrap();
+        let output = shell_output_until(&sessions, &id, "24 80").await;
+        assert!(output.contains("STDOUT_OK"));
+        sessions.resize("main", &id, 132, 43).unwrap();
+        sessions
+            .write("main", &id, b"stty size\n".to_vec())
+            .unwrap();
+        shell_output_until(&sessions, &id, "43 132").await;
+        let shell = fixture.shells.lock().unwrap().last().unwrap().clone();
+        let shell_pid = shell.lock().unwrap().process_id().unwrap();
+        sessions
+            .write("main", &id, b"printf 'SLEEPING\\n'; sleep 5\n".to_vec())
+            .unwrap();
+        shell_output_until(&sessions, &id, "SLEEPING\r\n").await;
+        let foreground = tokio::time::timeout(Duration::from_secs(1), async {
+            loop {
+                if let Some(pid) = shell.lock().unwrap().foreground_child() {
+                    break pid;
+                }
+                tokio::time::sleep(Duration::from_millis(10)).await;
+            }
+        })
+        .await
+        .unwrap();
+        let interrupted_at = Instant::now();
+        sessions.write("main", &id, vec![3]).unwrap();
+        shell_output_until(&sessions, &id, "fixture> ").await;
+        sessions
+            .write("main", &id, b"printf 'INTERRUPTED:%s\\n' \"$?\"\n".to_vec())
+            .unwrap();
+        shell_output_until(&sessions, &id, "INTERRUPTED:130").await;
+        assert!(interrupted_at.elapsed() < Duration::from_secs(2));
+        sessions
+            .write("main", &id, b"printf 'CLOSING\\n'; sleep 30\n".to_vec())
+            .unwrap();
+        shell_output_until(&sessions, &id, "CLOSING\r\n").await;
+        let running_at_close = tokio::time::timeout(Duration::from_secs(1), async {
+            loop {
+                if let Some(pid) = shell.lock().unwrap().foreground_child() {
+                    break pid;
+                }
+                tokio::time::sleep(Duration::from_millis(10)).await;
+            }
+        })
+        .await
+        .unwrap();
+        if destroy_window {
+            sessions.forget_owner("main");
+        } else {
+            sessions.close("main", &id).unwrap();
+        }
+        wait_closed(&fixture).await;
+        assert!(shell.lock().unwrap().is_closed());
+        for pid in [shell_pid, foreground, running_at_close] {
+            tokio::time::timeout(Duration::from_secs(2), async {
+                // SAFETY: signal zero only observes the fixture-created process ID.
+                while unsafe { libc::kill(pid as libc::pid_t, 0) } == 0 {
+                    tokio::time::sleep(Duration::from_millis(10)).await;
+                }
+            })
+            .await
+            .expect("owned shell/foreground child still exists after close");
+        }
+    }
+    assert_eq!(fixture.auth.load(Ordering::SeqCst), 2);
 }

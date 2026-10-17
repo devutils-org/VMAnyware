@@ -62,3 +62,12 @@ The fixture echoes protocol data; it does not execute a remote OS shell. The
 isolated `make check-ssh` real-shell fixture still establishes local PTY resize
 and actual foreground Ctrl-C behavior. Neither alone proves an integrated graphical native terminal
 or real guest interoperability; WebKit renderer tests have their own boundary. No real infrastructure/credential was used.
+
+The native managers now also have a real-shell integration test, using the same
+disposable PTY source as the isolated experiment. It verifies persisted first-use
+confirmation, exact agent authentication, actual /bin/sh output and stty resize,
+foreground sleep interruption/status 130 within two seconds, reconnect, and
+closure while another sleep is active. Owned shell/foreground PIDs and SSH
+connections must disappear after both explicit close and window destruction.
+This does not involve the renderer or Tauri's actual IPC/window process.
+portable-pty is used only as a macOS test dependency, not a product dependency.

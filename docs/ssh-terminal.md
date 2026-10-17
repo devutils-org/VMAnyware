@@ -44,8 +44,9 @@ results and exit/EOF/close. They use simulated native calls, not SSH.
 `make check-terminal-webkit` optionally exercises the real xterm renderer and
 React development UI in macOS WebKit with isolated simulated IPC. Its
 [fixture boundary](../experiments/terminal-webkit/README.md) is explicit. Native
-Rust tests separately exercise the product agent/PTY path against generated local
-SSH fixtures; `make check-ssh` separately executes an actual local OS shell.
+Rust tests exercise the product agent/PTY path against both generated protocol
+fixtures and an actual local OS shell, including real resize/Ctrl-C and owned
+process cleanup. `make check-ssh` retains its separate actual-shell exercise.
 
 A manual native application walkthrough combining the renderer, Tauri IPC and an
 approved disposable shell endpoint is still pending, as are packaged-runtime CSP,

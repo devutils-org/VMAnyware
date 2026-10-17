@@ -63,7 +63,8 @@ Apple CommandLineTools. Dependency locks and compiler pin are committed.
 
 - Latest `make check` passed frontend TypeScript/Vite build, seven Node terminal
   controller tests, Rust formatting/all-target Clippy with warnings denied and
-  all 80 workspace tests: 49 server, 31 native. Vite reports a nonblocking main
+  all 80 workspace tests: 49 server, 31 native. Latest transport-fixture
+  `make check-rust` passed 81 tests: 49 server, 32 native. Vite reports a nonblocking main
   chunk-size warning (~580 KiB before gzip); performance tuning is deferred.
 - Provider tests use generated localhost TLS fixtures, never runtime credentials.
   They cover certificate/hostname/authentication failures, time/size bounds,
@@ -109,6 +110,15 @@ Apple CommandLineTools. Dependency locks and compiler pin are committed.
   connections after explicit close/window destruction. Two policy tests cover
   queue saturation, single-reader enforcement, capacity and invalid dimensions.
   This is protocol echo, not a native graphical or actual remote OS shell test.
+- Native real-shell slice: `make check-rust` passed all 81 tests; isolated
+  `make check-ssh` passed all sixteen tests. The native HostManager → explicit
+  disposable agent → SessionManager path now exercises actual /bin/sh output,
+  stty size 24×80 → 43×132, foreground sleep interruption/status 130 within two
+  seconds, reconnect and process/socket cleanup after explicit close and window
+  destruction. Closing while sleep 30 is running also leaves none of the owned
+  shell/foreground PIDs alive. The experimental and native tests share one
+  bounded-output PTY fixture. portable-pty is a macOS dev-dependency only; no
+  runtime dependency or user agent/credential/real infrastructure was accessed.
 - Graphical terminal slice: seven Node tests cover binary/split UTF-8 output,
   renderer backpressure, stale results/errors, bounded serialized input, resize
   coalescing, overflow, native saturation retries and exit/EOF/close.
@@ -137,12 +147,11 @@ No Proxmox infrastructure has been contacted. Phase 0 remains incomplete.
 
 ## Next single task
 
-Prove the integrated native PTY path against an actual disposable local OS shell
-with agent-backed authentication, preserving real resize, foreground Ctrl-C and
-owned-process cleanup. Reuse fixture conventions; never access a user agent or
-credential file. Renderer/WebKit, Rust protocol and isolated real-shell evidence
-currently remain separate. Then perform an explicitly selected native/guest
-walkthrough; real Proxmox and mobile gates still await external setup.
+Exercise sustained real-shell output with a deliberately slow/paused native
+reader, then Ctrl-C, recovery and disconnect. Verify bounded buffering and no
+input starvation; fix any observed failure before expanding the SSH prototype.
+The renderer's isolated WebKit smoke and real native shell tests still do not
+prove the complete packaged Tauri UI/IPC/shell chain or real guest behavior.
 
 ## External inputs and limits
 

@@ -1,156 +1,6 @@
-//! Native Unix shell fixture only. Never accepts an external endpoint or command.
+//! Actual local OS shell exercise, using the shared disposable PTY fixture.
 use super::*;
-use portable_pty::{native_pty_system, Child, CommandBuilder, MasterPty, PtySize};
-use std::io::{Read, Write};
-
-pub(super) struct Shell {
-    master: Option<Box<dyn MasterPty + Send>>,
-    writer: Option<Box<dyn Write + Send>>,
-    child: Box<dyn Child + Send + Sync>,
-    reader: Option<std::thread::JoinHandle<()>>,
-    stop_reader: Arc<std::sync::atomic::AtomicBool>,
-    forwarder: JoinHandle<()>,
-    _directory: tempfile::TempDir,
-}
-
-fn size(cols: u16, rows: u16) -> PtySize {
-    PtySize {
-        cols,
-        rows,
-        pixel_width: 0,
-        pixel_height: 0,
-    }
-}
-
-impl Shell {
-    pub(super) fn start(
-        dimensions: (u16, u16),
-        channel: ChannelId,
-        session: server::Handle,
-    ) -> Self {
-        let pair = native_pty_system()
-            .openpty(size(dimensions.0, dimensions.1))
-            .unwrap();
-        let directory = tempfile::tempdir().unwrap();
-        let mut command = CommandBuilder::new("/bin/sh");
-        command.arg("-i");
-        command.env_clear();
-        command.env("PATH", "/usr/bin:/bin");
-        command.env("TERM", "xterm-256color");
-        command.env("PS1", "fixture> ");
-        command.cwd(directory.path());
-        let child = pair.slave.spawn_command(command).unwrap();
-        drop(pair.slave);
-        let mut reader = pair.master.try_clone_reader().unwrap();
-        let writer = pair.master.take_writer().unwrap();
-        let (output, mut receiver) = mpsc::unbounded_channel();
-        // Nonblocking input permits deterministic thread shutdown even on failures.
-        let fd = pair.master.as_raw_fd().unwrap();
-        // SAFETY: fd belongs to this live fixture master; preserve existing flags.
-        unsafe {
-            let flags = libc::fcntl(fd, libc::F_GETFL);
-            assert!(flags >= 0);
-            assert_eq!(libc::fcntl(fd, libc::F_SETFL, flags | libc::O_NONBLOCK), 0);
-        }
-        let stop_reader = Arc::new(std::sync::atomic::AtomicBool::new(false));
-        let stop = stop_reader.clone();
-        let reader = std::thread::spawn(move || {
-            let mut buffer = [0u8; 4096];
-            while !stop.load(Ordering::SeqCst) {
-                match reader.read(&mut buffer) {
-                    Ok(0) => break,
-                    Ok(count) => {
-                        if output.send(buffer[..count].to_vec()).is_err() {
-                            break;
-                        }
-                    }
-                    Err(error) if error.kind() == std::io::ErrorKind::WouldBlock => {
-                        std::thread::sleep(Duration::from_millis(5))
-                    }
-                    Err(_) => break,
-                }
-            }
-        });
-        let forwarder = tokio::spawn(async move {
-            while let Some(bytes) = receiver.recv().await {
-                if !matches!(
-                    timeout(Duration::from_secs(1), session.data(channel, bytes)).await,
-                    Ok(Ok(()))
-                ) {
-                    break;
-                }
-            }
-        });
-        Self {
-            master: Some(pair.master),
-            writer: Some(writer),
-            child,
-            reader: Some(reader),
-            stop_reader,
-            forwarder,
-            _directory: directory,
-        }
-    }
-
-    pub(super) fn write(&mut self, data: &[u8]) {
-        self.writer.as_mut().unwrap().write_all(data).unwrap();
-    }
-    pub(super) fn resize(&self, cols: u16, rows: u16) {
-        self.master
-            .as_ref()
-            .unwrap()
-            .resize(size(cols, rows))
-            .unwrap();
-    }
-
-    pub(super) fn close(&mut self) {
-        let Some(master) = self.master.take() else {
-            return;
-        };
-        // Only fixture-created process groups: current foreground job and shell.
-        // SAFETY: these calls use this owned PTY's fd and generated child PID.
-        unsafe {
-            if let Some(fd) = master.as_raw_fd() {
-                let foreground = libc::tcgetpgrp(fd);
-                if foreground > 0 && foreground != libc::getpgrp() {
-                    libc::killpg(foreground, libc::SIGKILL);
-                }
-            }
-            if let Some(pid) = self.child.process_id() {
-                let group = pid as libc::pid_t;
-                if group > 0 && group != libc::getpgrp() {
-                    libc::killpg(group, libc::SIGKILL);
-                }
-            }
-        }
-        self.stop_reader.store(true, Ordering::SeqCst);
-        self.forwarder.abort();
-        self.writer.take();
-        drop(master);
-        let _ = self.child.kill();
-        let deadline = std::time::Instant::now() + Duration::from_secs(1);
-        loop {
-            if matches!(self.child.try_wait(), Ok(Some(_))) {
-                break;
-            }
-            assert!(
-                std::time::Instant::now() < deadline,
-                "fixture child did not terminate after SIGKILL"
-            );
-            std::thread::sleep(Duration::from_millis(5));
-        }
-        if let Some(reader) = self.reader.take() {
-            reader.join().unwrap();
-        }
-    }
-}
-
-impl Drop for Shell {
-    fn drop(&mut self) {
-        self.close();
-    }
-}
-
+pub(super) use shell::Shell;
 async fn output_until(channel: &mut Channel<client::Msg>, expected: &str) -> String {
     timeout(Duration::from_secs(2), async {
         let mut output = Vec::new();
@@ -199,6 +49,12 @@ async fn real_shell_stdout_terminal_resize_and_ctrl_c_interrupt() {
             channel_success(&mut channel).await;
             assert_eq!(fixture.next_event().await, Event::Shell);
             output_until(&mut channel, "fixture> ").await;
+            {
+                let shells = fixture.shells.lock().unwrap();
+                let shell = shells.last().unwrap().lock().unwrap();
+                assert!(shell.process_id().is_some());
+                assert!(!shell.is_closed());
+            }
             channel
                 .data(&b"stty -echo; printf 'READY\\n'\n"[..])
                 .await
@@ -230,13 +86,7 @@ async fn real_shell_stdout_terminal_resize_and_ctrl_c_interrupt() {
                 loop {
                     let foreground_is_child = {
                         let shell = shell.lock().unwrap_or_else(|poison| poison.into_inner());
-                        let fd = shell.master.as_ref().unwrap().as_raw_fd().unwrap();
-                        // SAFETY: fd belongs to the live fixture PTY.
-                        unsafe {
-                            let foreground = libc::tcgetpgrp(fd);
-                            foreground > 0
-                                && foreground != shell.child.process_id().unwrap() as libc::pid_t
-                        }
+                        shell.foreground_child().is_some()
                     };
                     if foreground_is_child {
                         break;
