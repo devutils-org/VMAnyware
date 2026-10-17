@@ -1,6 +1,7 @@
 # Native macOS PTY transport
 
-This is a Rust/native-command transport, not a graphical terminal yet. It reuses
+This Rust/native-command transport now backs the [graphical prototype](ssh-terminal.md).
+It reuses
 [explicit agent selection](ssh-agent.md); it has no private-key, command-execution,
 agent-forwarding or generic signing parameter. A new selection authorizes one
 connection attempt for the endpoint/login/key held in Rust.
@@ -45,8 +46,8 @@ prototype; they are not a claim of production terminal throughput.
 The actor retains a cloned TCP shutdown guard. Closing/removing its entry aborts
 that actor and shuts down its own socket even if russh has detached internal
 work. No global process, personal agent or unrelated SSH connection is killed.
-Already pending native reads may complete during close; a future frontend must
-ignore results from a superseded session generation.
+Already pending native reads may complete during close; the frontend ignores
+results from a superseded session generation.
 
 ## Evidence boundary
 
@@ -59,5 +60,5 @@ policy tests exercise input saturation, single-reader enforcement and bounds.
 
 The fixture echoes protocol data; it does not execute a remote OS shell. The
 isolated `make check-ssh` real-shell fixture still establishes local PTY resize
-and actual foreground Ctrl-C behavior. Neither proves a graphical native terminal
-or real guest interoperability. No real infrastructure/credential was used.
+and actual foreground Ctrl-C behavior. Neither alone proves an integrated graphical native terminal
+or real guest interoperability; WebKit renderer tests have their own boundary. No real infrastructure/credential was used.

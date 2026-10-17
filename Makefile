@@ -1,4 +1,4 @@
-.PHONY: doctor install-client dev web server check check-client check-rust check-server check-ssh
+.PHONY: doctor install-client dev web server check check-client check-rust check-server check-ssh check-terminal-webkit
 
 .DEFAULT_GOAL := doctor
 
@@ -21,6 +21,11 @@ check: check-client check-rust
 
 check-client:
 	npm --prefix apps/client run build
+	npm --prefix apps/client test
+
+# Opt-in macOS renderer smoke; simulated IPC, never a user agent or real SSH host.
+check-terminal-webkit: check-client
+	node experiments/terminal-webkit/check.mjs
 
 check-rust:
 	cargo fmt --all -- --check

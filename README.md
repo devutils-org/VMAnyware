@@ -7,7 +7,8 @@ the working product name used in the roadmap.
 **Status: Phase 0.** The frontend build, workspace Rust checks/tests and local
 control-plane HTTP smoke check pass on macOS arm64. The native development
 process starts; the user confirmed the UI bridge returns `macos`.
-VM management and an integrated SSH terminal are not implemented.
+VM management is not implemented. A macOS SSH terminal prototype is wired to
+the native transport; real guest and integrated native walkthroughs are pending.
 
 The native client can now connect to the local control plane and list Proxmox
 nodes/templates in read-only mode. Configure the server using
@@ -43,7 +44,7 @@ make doctor
 make install-client
 make web                 # browser preview only
 make dev                 # native Tauri window, instead of make web
-make check               # frontend build, Rust fmt/clippy/tests
+make check               # frontend build/tests, Rust fmt/clippy/tests
 make server              # local Axum API on 127.0.0.1:8080
 make check-server        # scoped server checks
 ```
@@ -75,8 +76,10 @@ The [macOS agent authentication check](docs/ssh-agent.md) lets you explicitly
 list identities and test one selected fingerprint after host verification. It
 closes the connection without opening a terminal. Default macOS Rust tests use
 disposable system agents; they never contact your configured agent. The
-[bounded native PTY transport](docs/ssh-sessions.md) is fixture-tested; a graphical
-terminal is the next integration step.
+[bounded native PTY transport](docs/ssh-sessions.md) now powers a
+[graphical terminal prototype](docs/ssh-terminal.md). `make check-terminal-webkit`
+optionally tests actual macOS WebKit rendering with isolated simulated IPC; it
+never connects to an agent or SSH host.
 
 The native build requires `apps/client/src-tauri/icons/icon.png`. Its editable
 source is `icons/source.svg` in the same directory. Regenerate it from the root:

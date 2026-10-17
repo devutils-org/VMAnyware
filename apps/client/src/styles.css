@@ -28,3 +28,5 @@ textarea:focus-visible { outline: 3px solid #9fdbbc; outline-offset: 3px; }
 .plan-details dt { font-weight: 600; }
 .plan-details dd { margin: 0; overflow-wrap: anywhere; }
 @media (max-width: 480px) { .plan-details { grid-template-columns: 1fr; } .plan-details dd { margin-bottom: .5rem; } }
+.ssh-terminal { height: 24rem; min-width: 0; margin-block: 1rem; padding: .5rem; border: 1px solid #8193a5; border-radius: .4rem; overflow: hidden; }
+.ssh-terminal textarea { min-height: 0; resize: none; }

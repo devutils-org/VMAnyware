@@ -9,7 +9,7 @@ disposable macOS OpenSSH agents, not the user's agent.
 
 1. Inspect the endpoint; independently verify and explicitly trust an unknown
    fingerprint. Inspect again to complete a fresh verified handshake.
-2. Under **Test SSH authentication**, enter the login name and allow access to
+2. Under **Connect with an SSH agent**, enter the login name and allow access to
    the configured agent. Click **List agent identities**.
 3. Choose one displayed SHA-256 fingerprint, then **Check selected identity**.
    Success closes the connection without opening a terminal. Retry requires a
@@ -100,8 +100,9 @@ path with generated keys, temporary trust stores and disposable agents. No new
 application dependency was needed. `STATE.md` records actual checks/results.
 
 The [bounded native PTY transport](ssh-sessions.md) now reuses this authentication
-path and has local protocol-fixture evidence. A graphical terminal and real guest
-tests remain separate acceptance gates.
+path and has local protocol-fixture evidence. The [graphical terminal](ssh-terminal.md)
+is also wired, with separate simulated-IPC WebKit evidence. Integrated native
+and real guest walkthroughs remain separate acceptance gates.
 
 Primary references: [OpenSSH agent manual](https://man.openbsd.org/ssh-agent),
 [russh agent client](https://docs.rs/russh/0.64.1/russh/keys/agent/client/struct.AgentClient.html),

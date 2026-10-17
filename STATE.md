@@ -45,7 +45,12 @@ Updated: 2026-10-17. Historical evidence and decisions are in Git and docs.
 - Native Rust PTY/session transport with window-bound IDs, positive PTY/shell
   acknowledgments, bounded byte input/output, resize and explicit close. Startup
   reuses the same selected-agent authentication path. Window destruction aborts
-  its actor and closes its owned socket. No graphical terminal is wired yet.
+  its actor and closes its owned socket.
+- Graphical macOS terminal prototype using pinned xterm.js 6.0.0/fit 0.11.0.
+  Explicit opening consumes the chosen identity; output pulls wait for parser
+  consumption, input is serialized/bounded and resizes coalesce. Ctrl-C and
+  disconnect controls, stale-result cleanup and StrictMode lifecycle are wired.
+  Terminal output cannot set the app title, navigate links or access clipboard.
 - Rust-owned window/endpoint/key-bound UUID challenges expire after 120 seconds,
   are consumed once and invalidate on new inspection, cancellation or window
   destruction. Owner/probe limits are eight each; probes have a ten-second
@@ -56,10 +61,10 @@ Updated: 2026-10-17. Historical evidence and decisions are in Git and docs.
 Environment: macOS arm64, Rust/Cargo 1.99.1, Node 26.11.1, npm 11.20.0,
 Apple CommandLineTools. Dependency locks and compiler pin are committed.
 
-- Latest frontend check passed TypeScript/Vite build. Latest `make check-rust`
-  passed formatting, all-target Clippy with warnings denied and all 80 workspace
-  tests: 49 server, 31 native. The preceding full `make check` passed 76 tests
-  before the transport-only slice; frontend sources did not change in that slice.
+- Latest `make check` passed frontend TypeScript/Vite build, seven Node terminal
+  controller tests, Rust formatting/all-target Clippy with warnings denied and
+  all 80 workspace tests: 49 server, 31 native. Vite reports a nonblocking main
+  chunk-size warning (~580 KiB before gzip); performance tuning is deferred.
 - Provider tests use generated localhost TLS fixtures, never runtime credentials.
   They cover certificate/hostname/authentication failures, time/size bounds,
   inventory, preflight, task status validation and bounded polling.
@@ -104,6 +109,16 @@ Apple CommandLineTools. Dependency locks and compiler pin are committed.
   connections after explicit close/window destruction. Two policy tests cover
   queue saturation, single-reader enforcement, capacity and invalid dimensions.
   This is protocol echo, not a native graphical or actual remote OS shell test.
+- Graphical terminal slice: seven Node tests cover binary/split UTF-8 output,
+  renderer backpressure, stale results/errors, bounded serialized input, resize
+  coalescing, overflow, native saturation retries and exit/EOF/close.
+- Isolated macOS WebKit development smoke passed with simulated IPC and a
+  nonpersistent store: explicit identity choice/no automatic agent listing,
+  split UTF-8 rendered by xterm, resize, synthetic Unicode textarea input,
+  Ctrl-C byte, StrictMode no premature close/duplicate login, disconnect and
+  cleanup of a late start after edits. It never invokes Rust SSH commands or
+  accesses a personal agent. See `make check-terminal-webkit`. This is not an
+  integrated native-to-shell test or packaged CSP/real-keyboard evidence.
 - The running local service was rebuilt/restarted with the current code; a real
   validation POST returned HTTP 200, canonical hash and generated request ID.
   Current UI features compile; their manual native walkthrough remains pending.
@@ -113,18 +128,21 @@ Apple CommandLineTools. Dependency locks and compiler pin are committed.
 
 Earlier runtime evidence: `make doctor`, actual local HTTP/SQLite restart smokes,
 `make dev` native launch and user-confirmed `Native bridge connected (macos)`.
-`tauri build -- --no-bundle` produced an optimized binary before the latest
-features; current native frontend changes compile but await manual walkthrough.
+Latest `npm --prefix apps/client run tauri build -- --no-bundle` passed and
+produced the current optimized `target/release/pocketlab-client` (1m15s Rust
+release build). It was not launched for an integrated SSH walkthrough. The
+renderer smoke uses its own isolated WebKit host, not the packaged native app.
 Windows shutdown code is source-prepared, not compiled or tested on Windows.
 No Proxmox infrastructure has been contacted. Phase 0 remains incomplete.
 
 ## Next single task
 
-Connect a graphical macOS terminal to the bounded native PTY commands. Consume
-bytes incrementally with backpressure; bind input/resize/close to the current
-session and ignore stale results. Test frontend lifecycle and simulated IPC
-separately from the existing real native transport fixtures. Native walkthrough
-and real guest/Proxmox tests still await deliberate external setup.
+Prove the integrated native PTY path against an actual disposable local OS shell
+with agent-backed authentication, preserving real resize, foreground Ctrl-C and
+owned-process cleanup. Reuse fixture conventions; never access a user agent or
+credential file. Renderer/WebKit, Rust protocol and isolated real-shell evidence
+currently remain separate. Then perform an explicitly selected native/guest
+walkthrough; real Proxmox and mobile gates still await external setup.
 
 ## External inputs and limits
 
@@ -140,8 +158,10 @@ and real guest/Proxmox tests still await deliberate external setup.
 
 ## Remaining scope
 
-Application provisioning, VM instances/lifecycle, snapshots, desktop/mobile SSH,
-authenticated remote control planes and signed distribution are not implemented.
+Application provisioning, VM instances/lifecycle, snapshots, production desktop/
+mobile SSH, authenticated remote control planes and signed distribution remain
+incomplete. The macOS terminal is a fixture-tested prototype, not real-host proof.
 Default tests work without configured Proxmox, user credentials or mutable VMs.
 The macOS native target now includes the pinned russh candidate for handshake/
-trust and explicit agent authentication (ADRs 0010/0011); no production/mobile library guarantee is implied.
+trust, explicit agent authentication and PTY transport (ADRs 0010–0013); no
+production/mobile library guarantee is implied.

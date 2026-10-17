@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { SshTerminal } from "./SshTerminal";
 
 type Identity = { algorithm: string; fingerprint: string };
 type Selection = {
@@ -23,6 +24,7 @@ export function SshAuthentication({ host, port }: { host: string; port: number }
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");
   const [result, setResult] = useState<Authentication | null>(null);
+  const [terminal, setTerminal] = useState<{ id: string; account: string } | null>(null);
   const [deadline, setDeadline] = useState(0);
   const [now, setNow] = useState(Date.now());
   const generation = useRef(0);
@@ -45,6 +47,7 @@ export function SshAuthentication({ host, port }: { host: string; port: number }
     setFingerprint("");
     setError("");
     setResult(null);
+    setTerminal(null);
     setBusy(false);
     setDeadline(0);
   }
@@ -73,7 +76,7 @@ export function SshAuthentication({ host, port }: { host: string; port: number }
       if (request === generation.current) setBusy(false);
     }
   }
-  async function authenticate() {
+  async function authenticate(openTerminal = false) {
     if (!selection || !fingerprint || busy || Date.now() >= deadline || !consent) return;
     const current = selection;
     const request = generation.current;
@@ -81,6 +84,15 @@ export function SshAuthentication({ host, port }: { host: string; port: number }
     setBusy(true);
     setError("");
     try {
+      if (openTerminal) {
+        const started = await invoke<{ id: string }>("start_ssh_session", { selectionId: current.id, fingerprint, cols: 80, rows: 24 });
+        if (request !== generation.current) {
+          void invoke("close_ssh_session", { sessionId: started.id }).catch(() => {});
+          return;
+        }
+        setTerminal({ id: started.id, account: `${current.username}@${host} · port ${port}` });
+        return;
+      }
       const authenticated = await invoke<Authentication>("check_ssh_authentication", { selectionId: current.id, fingerprint });
       if (request !== generation.current) return;
       if (authenticated.host !== host || authenticated.port !== port || authenticated.username !== current.username || authenticated.fingerprint !== fingerprint) {
@@ -97,14 +109,14 @@ export function SshAuthentication({ host, port }: { host: string; port: number }
   }
   const seconds = Math.max(0, Math.ceil((deadline - now) / 1000));
   return <div aria-busy={busy}>
-    <h3>Test SSH authentication</h3>
-    <p>Use the SSH agent configured when this application was launched. Choose one public identity to test a login to {host} · port {port}. The connection closes after the check.</p>
+    <h3>Connect with an SSH agent</h3>
+    <p>Use the SSH agent configured when this application was launched. Choose one public identity for {host} · port {port}, then test authentication or open a terminal.</p>
     <form onSubmit={list}>
       <label htmlFor="ssh-username">SSH username</label>
       <div className="connection-fields">
         <input id="ssh-username" required maxLength={64} pattern="[a-zA-Z0-9_.\-]+" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={username} onChange={event => { invalidate(); setUsername(event.target.value); }} />
       </div>
-      <p><label><input type="checkbox" checked={consent} onChange={event => { invalidate(); setConsent(event.target.checked); }} /> Allow access to my configured SSH agent for this check.</label></p>
+      <p><label><input type="checkbox" checked={consent} onChange={event => { invalidate(); setConsent(event.target.checked); }} /> Allow access to my configured SSH agent for this connection.</label></p>
       <button type="submit" disabled={!consent || busy}>List agent identities</button>
     </form>
     {busy && <p role="status">Verifying the host and contacting the SSH agent…</p>}
@@ -119,10 +131,12 @@ export function SshAuthentication({ host, port }: { host: string; port: number }
       </fieldset>}
       <p>{seconds > 0 ? `Selection expires in ${seconds} seconds.` : "Selection expired. List identities again."}</p>
       <div className="connection-fields">
-        <button type="button" disabled={!fingerprint || busy || seconds === 0} onClick={authenticate}>Check selected identity</button>
+        <button type="button" disabled={!fingerprint || busy || seconds === 0} onClick={() => authenticate()}>Check selected identity</button>
+        <button type="button" disabled={!fingerprint || busy || seconds === 0} onClick={() => authenticate(true)}>Open terminal</button>
         <button type="button" onClick={invalidate}>Cancel</button>
       </div>
     </>}
     {result && <p role="status">Authenticated as {result.username} on {result.host} · port {result.port} with <span className="operation-id">{result.fingerprint}</span>. Connection closed. No terminal was opened.</p>}
+    {terminal && <SshTerminal key={terminal.id} id={terminal.id} account={terminal.account} />}
   </div>;
 }
