@@ -71,6 +71,8 @@ server and real local shell; run it separately with `make check-ssh`. Its
 [persistent host-trust policy](docs/ssh-host-trust.md) is shared with the
 [native macOS inspection/confirmation prototype](docs/ssh-host-inspection.md).
 Inspection never logs in or opens a shell; manual UI verification remains pending.
+The separate [disposable SSH-agent tests](docs/ssh-agent.md) now prove agent-backed
+authentication locally, ahead of native authentication integration.
 
 The native build requires `apps/client/src-tauri/icons/icon.png`. Its editable
 source is `icons/source.svg` in the same directory. Regenerate it from the root:

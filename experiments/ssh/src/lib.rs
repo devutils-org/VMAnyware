@@ -186,6 +186,15 @@ impl Fixture {
     }
 
     async fn with_os_shell(os_shell: bool) -> Self {
+        Self::with_configuration(os_shell, None).await
+    }
+
+    #[cfg(target_os = "macos")]
+    async fn with_user_public_key(key: PublicKey) -> Self {
+        Self::with_configuration(false, Some(key)).await
+    }
+
+    async fn with_configuration(os_shell: bool, allowed: Option<PublicKey>) -> Self {
         let host_key = ephemeral_key();
         let trusted_host = host_key.public_key().clone();
         let user_key = Arc::new(ephemeral_key());
@@ -208,7 +217,7 @@ impl Fixture {
             size: (80, 24),
             pty: None,
             shells: shells.clone(),
-            allowed_key: user_key.public_key().clone(),
+            allowed_key: allowed.unwrap_or_else(|| user_key.public_key().clone()),
             events: sender,
             auth_attempts: auth_attempts.clone(),
         };
@@ -493,3 +502,6 @@ async fn persisted_first_use_confirmation_reopen_and_changed_key_before_auth() {
     .await
     .unwrap();
 }
+
+#[cfg(target_os = "macos")]
+mod agent;

@@ -29,6 +29,10 @@ Updated: 2026-10-17. Historical evidence and decisions are in Git and docs.
   application dependency graph. Generated in-memory keys and localhost fixture
   prove strict host-key checks, signed authentication, real local shell output,
   resize, Ctrl-C foreground interruption and fresh reconnect. See ADR 0008.
+- Isolated macOS OpenSSH-agent authentication proves exact public-fingerprint
+  selection, delegated signatures, no identity fallback and rejection of
+  untrusted hosts before agent access. Agents/keys/sockets are disposable;
+  no user agent or credential file is accessed. Native authentication is pending.
 - Shared native/experimental persistent endpoint-scoped SSH host trust. On
   macOS, the native UI inspects keys and offers explicit first-use confirmation;
   known keys require a completed verified handshake, while changed keys cannot
@@ -57,7 +61,7 @@ Apple CommandLineTools. Dependency locks and compiler pin are committed.
   safe field hints, redaction, previews and preflight result decoding.
 - CI YAML passed actionlint 1.7.12 using a temporary checksum-verified binary.
   Its commands passed locally; no GitHub/Linux/native/mobile CI result is claimed.
-- Latest `make check-ssh` passed isolated formatting, locked Clippy and all ten SSH
+- Latest `make check-ssh` passed isolated formatting, locked Clippy and all sixteen SSH
   tests on macOS arm64. The real PTY test uses two fresh connections, observes
   stty size changes and requires foreground sleep interruption/status 130 within
   two seconds. Fixture cleanup leaves no owned shell/sleep processes. An early
@@ -73,6 +77,12 @@ Apple CommandLineTools. Dependency locks and compiler pin are committed.
   invalidation and out-of-order results, capacity and corrupt storage. Window
   destruction cleanup also prevents reuse of an old label reviving a challenge.
   Non-macOS wrappers are source-prepared, not cross-compiled or tested.
+- Agent slice: `make check-ssh` passed isolated fmt, locked Clippy and all
+  16 tests, including six real/disposable-agent and timeout scenarios. Processes
+  start with `-D -U -a`, cleared environment and private temporary sockets.
+  Authenticated reconnections open protocol PTYs; the separate shell fixture
+  still proves actual terminal resize/Ctrl-C. No new dependency or product
+  command was added; application checks were not rerun for this isolated change.
 - The running local service was rebuilt/restarted with the current code; a real
   validation POST returned HTTP 200, canonical hash and generated request ID.
   Current UI features compile; their manual native walkthrough remains pending.
@@ -89,11 +99,12 @@ No Proxmox infrastructure has been contacted. Phase 0 remains incomplete.
 
 ## Next single task
 
-Prototype desktop SSH-agent authentication against a disposable local agent
-and fixture, without reading personal credential files or accessing the user's
-agent. Use that evidence to choose platform key access before adding terminal
-sessions. Current native host inspection needs a manual walkthrough; see
-`docs/ssh-host-inspection.md`. Live Proxmox checks await the approved PC/catalog.
+Integrate explicit macOS agent-identity selection and an authentication-only
+native check. Verify fresh persisted host trust before agent access; select one
+public fingerprint with no fallback, keep signing inside Rust and close the
+connection after success. No terminal/session transport or generic signing API
+yet. Native host inspection still needs a manual walkthrough; live Proxmox
+checks await the approved PC/catalog. See `docs/ssh-agent.md` and ADR 0011.
 
 ## External inputs and limits
 

@@ -8,7 +8,7 @@ SSH candidate and shares the trust source at
 client keys in memory, and closes its fixture on completion. It never reads
 personal SSH configuration, credentials or OpenSSH known-host files. Only the
 experiment's temporary managed public-key records are persisted/read. No private
-key is serialized.
+key is written to disk or logged.
 
 From the repository root:
 
@@ -50,7 +50,7 @@ or reconfigured. Fixture commands are fixed source literals, not user input.
 ## Verification and limits
 
 Verified on 2026-10-16, macOS arm64 (Apple M1), Rust/Cargo 1.99.1:
-formatting and Clippy with warnings denied passed; all ten tests passed.
+formatting and Clippy with warnings denied passed; all sixteen tests passed on macOS.
 During development, an initial native-PTY run hit its ten-second overall limit;
 its precise cause was not established. Subsequent tests passed, including eight
 consecutive runs after explicit reader shutdown was added. Per-stage output
@@ -116,3 +116,28 @@ perform a DNS or network takeover.
 
 Next: choose platform credential access and connect a desktop terminal renderer
 through Tauri, then repeat essential interactions on real iOS/Android devices.
+
+
+## Disposable OpenSSH-agent authentication
+
+The macOS-only agent fixture starts `/usr/bin/ssh-agent -D -U -a` with an
+explicit private temporary socket and a cleared environment. The `-U` flag
+prevents personal agent-directory cleanup. It never discovers the user's agent,
+reads private-key files or uses `ssh-add`/`ssh-agent -k`. Generated fixture keys
+are provisioned over the local agent protocol in memory; the authentication
+helper receives only the selected public fingerprint and socket path. Cleanup
+kills/reaps only the owned child and removes its directory.
+
+The six additional tests prove verified host handshake before any client-path
+agent access; exact fingerprint selection with no fallback; two successful
+signed authentications and subsequent protocol PTY/data exchange; empty/missing
+identity or socket failure; unauthorized selected-key rejection; agent removal
+of a key or disconnect during signing; and a three-second unresponsive-agent
+deadline with connection closure. These agent-authenticated channels use the
+echo fixture, while the separate real-shell test validates native PTY behavior.
+
+This does not add authentication to the native application, access a personal
+agent, test Keychain or establish hardware/third-party/mobile agent support.
+The system agent must support `-U`; missing/unsupported tools fail explicitly.
+See [agent policy and evidence](../../docs/ssh-agent.md) and
+[ADR 0011](../../docs/decisions/0011-desktop-agent-backed-authentication.md).
