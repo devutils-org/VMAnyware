@@ -8,15 +8,15 @@ been demonstrated. See `STATE.md` for current counts and commands.
 | --- | --- | --- |
 | Native macOS foundation | Compiled development/release executable; user confirmed native bridge | Manual walkthrough of newly added screens; signing/installers |
 | Definitions | Strict YAML, deterministic hashes, SQLite migration/reopen, native HTTP and validation tests | Editing/versioning and large-catalog pagination are future product work |
-| Provider transport | Local Proxmox 9.2.2 Rust probe with explicit CA/hostname and dedicated privilege-separated token; bad token/CA/hostname rejected; effective privileges empty; fixture deadline/size tests | Scoped template/storage ACLs and provisioning permissions |
-| Inventory/preflight | Live Rust version/online-node reads and empty visible VM list on disposable pve-lab; HTTP/TLS fixtures, explicit catalog and unknowns | Known source template, scoped visibility and live preflight |
+| Provider transport | Local Proxmox 9.2.2 Rust probe with explicit CA/hostname and dedicated privilege-separated token; bad token/CA/hostname rejected; VM.Audit scoped to template 9000; fixture deadline/size tests | Storage audit and provisioning permissions |
+| Inventory/preflight | Live Rust version/node/template-9000 reads and scoped current-config inspection on disposable pve-lab; HTTP/TLS fixtures and explicit catalog | Live preflight, usable clone network and guest readiness |
 | Provider task status | Validated task identity, exact success semantics, bounded polling fixtures | Durable linkage/reconciliation and real provider task |
 | Local process ownership | Real process lock/restart and signal tests, five-second drain bound with stalled HTTP body | Service packaging and installed-service operational experience |
 | Diagnostics | Real binary tests for allowed fields and sensitive-input redaction | Operational experience on an installed service |
 | CI | Pinned workflow, local command checks and actionlint | First actual GitHub/Linux run; native/mobile runners |
-| VM provisioning | Explicit plan and template preparation procedure | Clone/configuration implementation plus approved disposable-host tests |
+| VM provisioning | Actual lab API full clone/configure/start/task-poll/shutdown; fresh 202 Cloud-Init exit 0/done without errors, consumed snippet hash and real Debian resource/SSH checks | Application mutation implementation, least-privilege execution ACLs and DHCP; recipe is pinned to tested versions |
 | Snapshot/restore | Declared intent only | Storage capability evidence, implementation and separately approved restore |
-| Desktop SSH/PTY | Real Tauri/IPC/bundled-renderer/disposable-agent/shell smoke; native output-pressure and isolated WebKit fixtures | Normal startup, real guest/OpenSSH/agent interoperability and physical keyboard behavior |
+| Desktop SSH/PTY | Real macOS Tauri/IPC/agent/local-shell smoke; separate Linux OpenSSH real-guest trust/auth/resize/Ctrl-C/reconnect; output-pressure fixtures | Native Tauri against a real guest, normal startup and physical keyboard behavior |
 | Mobile | No runtime evidence | SDKs, devices/simulators, SSH crypto/PTY build and lifecycle checks |
 
 ## Decisions that remain open

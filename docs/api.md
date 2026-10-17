@@ -3,7 +3,7 @@
 Status: compiled and exercised on macOS arm64 with Rust 1.99.1. Configuration
 and HTTP contract tests pass; a live health request returns HTTP 200.
 
-The service binds only `127.0.0.1`. `POCKETLAB_PORT` sets the port (default 8080,
+The service binds only `127.0.0.1`. `VMANYWARE_PORT` sets the port (default 8080,
 range 1–65535). No host override, authentication or CORS permission exists yet.
 SQLite definitions and an optional read-only Proxmox provider are available.
 The native client connects through Rust to this

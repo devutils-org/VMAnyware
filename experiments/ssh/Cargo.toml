@@ -1,5 +1,5 @@
 [package]
-name = "pocketlab-ssh-spike"
+name = "vmanyware-ssh-spike"
 version = "0.1.0"
 edition = "2021"
 publish = false

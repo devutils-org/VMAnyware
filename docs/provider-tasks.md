@@ -2,7 +2,7 @@
 
 The Rust provider client can observe an existing task with
 `GET /api2/json/nodes/{node}/tasks/{upid}/status`. No HTTP passthrough route or
-mutation method is exposed to the PocketLab client. This helper is preparation
+mutation method is exposed to the VMAnyware client. This helper is preparation
 for a future worker executing approved operations; it does not create jobs,
 persist provider references or reconcile tasks after a restart yet.
 

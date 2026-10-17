@@ -17,12 +17,12 @@ development session before proceeding. Leave existing API processes alone.
 Launch from the repository root:
 
 ```sh
-env -u SSH_AUTH_SOCK -u SSH_AGENT_PID npm --prefix apps/client run tauri dev -- --config '{"identifier":"dev.pocketlab.startup-smoke"}'
+env -u SSH_AUTH_SOCK -u SSH_AGENT_PID npm --prefix apps/client run tauri dev -- --config '{"identifier":"dev.vmanyware.startup-smoke"}'
 ```
 
 The configuration override selects a distinct application identifier; it does
 not edit the checked-in configuration. The normal macOS app-local data resolver
-should therefore select `~/Library/Application Support/dev.pocketlab.startup-smoke`
+should therefore select `~/Library/Application Support/dev.vmanyware.startup-smoke`
 rather than the regular application's directory. Confirm the resolved location
 before claiming app-data isolation. Use a fresh identifier suffix if this test
 identifier has already been used. This isolation procedure itself still needs
@@ -37,7 +37,7 @@ personal credential files or delete existing application data.
 ## Acceptance walkthrough
 
 1. Record macOS/architecture, tool versions, revision and exact test identifier.
-   Confirm that the normal PocketLab window opens without a startup error.
+   Confirm that the normal VMAnyware window opens without a startup error.
 2. Before clicking anything, confirm that local service status is unchecked and
    no inventory operation, SSH inspection or identity listing has started.
 3. Click **Check native bridge**. Record the actual Rust result `macos`.

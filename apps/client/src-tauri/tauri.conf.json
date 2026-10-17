@@ -1,8 +1,8 @@
 {
   "$schema": "https://schema.tauri.app/config/2",
-  "productName": "PocketLab",
+  "productName": "VMAnyware",
   "version": "0.1.0",
-  "identifier": "dev.pocketlab.client",
+  "identifier": "dev.vmanyware.client",
   "build": {
     "beforeDevCommand": "npm run dev",
     "devUrl": "http://127.0.0.1:1420",
@@ -10,7 +10,7 @@
     "frontendDist": "../dist"
   },
   "app": {
-    "windows": [{ "label": "main", "title": "PocketLab", "width": 960, "height": 680 }],
+    "windows": [{ "label": "main", "title": "VMAnyware", "width": 960, "height": 680 }],
     "security": {
       "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src ipc: http://ipc.localhost; img-src 'self' data:"
     }

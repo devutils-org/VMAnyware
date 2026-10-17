@@ -96,6 +96,6 @@ fn missing_catalog() -> (StatusCode, Json<ApiError>) {
     error(
         StatusCode::SERVICE_UNAVAILABLE,
         "template_catalog_not_configured",
-        "Configure POCKETLAB_TEMPLATES on the control plane before previewing provisioning.",
+        "Configure VMANYWARE_TEMPLATES on the control plane before previewing provisioning.",
     )
 }

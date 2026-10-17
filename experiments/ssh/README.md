@@ -13,9 +13,9 @@ key is written to disk or logged.
 From the repository root:
 
 ```sh
-CARGO_TARGET_DIR=/tmp/pocketlab-ssh-target cargo fmt --manifest-path experiments/ssh/Cargo.toml -- --check
-CARGO_TARGET_DIR=/tmp/pocketlab-ssh-target cargo clippy --manifest-path experiments/ssh/Cargo.toml --locked --all-targets -- -D warnings
-CARGO_TARGET_DIR=/tmp/pocketlab-ssh-target cargo test --manifest-path experiments/ssh/Cargo.toml --locked
+CARGO_TARGET_DIR=/tmp/vmanyware-ssh-target cargo fmt --manifest-path experiments/ssh/Cargo.toml -- --check
+CARGO_TARGET_DIR=/tmp/vmanyware-ssh-target cargo clippy --manifest-path experiments/ssh/Cargo.toml --locked --all-targets -- -D warnings
+CARGO_TARGET_DIR=/tmp/vmanyware-ssh-target cargo test --manifest-path experiments/ssh/Cargo.toml --locked
 ```
 
 `make check-ssh` is the opt-in repository convenience target. Default application
@@ -59,7 +59,7 @@ fresh reconnection to the real-shell fixture.
 
 This proves a local desktop Rust SSH/PTY transport and native Unix terminal path.
 It does **not** prove interoperability with a Proxmox guest/OpenSSH server,
-PocketLab's Tauri/WebView terminal, terminal rendering or keyboard handling,
+VMAnyware's Tauri/WebView terminal, terminal rendering or keyboard handling,
 a manual walkthrough of the native first-use confirmation UI, platform key
 storage, long-lived
 backpressure/recovery, installers, Windows, iOS or Android. It does not complete

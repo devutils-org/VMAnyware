@@ -344,14 +344,14 @@ async fn request<T: DeserializeOwned>(
             404 => "This feature is not available on the selected control plane.",
             413 => "Definition exceeds 64 KiB.",
             422 if path.starts_with("/api/v1/provisioning/") => "Cannot preview this configuration. Check the YAML, image mapping, target VMID and template disk size.",
-            503 if path == "/api/v1/provisioning/preflight" => "Configure the Proxmox provider and POCKETLAB_TEMPLATES on the control plane before checking provisioning.",
-            503 if path == "/api/v1/provisioning/plan" => "Configure POCKETLAB_TEMPLATES on the control plane before previewing provisioning.",
+            503 if path == "/api/v1/provisioning/preflight" => "Configure the Proxmox provider and VMANYWARE_TEMPLATES on the control plane before checking provisioning.",
+            503 if path == "/api/v1/provisioning/plan" => "Configure VMANYWARE_TEMPLATES on the control plane before previewing provisioning.",
             422 => "Definition is invalid. Check its schema, resource limits and inline public SSH key.",
             503 if path == "/api/v1/provider/inventory" => "The control plane is reachable. Configure Proxmox on the server, then retry.",
             503 => "Control-plane storage is unavailable. Check the control plane and retry.",
             502 => "The control plane cannot read Proxmox. Check its token permissions, endpoint and TLS trust.",
             504 => "Proxmox checks timed out. Check the server connection and retry.",
-            _ => "The control plane rejected the request. Check that you are connecting to PocketLab.",
+            _ => "The control plane rejected the request. Check that you are connecting to VMAnyware.",
         }.into());
     }
     serde_json::from_slice(&body)

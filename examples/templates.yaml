@@ -1,5 +1,5 @@
 # Example only. These values are not verified against any real homelab.
-apiVersion: pocketlab.dev/v1
+apiVersion: vmanyware.dev/v1
 kind: TemplateCatalog
 images:
   - image: debian-13

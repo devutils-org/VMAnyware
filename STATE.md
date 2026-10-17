@@ -1,6 +1,10 @@
-# PocketLab — current state
+# VMAnyware — current state
 
-Updated: 2026-10-17. Historical evidence and decisions are in Git and docs.
+Updated: 2026-10-18. Historical evidence and decisions are in Git and docs.
+
+Naming note: historical lab resource identifiers below are normalized to the
+current VMAnyware name. External resources were not renamed; use VMIDs and
+ignored local lab records to verify actual identifiers before operations.
 
 ## Implemented
 
@@ -181,7 +185,7 @@ Apple CommandLineTools. Dependency locks and compiler pin are committed.
 Earlier runtime evidence: `make doctor`, actual local HTTP/SQLite restart smokes,
 `make dev` native launch and user-confirmed `Native bridge connected (macos)`.
 Latest `npm --prefix apps/client run tauri build -- --no-bundle` passed and
-produced the current optimized `target/release/pocketlab-client` (1m02s Rust
+produced the current optimized `target/release/vmanyware-client` (1m02s Rust
 release build), confirmed Mach-O arm64, including stall handling/lazy rendering. It was not launched for an integrated SSH walkthrough. The
 older renderer smoke uses an isolated WebKit host. The new optimized Cargo
 example now proves real Tauri IPC/custom-protocol/CSP integration with disposable
@@ -213,7 +217,7 @@ remains incomplete.
   project Vite/Tauri session already owned port 1420. The identified old session
   and remaining native child were stopped, leaving the API untouched. A fresh
   `make dev` passed Vite startup, compiled the native client and launched
-  target/debug/pocketlab-client. README documents single-session recovery.
+  target/debug/vmanyware-client. README documents single-session recovery.
   No application code changed; native UI interaction was not asserted here.
 
 - Local-service demo slice: an explicit Check local service / Retry service
@@ -263,12 +267,12 @@ proof of a successful hosted run.
 
 ## Next single task
 
-Prepare a concrete Debian template plan (dated image/checksum, VMID, storage
-and network) for approval on pve-lab, including scoped VM.Audit for its account
-and token. The Rust version/node/empty-inventory probe now passes with verified
-TLS. No inner guest exists. The current read-only identity expires on
-2026-10-18 at 21:22:17 UTC; replacement requires approval. Normal macOS startup
-remains deferred to a Mac.
+Obtain explicit approval of the concrete clone-202 snapshot/rollback operations
+in `docs/x86-snapshot.md`, then execute that bounded experiment. Read-only API
+preflight passed: stopped target, no named snapshots, snapshot feature supported,
+active local-lvm with 17,977,492,007 bytes available. Thin-pool metadata gates
+still need read-only verification before execution. No snapshot/restart/rollback
+was performed. Preserve stopped 201/202 and template 9000.
 
 ## Resumed session — Linux environment
 
@@ -340,7 +344,7 @@ production/mobile library guarantee is implied.
 ## Approved outer lab preparation — 2026-10-17
 
 - User explicitly approved QEMU installation and creation/start of only
-  `pocketlab-pve-lab` with the resources/network/disk in `docs/x86-lab.md`.
+  `vmanyware-pve-lab` with the resources/network/disk in `docs/x86-lab.md`.
   This supersedes the earlier pending-approval status. Inner guests and
   credential creation remain outside this approval.
 - Added `/.lab/` to `.gitignore`; `git check-ignore` confirms exclusion.
@@ -364,7 +368,7 @@ production/mobile library guarantee is implied.
   report 11.1.2. Read installed invocation help before selecting arguments.
 - Rehashed the ISO successfully, checked free ports and refused any preexisting
   disk before creating `.lab/pve/pve.qcow2` (64 GiB virtual capacity).
-- Started `pocketlab-pve-lab` as UID 1000, PID 171988, with q35/KVM, host CPU,
+- Started `vmanyware-pve-lab` as UID 1000, PID 171988, with q35/KVM, host CPU,
   eight vCPUs, 16 GiB RAM, virtio disk/network and user-mode NAT. No host bridge,
   service, firewall, shared folder or physical disk was changed. Actual launch
   arguments and PID are saved under ignored `.lab/pve/`; verify PID identity
@@ -389,7 +393,7 @@ production/mobile library guarantee is implied.
   to approve concrete hostname/network defaults and choose local root-password
   handling (self-entry over VNC or explicitly authorized generated local file).
   That answer remains required before dependent installation steps.
-- Proposed hostname: pve-lab.pocketlab.test; address 10.0.2.15/24; gateway
+- Proposed hostname: pve-lab.vmanyware.test; address 10.0.2.15/24; gateway
   10.0.2.2; DNS 10.0.2.3; ext4/LVM on the sole 64 GiB virtual disk.
   Existing credential files were never read. VM remains running.
 
@@ -398,9 +402,9 @@ production/mobile library guarantee is implied.
 - User explicitly approved the proposed installation settings and generation
   of the local administrator password. Installed only on `/dev/vda` (the new
   64 GiB qcow2), ext4/LVM. Country France, Europe/Paris, US English keyboard;
-  hostname pve-lab.pocketlab.test; nic0 bridged by installer vmbr0 with
+  hostname pve-lab.vmanyware.test; nic0 bridged by installer vmbr0 with
   10.0.2.15/24, gateway 10.0.2.2 and DNS 10.0.2.3. Notification address
-  root@pocketlab.test is a lab placeholder, not working email delivery.
+  root@vmanyware.test is a lab placeholder, not working email delivery.
 - The generated 32-character random root credential is in ignored
   `.lab/pve/root-password`, mode 0600, used only for owned local-console login.
   No secret was printed. Initial rapid simulated keystrokes failed password
@@ -416,7 +420,7 @@ production/mobile library guarantee is implied.
   temporary bounded loopback HTTP receiver. Receiver closed after receipt.
   CA SHA256 fingerprint:
   D6:11:0C:E7:1B:12:F5:B6:79:22:99:22:E9:19:34:E8:98:FE:84:0D:88:69:56:70:0E:5F:A0:A6:38:5D:1D:2D.
-  curl with this explicit CA and hostname pve-lab.pocketlab.test resolved to
+  curl with this explicit CA and hostname pve-lab.vmanyware.test resolved to
   127.0.0.1:18006 returned HTTP 200 from the login page with TLS verification.
   No system trust/DNS configuration was modified or verification bypassed.
 - VM PID 171988 remains running; ss confirms both 5901 and 18006 still bind
@@ -432,12 +436,12 @@ production/mobile library guarantee is implied.
   Proxmox API schema with verified TLS: version/nodes/qemu-list GET endpoints
   allow authenticated users; VM visibility requires per-VM VM.Audit.
 - Prepared `.lab/pve/create-reader.py` for only pve-lab: root HTTPS login,
-  passwordless pocketlab-reader@pve, privsep inventory token, no ACLs, both
+  passwordless vmanyware-reader@pve, privsep inventory token, no ACLs, both
   expiring in 24 hours. Secret output is exclusive/0600 under ignored .lab.
   Script syntax parsed successfully; it has NOT been executed. Concrete
   credential approval was requested and remains pending.
-- `cargo build --locked -p pocketlab-server --example proxmox_probe` passed.
-  Bubblewrap read-only hosts-file override resolved pve-lab.pocketlab.test to
+- `cargo build --locked -p vmanyware-server --example proxmox_probe` passed.
+  Bubblewrap read-only hosts-file override resolved pve-lab.vmanyware.test to
   127.0.0.1 without changing host DNS/hosts. No new dependency or production
   code was introduced. Live authenticated inventory remains untested.
 - Next: after approval, run the prepared script in the isolated hosts namespace,
@@ -448,7 +452,7 @@ production/mobile library guarantee is implied.
 ## Live Rust inventory slice — 2026-10-17
 
 - User explicitly approved the prepared account/token operation. Created only
-  pocketlab-reader@pve (no password/group/ACL) and privsep inventory token on
+  vmanyware-reader@pve (no password/group/ACL) and privsep inventory token on
   the disposable pve-lab. Both expire 2026-10-18 21:22:17 UTC. Secret output
   is `.lab/pve/inventory-token.json`, verified mode 0600, never printed.
 - Root credentials/tickets were used over verified HTTPS only for approved
@@ -467,7 +471,7 @@ production/mobile library guarantee is implied.
   for a bad token and absent lab CA. No mutation request was attempted with
   the reader token. Initial diagnostic helper wrongly assumed 401 bodies were
   JSON; it was corrected to inspect status without parsing error bodies.
-- `cargo build --locked -p pocketlab-server --example proxmox_probe` passed.
+- `cargo build --locked -p vmanyware-server --example proxmox_probe` passed.
   No application source/dependency changes; no broad test suite was repeated.
   `git diff --check` passed. Updated roadmap's live connection and TLS/token
   checks only; known-template/provisioning gates and Phase 0 remain open.
@@ -609,3 +613,251 @@ production/mobile library guarantee is implied.
   keyboard, packaged distribution or mobile check. Next single frontend task:
   run `make check-terminal-webkit` for the extended macOS simulated-IPC states;
   the independent infrastructure task remains the Debian template plan.
+
+## Debian template preparation — 2026-10-18
+
+- User reports all Mac tests green after edits and authorized continuing the
+  remaining work. Clean workspace already contains 759aac5: example-only native
+  failure reporting and scrollIntoView before checking post-navigation xterm
+  output. Its recorded real macOS native run passed step 21. User's broader
+  all-green report is accepted as user-reported evidence, not a local Linux
+  rerun or real-guest/mobile proof.
+- Current host remains Linux. Owned outer QEMU PID 171988 still has loopback
+  ports 18006/5901. Verified-TLS read-only lab observations: no VM/container
+  resources; nextid 9000 available; local-lvm active/enabled with image content
+  and 21,302,870,016 available bytes; vmbr0 active over nic0. Requested custom
+  role VMAnywareTemplateReader does not exist. Observations reserve nothing.
+- Downloaded official dated Debian 13 genericcloud amd64 20261015-2632 image,
+  SHA512SUMS and build JSON to ignored .lab/pve/images/. Exact SHA-512 matches
+  the HTTPS manifest (recorded in docs/x86-template.md). qemu-img confirms qcow2,
+  3 GiB virtual size and no backing file; metadata JSON parses. No image boot,
+  mount, import or guest filesystem change occurred.
+- Prepared docs/x86-template.md: create only VM9000 on pve-lab, import/expand
+  scsi0 to 8 GiB on local-lvm, Cloud-Init/debian/NoCloud, 2 cores/2048 MiB,
+  serial console and vmbr0, convert while stopped and never booted. Separate
+  approval also covers a VM.Audit-only role and nonpropagating /vms/9000 grants
+  for existing reader user/token. No token regeneration or expiry change.
+- Prepared ignored .lab/pve/templates.yaml mapping this candidate; not claimed
+  live-validated. Template DHCP is dormant, not proof of nested guest routing.
+  A clone/start slice must establish an explicitly approved usable guest network.
+- Reviewed installed qm/pveum manuals fetched with explicit CA/hostname trust.
+  All three proposed shell blocks pass bash -n without execution. No product
+  source changed, so no application suite was repeated; git diff --check passed.
+  Read-only observations used only the lab's generated root credential over
+  verified HTTPS, without logging it or inspecting personal credentials.
+- Next: explicit approval of this concrete template/ACL operation, then create
+  and verify stopped template metadata through the scoped reader/Rust probe.
+
+## Real unbooted Debian template — 2026-10-18
+
+- User explicitly approved the concrete template/ACL operation. This approval
+  persists for that target/operation; no repeated confirmation is needed. It
+  does not authorize arbitrary VM creation, clone/start, network changes,
+  token renewal or deletion.
+- Rechecked 9000 availability, active image-capable local-lvm, vmbr0 and absent
+  role. Downloaded the same pinned Debian image inside pve-lab over verified
+  HTTPS; required the exact SHA-512, qcow2/no backing file/3 GiB before import.
+  Created only 9000, imported scsi0, expanded it to 8 GiB, added Cloud-Init and
+  configured 2 cores/2048 MiB/debian/NoCloud/ciupgrade=0/serial boot/vmbr0.
+- Verified stopped/configured state by HTTPS API before conversion. Converted
+  to template; final disk is local-lvm:base-9000-disk-0,size=8G, Cloud-Init disk
+  is vm-9000-cloudinit. No guest password/key, extra disk, hooks, passthrough or
+  custom QEMU args. No start was issued, so the template remains unbooted.
+- Created VMAnywareTemplateReader with VM.Audit only; exactly two direct
+  nonpropagating /vms/9000 ACLs for vmanyware-reader@pve and its inventory token.
+  Administrative readback confirms the role/grants, privsep and unchanged expiry.
+  Reader's own effective-permissions endpoint reports only VM.Audit at that path.
+- Reader GETs list exactly one stopped template and return its current config
+  HTTP 200. Existing Rust proxmox_probe exits zero with 9.2.2, pve-lab online
+  and Template 9000: vmanyware-debian-13-20261015. Explicit CA/hostname checks
+  remain enabled; token is passed only in child environment, never arguments.
+- A diagnostic helper initially used an unsupported administrative token-
+  permissions URL; replaced it with role/ACL metadata readback and the reader's
+  own effective-permissions endpoint. No mutation was repeated after this error.
+- Script hashes were compared through the owned QMP console before each stage.
+  Temporary public-only loopback script server stopped; root console logged
+  out. Outer VM remains running. All image/runtime/credential/evidence files
+  stay ignored under .lab/pve/. No private user credentials were inspected.
+- Updated template/lab/setup/feasibility docs and roadmap known-template item.
+  No product source changed; actual infrastructure checks above are the
+  verification for this slice. Shell syntax and git diff --check pass; no
+  application suite was repeated. Catalog is prepared locally, not live
+  provisioning/preflight proof. Phase 0 remains incomplete.
+- Next single task: propose an isolated guest-network/clone plan. No DHCP/SSH
+  reachability, nested guest boot, Cloud-Init completion, snapshot or restore
+  is implied by a readable stopped template.
+
+## Isolated clone plan — 2026-10-18
+
+- Continued with the requested network/clone preparation. Live read-only lab
+  observations confirm VMID 201 available, vmbr1 absent, template 9000 stopped,
+  active local-lvm with 20,301,635,126 bytes available. Host port 18222 is free;
+  inspected host routes show no 192.0.2.0/30 route. Recheck all inside/outside
+  routes, listeners and resources immediately before execution.
+- Prepared docs/x86-clone.md: full clone 9000 -> 201, 2 cores/2048 MiB/12 GiB,
+  runtime-only private vmbr1 at 192.0.2.1/30, guest 192.0.2.2/30 without default
+  gateway. Literal-address SSH through a fixed Proxmox Python relay and owned
+  outer QEMU hostfwd on 127.0.0.1:18222 avoids NAT/DHCP, package installation,
+  Linux host networking changes and management-bridge reloads. DNS may inherit
+  host defaults; no guest Internet or working DNS is assumed by this smoke.
+- Plan includes exactly one newly generated disposable SSH identity (no personal
+  agent/config/key), serial capture attached before first CPU execution, trusted
+  console host-fingerprint comparison, strict SSH, Cloud-Init/resource/PTY checks
+  and graceful shutdown/owned transport cleanup without deleting the clone.
+- Read installed qm documentation for freeze-at-startup; owned outer QMP help
+  confirms hostfwd_add syntax. info usernet shows only existing management
+  forwarding. No new bridge, listener, forward, identity or VM was created.
+- Static-address manual clone does not match current DHCP-only product preview.
+  Documented this limitation rather than claiming application provisioning.
+  No product source changes; two shell blocks pass bash -n, git diff --check
+  passes. No application suite was repeated for this preparation-only slice.
+- Next single task: approval of the concrete clone/network/SSH-identity and
+  graceful-shutdown operations, then execute the prepared smoke in stages.
+
+## First real nested clone/SSH smoke — 2026-10-18
+
+- User approved the concrete docs/x86-clone.md plan. Rechecked all target/
+  storage/network/port collisions; created only runtime vmbr1 and full clone
+  201 from template 9000. Used root lab HTTPS API for clone/config/resize/
+  frozen start/continue/shutdown with bounded task polling and recorded UPIDs.
+  No product mutation method, reader ACL expansion or new API token.
+- Generated one new disposable Ed25519 key in ignored .lab/pve/clone201, mode
+  0600. Only its public key was supplied through Cloud-Init. No personal key,
+  agent or SSH configuration was accessed. Outer forward bound only to host
+  127.0.0.1:18222; owned Python relay bound only to 10.0.2.15:18222, reaching
+  guest 192.0.2.2:22. No NAT/DHCP, management/host network reload or package install.
+- QEMU confirmed prelaunch before the serial recorder attached; guest final
+  Cloud-Init stage completed at about 6.8s after CPU continuation. Captured
+  Ed25519 host key independently matched SSH endpoint before isolated trust
+  was written. Strict selected-key SSH/reconnect pass; mismatched known-host
+  data rejected with 255, without changing any guest key.
+- Real guest resource assertions pass: Debian 13, debian, 2 CPUs, 1974 MiB RAM,
+  12 GiB disk, 12,468,432,896-byte expanded root filesystem, private /30 route
+  and no default route. Linux OpenSSH PTY passes 24x80 -> 43x132, foreground
+  sleep Ctrl-C/status130 in 0.022s, usable shell and reaped SSH child. No
+  remaining debian sleep process. This is separate from native macOS Tauri.
+- Strict initial readiness failed correctly: cloud-init 25.1.4 returns 2,
+  done/degraded done, errors=[], recoverable DEPRECATED scalar user warnings.
+  Root HTTPS readback confirms Proxmox emits user: debian. Warning is recorded,
+  not suppressed; separate SSH/resource checks do not constitute clean readiness.
+  Leave phase-0 clone/readiness checkbox open pending a deliberate correction.
+- Initial PTY harness expected the remainder of an interrupted interactive Bash
+  list to execute. A separate post-prompt status command corrected that test;
+  final real interruption passes. No product source change was needed.
+- Graceful shutdown task OK; 201 and template9000 both stopped. Owned transport
+  PID exited, no attached bridge links remained, vmbr1 removed, only added
+  outer forward removed. Temporary script/serial receiver stopped and root
+  console logged out. Clone/disk/identity retained; freeze=1 and absent vmbr1
+  mean restart requires deliberate restoration. No snapshot/restore/deletion.
+- Updated docs/x86-clone.md, template guide, feasibility and roadmap with exact
+  evidence/limits. No application source/dependency changed or broad suite
+  repeated; infrastructure assertions above and git diff --check are checks
+  for this slice. Raw logs/keys/tasks stay ignored, not committed.
+- Next single task: investigate scalar-user Cloud-Init generation and define
+  a compatible correction/explicit readiness policy before another guest test.
+
+## Offline Cloud-Init compatibility correction — 2026-10-18
+
+- Confirmed Proxmox generator's scalar user output against upstream source and
+  the lab's generated data. Cloud-Init 25.1.4 internally maps that scalar to a
+  name dictionary but emits a recoverable deprecation. Proposed minimal change
+  is user: {name: debian}, retaining users:[default] and all other allowed data.
+- Added experiments/cloud-init-user/convert.py, check.py and README; ignored
+  generated Python __pycache__ directories. Converter
+  accepts only observed passwordless/default-user data and explicit matching
+  expected username; rejects unknown features/passwords/upgrades; writes a new
+  0600 output exclusively. It has no provider access and never executes data.
+- Downloaded exact upstream 25.1.4 source archive into ignored .lab; SHA256
+  fa70a77fc3cd3167a051e9ab04af4d4f56d3ffa0deb320735c889a6a367d3a3d.
+  Installed upstream Python requirements only into an experimental venv. No
+  application/system dependency was added. Local tested packages are recorded
+  under .lab/cloud-init-compat/tested-python-packages.txt.
+- Actual upstream normalizer/schema check passes: original scalar causes one
+  deprecation, mapping causes none, normalized user/groups/default/sudo/shell/
+  locked-password values are identical. Unexpected input and file-overwrite
+  guards pass. Applied the same conversion offline to real stopped-201 generated
+  data: schema valid, identity equivalent and exact public key retained.
+- Lab read-only observations: local storage content currently import/backup/iso/
+  vztmpl (no snippets); 202 available; local-lvm free 19,140,628,710 bytes; both
+  201 and 9000 stopped. No Proxmox package, storage, VM, network or credential
+  mutation was made. No old guest cache was reset and no warning was suppressed.
+- Prepared docs/cloud-init-compatibility.md with exact fresh-202 retest: scoped
+  local snippets capability/file, converted 202-specific user-data, same bounded
+  private SSH topology, strict first-boot exit-zero/error-free acceptance and
+  graceful shutdown/transport cleanup. This requires concrete approval; the
+  existing 201 candidate must not be reused for a differently named/keyed clone.
+- Added link to clone evidence. Offline semantic/schema/CLI guards and README
+  shell syntax passed; git diff --check passed. No product source changed, so
+  no application suite was repeated. First-boot compatibility remains unproven.
+- Next single task is approval/execution of that fresh-202 retest. Keep the
+  phase-0 readiness gate open until actual guest exit-zero evidence exists.
+
+## Fresh Cloud-Init compatibility retest — 2026-10-18
+
+- User approved the concrete 202 retest. Rechecked unused VMID/storage/ports;
+  full-cloned 9000 to 202, configured 2 CPUs/2048 MiB/12 GiB, new disposable
+  key and private static /30. Clone/resize/frozen-start/shutdown tasks all OK.
+- Converted fresh 202-specific user-data, verified exact key/hostname and
+  upstream schema/normalization. Added only local storage snippets capability,
+  exclusively created root-owned 0600 snippet and bound only 202 cicustom user.
+  Generated network/metadata retained; no template/201/package changes.
+- Serial capture preceded CPU continuation. Initial key check correctly refused
+  before the boot block was available; after capture the endpoint key matched.
+  Strict selected-key SSH and reconnect passed; wrong pinned key rejected 255.
+- Actual first-boot Cloud-Init 25.1.4 exit 0, done/extended done, no fatal or
+  recoverable errors globally or per stage; final completion at 6.95s. Consumed
+  user-data SHA256 equals prepared snippet (recorded in compatibility document).
+- Debian 13/debian, 2 CPUs, 1974 MiB, 12 GiB disk and 12,468,432,896-byte root
+  filesystem verified; no default route. PTY 24x80 -> 43x132, Ctrl-C/status130
+  in 0.036s, usable shell/reaped child/no leftover sleep.
+- Graceful shutdown OK; final API readback confirms 202/201/9000 stopped.
+  Owned relay/recorder exited, runtime bridge removed, added loopback forward
+  removed, HTTP receiver stopped and root console logged out. Retain stopped
+  202/disks/snippet/storage capability/key; freeze=1 and absent vmbr1 require
+  deliberate restoration before another start. No snapshots/restore/deletion.
+- Updated compatibility evidence, experiment README, feasibility, roadmap and
+  ADR 0017. Phase-0 manual provisioning prototype gate is now evidenced;
+  application execution, least-privilege mutation ACLs and mobile remain open.
+- Checks: actual infrastructure assertions above, offline upstream semantic/
+  schema/guard checker and git diff --check. No product source changed; no
+  broad application suite rerun. Next single task: concrete snapshot test plan.
+
+## Snapshot experiment preparation — 2026-10-18
+
+- Read STATE.md, roadmap and phase-0 brief; scoped this slice to preparation.
+- Verified by trusted lab HTTPS API: 9000/201/202 stopped, 202 exact disk/network/
+  snippet/freeze configuration, snapshot list only current, snapshot feature
+  hasFeature=1, active enabled nonshared LVM-thin pve/data, available bytes
+  17,977,492,007. No VM/storage/network/credential mutation was performed.
+- Added docs/x86-snapshot.md: exact named stopped-disk snapshot on 202, existing
+  strict SSH identity/trust, A/B fsynced guest marker plus post-snapshot file,
+  explicit stopped rollback then guest A/absence proof, bounded task observation,
+  capacity/metadata/config gates and graceful shutdown/owned transport cleanup.
+- Retain snapshot and stopped target; no deletion/live RAM snapshots/ACL changes.
+  External user-data snippet is preserved and is not claimed as snapshot backup.
+- Official upstream LVM-thin docs and QEMU API consulted; installed API behavior
+  and thin-pool metadata remain execution gates, not asserted runtime evidence.
+- Validation: git diff --check. No application source changes or suite rerun.
+- Next single task: explicit approval and execution of this concrete plan.
+
+## Product naming — 2026-10-18
+
+- Standardized product/UI/docs, Rust/npm package names, Tauri identifiers,
+  environment variables, YAML API namespaces, fixtures and scripts on VMAnyware.
+- Existing databases, app trust directories and environment configuration need
+  explicit migration/reconfiguration; no automatic migration is implemented.
+- Historical lab identifiers in documents use current branding. Ignored local
+  records and external resources retain actual names; verify these before any
+  operation, particularly TLS hostname/snippet binding and snapshot preflight.
+- Next single task remains the concrete 202 snapshot plan, resolving actual
+  external identifiers from VMID and local lab records before execution.
+- Naming verification: make check-client passed (build + 7 tests); make
+  check-server passed (fmt/clippy + 50 tests). Locked Cargo metadata, workspace
+  formatting, changed JS syntax and git diff --check pass. Case-insensitive
+  source/document search finds no former product name outside ignored artifacts.
+- Full native workspace check cannot complete on this Linux host: GTK/WebKit
+  development libraries are missing. No native application launch was performed.
+- make check-ssh: fmt/clippy pass, 9 tests pass; the existing real-shell PTY
+  fixture fails waiting for its expected READY line framing (actual READY was
+  received). No renamed strings occur in that assertion; left this independent
+  Linux fixture issue unchanged. Native macOS validation remains to be rerun.

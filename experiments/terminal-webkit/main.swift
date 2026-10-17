@@ -20,7 +20,7 @@ configuration.userContentController.addUserScript(WKUserScript(source: script, i
 let frame = NSRect(x: 0, y: 0, width: 960, height: 900)
 let webView = WKWebView(frame: frame, configuration: configuration)
 let window = NSWindow(contentRect: frame, styleMask: [.titled], backing: .buffered, defer: false)
-window.title = "PocketLab isolated WebKit fixture"
+window.title = "VMAnyware isolated WebKit fixture"
 window.contentView = webView
 window.orderBack(nil)
 webView.load(URLRequest(url: URL(string: CommandLine.arguments[1])!))

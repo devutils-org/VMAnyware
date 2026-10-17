@@ -22,7 +22,7 @@ claiming Proxmox has been installed or tested.
 
 | Setting | Concrete proposal |
 | --- | --- |
-| Process/VM name | `pocketlab-pve-lab` |
+| Process/VM name | `vmanyware-pve-lab` |
 | Owner | Current unprivileged development user |
 | Runtime directory | `/home/moha/dev/VMAnyware/.lab/pve/` (must be ignored before creation) |
 | Virtual disk | New `pve.qcow2`, 64 GiB virtual capacity; no existing disk reused |
@@ -46,7 +46,7 @@ Approval must cover package installation and creation/start of this exact outer
 VM. Guest administrator credentials and dedicated API-token creation need their
 own concrete approval. Do not put passwords/tokens in Git or command arguments.
 Do not bypass TLS verification for the self-signed guest endpoint: establish
-explicit trust before PocketLab API reads.
+explicit trust before VMAnyware API reads.
 
 ## Acceptance sequence after approval
 
@@ -70,7 +70,7 @@ unchanged. No LAN exposure or bridge modification is approved by this proposal.
 
 First API evidence should be verified-TLS read-only version/nodes/template
 metadata using a dedicated approved token. Clone/configure/start, snapshot,
-restore and cleanup are separate operations. PocketLab has no implemented
+restore and cleanup are separate operations. VMAnyware has no implemented
 provider mutation methods, so infrastructure readiness alone does not complete
 the provisioning roadmap.
 
@@ -104,10 +104,10 @@ Inner guests and dedicated API credentials still require concrete approval.
 ## Installed lab and verified HTTPS — 2026-10-17
 
 Proxmox installed on the sole `/dev/vda` with ext4/LVM and rebooted from disk.
-The node is `pve-lab` (`pve-lab.pocketlab.test`); version is
+The node is `pve-lab` (`pve-lab.vmanyware.test`); version is
 `pve-manager/9.2.2/b9984c6d90a4bd80`, kernel `7.0.2-6-pve`. Installer settings:
 France, Europe/Paris, US English keyboard, lab notification placeholder
-`root@pocketlab.test`. This placeholder does not provide email delivery.
+`root@vmanyware.test`. This placeholder does not provide email delivery.
 
 The installer created guest bridge `vmbr0` over `nic0`, using `10.0.2.15/24`,
 gateway `10.0.2.2` and DNS `10.0.2.3`. Host networking was not changed.
@@ -127,9 +127,9 @@ verification, without changing system DNS or trust:
 ```sh
 curl --fail --silent --show-error --noproxy '*' \
   --cacert .lab/pve/pve-root-ca.pem \
-  --resolve pve-lab.pocketlab.test:18006:127.0.0.1 \
+  --resolve pve-lab.vmanyware.test:18006:127.0.0.1 \
   --output /dev/null --write-out 'HTTP %{http_code}\n' \
-  https://pve-lab.pocketlab.test:18006/
+  https://pve-lab.vmanyware.test:18006/
 ```
 
 The VM remains running with management/VNC exposed only on host loopback.
@@ -141,13 +141,13 @@ template, snapshot, restore or API token was created in this slice.
 ## Inventory identity preparation and subsequent approval
 
 Concrete target: only the disposable node `pve-lab` at
-`https://pve-lab.pocketlab.test:18006`, resolved to host loopback.
+`https://pve-lab.vmanyware.test:18006`, resolved to host loopback.
 
 The prepared local script `.lab/pve/create-reader.py` would authenticate over
 verified HTTPS with the lab's generated root credential, then create:
 
-- User `pocketlab-reader@pve`, enabled, with no password, groups or ACL grants.
-- Token `pocketlab-reader@pve!inventory` with `privsep=1`, no ACL grants.
+- User `vmanyware-reader@pve`, enabled, with no password, groups or ACL grants.
+- Token `vmanyware-reader@pve!inventory` with `privsep=1`, no ACL grants.
 - Both identities expire 24 hours after execution. Token output is stored only
   in ignored `.lab/pve/inventory-token.json`, created exclusively with mode 0600.
 
@@ -165,7 +165,7 @@ that the installed API accepts the token or that node fields will be complete.
 A future concrete template needs its own scoped permission approval.
 
 The existing Rust `proxmox_probe` compiled with `cargo build --locked -p
-pocketlab-server --example proxmox_probe`. An isolated Bubblewrap mount of a
+vmanyware-server --example proxmox_probe`. An isolated Bubblewrap mount of a
 local hosts file resolves the certificate hostname to 127.0.0.1 for only the
 probe process; the host's `/etc/hosts`, DNS and trust remain unchanged. Token
 configuration will be passed only through the child environment, not arguments.
@@ -189,3 +189,11 @@ No guest/template exists yet. Next: prepare a concrete Debian template VMID,
 image, storage and networking plan for approval, then grant only its scoped
 VM.Audit visibility to the account and token. Do not broaden to a global role
 merely to obtain a nonempty inventory.
+
+## Next concrete template proposal
+
+[The prepared template plan](x86-template.md) records the downloaded/verified
+Debian image, observed free VMID/storage/bridge and exact unbooted template/
+scoped-reader operations. The user subsequently approved these mutations; the
+plan now records executed creation/conversion of stopped template 9000 and
+successful scoped-reader/Rust metadata reads. Clone/start remains separate.

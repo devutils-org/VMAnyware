@@ -104,10 +104,10 @@ impl Proxmox {
                 Err(_) => Err(Error::Configuration),
             }
         }
-        let endpoint = optional("POCKETLAB_PROXMOX_URL")?;
-        let id = optional("POCKETLAB_PROXMOX_TOKEN_ID")?;
-        let secret = optional("POCKETLAB_PROXMOX_TOKEN_SECRET")?;
-        let ca_path = optional("POCKETLAB_PROXMOX_CA")?;
+        let endpoint = optional("VMANYWARE_PROXMOX_URL")?;
+        let id = optional("VMANYWARE_PROXMOX_TOKEN_ID")?;
+        let secret = optional("VMANYWARE_PROXMOX_TOKEN_SECRET")?;
+        let ca_path = optional("VMANYWARE_PROXMOX_CA")?;
         if endpoint.is_none() && id.is_none() && secret.is_none() && ca_path.is_none() {
             return Ok(None);
         }

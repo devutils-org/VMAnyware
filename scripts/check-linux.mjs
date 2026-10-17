@@ -14,21 +14,21 @@ const image = target === "server"
 const commands = target === "server" ? [
   "rustc --version", "cargo --version",
   "rustup component add --toolchain 1.99.1 rustfmt clippy",
-  "cargo fmt -p pocketlab-server -- --check",
-  "cargo clippy --locked -p pocketlab-server --all-targets -- -D warnings",
-  "cargo test --locked -p pocketlab-server",
+  "cargo fmt -p vmanyware-server -- --check",
+  "cargo clippy --locked -p vmanyware-server --all-targets -- -D warnings",
+  "cargo test --locked -p vmanyware-server",
 ] : [
   "node --version", "npm --version",
   "npm --prefix apps/client ci --no-audit --no-fund",
   "npm --prefix apps/client run build",
   "npm --prefix apps/client test",
 ];
-const directory = await mkdtemp(join(tmpdir(), "pocketlab-linux-"));
+const directory = await mkdtemp(join(tmpdir(), "vmanyware-linux-"));
 const source = join(directory, "source"), config = join(directory, "docker");
 await mkdir(source); await mkdir(config);
 const environment = { PATH: "/usr/local/bin:/usr/bin:/bin", DOCKER_CONFIG: config };
 const docker = ["--host", "unix:///var/run/docker.sock"];
-const container = `pocketlab-linux-${randomUUID()}`;
+const container = `vmanyware-linux-${randomUUID()}`;
 let child;
 const interrupt = () => child?.kill("SIGTERM");
 process.on("SIGINT", interrupt); process.on("SIGTERM", interrupt);

@@ -2,13 +2,13 @@ use axum::{
     body::{to_bytes, Body},
     http::{Request, StatusCode},
 };
-use pocketlab_server::{
+use serde_json::Value;
+use tower::ServiceExt;
+use vmanyware_server::{
     definition::Definition,
     router,
     store::{Error, Store},
 };
-use serde_json::Value;
-use tower::ServiceExt;
 
 const SAMPLE: &str = include_str!("../../examples/kernel-lab.yaml");
 
@@ -30,7 +30,7 @@ fn schema_refuses_invalid_resources_versions_names_and_unknown_fields() {
         SAMPLE.replace("cpu: 4", "cpu: 0"),
         SAMPLE.replace("memoryMiB: 8192", "memoryMiB: 255"),
         SAMPLE.replace("diskGiB: 40", "diskGiB: 4097"),
-        SAMPLE.replace("pocketlab.dev/v1", "pocketlab.dev/v99"),
+        SAMPLE.replace("vmanyware.dev/v1", "vmanyware.dev/v99"),
         SAMPLE.replace("name: kernel-lab", "name: ../escape"),
         SAMPLE.replace("cloudInit: true", "cloudInit: false"),
         SAMPLE.replace("cpu: 4", "cpu: 4\n    typo: secret-value"),
@@ -44,7 +44,7 @@ fn schema_refuses_invalid_resources_versions_names_and_unknown_fields() {
 
 #[test]
 fn private_keys_paths_duplicate_keys_and_oversized_documents_are_refused() {
-    let public = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA pocketlab-example";
+    let public = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA vmanyware-example";
     for yaml in [
         SAMPLE.replace(public, "~/.ssh/id_ed25519.pub"),
         SAMPLE.replace(public, "-----BEGIN OPENSSH PRIVATE KEY-----"),
@@ -59,7 +59,7 @@ fn private_keys_paths_duplicate_keys_and_oversized_documents_are_refused() {
 #[test]
 fn definitions_survive_reopen_and_conflicts_do_not_overwrite() {
     let directory = tempfile::tempdir().unwrap();
-    let path = directory.path().join("pocketlab.sqlite");
+    let path = directory.path().join("vmanyware.sqlite");
     let definition = Definition::parse(SAMPLE).unwrap();
     let original_hash;
     {

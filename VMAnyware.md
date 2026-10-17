@@ -1,4 +1,4 @@
-# Roadmap — PocketLab
+# Roadmap — VMAnyware
 
 > **Mission:** Build a native, cross-platform application for reproducible Linux environments hosted on a self-managed Proxmox VE homelab.
 >
@@ -18,7 +18,7 @@
 
 A user can:
 
-1. Connect the application to a self-hosted PocketLab control plane.
+1. Connect the application to a self-hosted VMAnyware control plane.
 2. Connect that control plane to one Proxmox VE host or cluster endpoint.
 3. Inspect managed environments and their runtime status.
 4. Create a Debian-based environment from a prepared Proxmox template.
@@ -73,7 +73,7 @@ Do not assume one SSH implementation or terminal renderer works equally well on 
 └──────────────────────────┬───────────────────────────────┘
                            │ HTTPS + client authentication
 ┌──────────────────────────▼───────────────────────────────┐
-│ PocketLab control plane (self-hosted Linux service)       │
+│ VMAnyware control plane (self-hosted Linux service)       │
 │                                                          │
 │ Axum API                                                 │
 │ Domain model and validation                              │
@@ -107,7 +107,7 @@ SSH path:
 Suggested initial repository:
 
 ```text
-pocketlab/
+vmanyware/
 ├── apps/
 │   └── client/                  # Tauri 2 + React + TypeScript
 ├── crates/
@@ -148,7 +148,7 @@ The definition must be versioned and separate from a live VM instance.
 Example starting point (adjust names to the final schema; do not assume this is already implemented):
 
 ```yaml
-apiVersion: pocketlab.dev/v1
+apiVersion: vmanyware.dev/v1
 kind: Environment
 
 metadata:
@@ -165,7 +165,7 @@ spec:
   provisioning:
     cloudInit: true
     sshAuthorizedKeys:
-      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA pocketlab-example
+      - ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA vmanyware-example
     packages:
       - build-essential
       - clang
@@ -185,7 +185,7 @@ Public keys are inline contents; server-side key-file path resolution is not sup
 - Define and document the exact schema and defaults.
 - Reject unknown or invalid fields unless forward compatibility explicitly requires another policy.
 - Never store private SSH keys in environment YAML.
-- Do not assume `image` names map automatically to Proxmox templates. Maintain an explicit mapping from PocketLab image identifiers to known template IDs and versions.
+- Do not assume `image` names map automatically to Proxmox templates. Maintain an explicit mapping from VMAnyware image identifiers to known template IDs and versions.
 - Keep secrets out of logs, error messages, state snapshots and generated diagnostics.
 - Make configuration export deterministic.
 - Record the definition version/hash used to create each instance.
@@ -206,11 +206,11 @@ The MVP must achieve level 1 and document level 2 limitations. Snapshot support 
 Start with these conceptual entities:
 
 - `EnvironmentDefinition`: reusable, versioned desired configuration.
-- `EnvironmentInstance`: a concrete VM managed by PocketLab.
+- `EnvironmentInstance`: a concrete VM managed by VMAnyware.
 - `ProviderReference`: provider name, Proxmox node, VMID and other required identifiers.
 - `Operation`: asynchronous action with ID, type, status, progress/message where available, timestamps and safe error details.
 - `Snapshot`: snapshot ID/name, VM reference, creation time and description where supported.
-- `TemplateReference`: PocketLab image identifier mapped to a known Proxmox template and version.
+- `TemplateReference`: VMAnyware image identifier mapped to a known Proxmox template and version.
 
 Keep the state model explicit:
 
@@ -269,8 +269,8 @@ Tasks:
 - [x] Document the supported OS versions and toolchain. (Current macOS development baseline and unverified targets in docs/platforms.md; no release/minimum-OS guarantee.)
 - [x] Connect a Rust prototype to a disposable/test Proxmox VE environment using a dedicated least-privilege API token. (Local pve-lab: Rust probe reads 9.2.2, online node and empty visible inventory with a privilege-separated token and no ACL grants.)
 - [x] Verify TLS certificate handling and API-token permissions. (Local pve-lab: explicit CA/hostname verified; bad token, untrusted CA and wrong hostname rejected; effective token privileges confirmed empty. Template/provisioning ACLs remain unverified.)
-- [ ] Read VM inventory and inspect a known template.
-- [ ] Prototype clone → Cloud-Init configuration → start → poll task → verify readiness.
+- [x] Read VM inventory and inspect a known template. (pve-lab: stopped Debian 13 template 9000, verified image/import/8 GiB Cloud-Init configuration; scoped reader HTTP config and Rust template listing pass. No guest boot.)
+- [x] Prototype clone → Cloud-Init configuration → start → poll task → verify readiness. (Disposable lab clone 9000→202: provider tasks OK, corrected target-specific user-data, first-boot Cloud-Init exit 0/done without fatal or recoverable errors, strict SSH/resources verified. Administrative manual prototype only; application mutation methods and least-privilege execution remain absent. See docs/cloud-init-compatibility.md.)
 - [ ] Prototype create/list/restore snapshot on a disposable VM.
 - [ ] Test SSH authentication, host-key verification, interactive PTY and terminal resizing on desktop. (Real macOS Tauri UI/IPC/agent/local-shell fixture passes, including resize/Ctrl-C/reconnect; normal startup, real guest/agent and mobile validation remain open.)
 - [ ] Test whether the chosen terminal and SSH approach works on both iOS and Android.
@@ -341,7 +341,7 @@ Tasks:
 Tasks:
 
 - [x] Document how to prepare/import a supported Debian template in Proxmox. (Proposed Debian 13 amd64 procedure reviewed against official sources; real-host support validation pending.)
-- [x] Implement an explicit PocketLab image-to-Proxmox-template mapping. (Strict server catalog and offline plan; live template verification pending.)
+- [x] Implement an explicit VMAnyware image-to-Proxmox-template mapping. (Strict server catalog and offline plan; live template verification pending.)
 - [ ] Implement clone and resource configuration.
 - [ ] Apply Cloud-Init settings and SSH public keys.
 - [ ] Implement provisioning/readiness polling with timeout and failure handling.

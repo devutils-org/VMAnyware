@@ -126,7 +126,7 @@ mod smoke {
             .expect("repository-owned native scenario unavailable")
         );
         let mut context = tauri::generate_context!();
-        context.config_mut().identifier = "dev.pocketlab.terminal-fixture".into();
+        context.config_mut().identifier = "dev.vmanyware.terminal-fixture".into();
         context.config_mut().app.windows.clear();
         tauri::Builder::default()
             .manage(hosts)
@@ -171,7 +171,7 @@ mod smoke {
                     "main",
                     tauri::WebviewUrl::App("index.html".into()),
                 )
-                .title("PocketLab disposable native smoke")
+                .title("VMAnyware disposable native smoke")
                 .inner_size(960.0, 900.0)
                 .incognito(true)
                 .focused(false)

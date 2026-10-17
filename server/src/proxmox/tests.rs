@@ -107,7 +107,7 @@ impl Fixture {
     fn client(&self) -> Proxmox {
         Proxmox::new(
             &self.endpoint,
-            "reader@pve!pocketlab",
+            "reader@pve!vmanyware",
             "fake-test-secret",
             Some(&self.ca),
         )
@@ -277,7 +277,7 @@ async fn verified_tls_reads_api_envelope_and_sends_token_header() {
     assert!(request.starts_with("GET /api2/json/version HTTP/1.1"));
     assert!(request
         .to_ascii_lowercase()
-        .contains("authorization: pveapitoken=reader@pve!pocketlab=fake-test-secret\r\n"));
+        .contains("authorization: pveapitoken=reader@pve!vmanyware=fake-test-secret\r\n"));
 }
 
 #[tokio::test]

@@ -2,14 +2,14 @@ use axum::{
     body::{to_bytes, Body},
     http::{Request, StatusCode},
 };
-use pocketlab_server::{
+use serde_json::{json, Value};
+use tower::ServiceExt;
+use vmanyware_server::{
     definition::Definition,
     provisioning::{Catalog, Error},
     router_with_catalog,
     store::Store,
 };
-use serde_json::{json, Value};
-use tower::ServiceExt;
 
 const CATALOG: &str = include_str!("../../examples/templates.yaml");
 const DEFINITION: &str = include_str!("../../examples/kernel-lab.yaml");
@@ -71,7 +71,7 @@ fn incomplete_ambiguous_or_invalid_catalogs_are_refused_without_echoing_values()
             "guestUser: debian",
             "guestUser: debian\n    secret: never-echo-me",
         ),
-        CATALOG.replace("pocketlab.dev/v1", "pocketlab.dev/v99"),
+        CATALOG.replace("vmanyware.dev/v1", "vmanyware.dev/v99"),
         CATALOG.replace("templateVmid: 9000", "templateVmid: 0"),
         CATALOG.replace(
             "templateVersion: debian-13-cloud-20261016",

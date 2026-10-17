@@ -29,7 +29,7 @@ pub struct InvalidPort;
 
 impl fmt::Display for InvalidPort {
     fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
-        f.write_str("POCKETLAB_PORT must be an integer between 1 and 65535")
+        f.write_str("VMANYWARE_PORT must be an integer between 1 and 65535")
     }
 }
 
@@ -54,7 +54,7 @@ mod tests {
             let error = Config::from_port(Some(input)).unwrap_err();
             assert_eq!(
                 error.to_string(),
-                "POCKETLAB_PORT must be an integer between 1 and 65535"
+                "VMANYWARE_PORT must be an integer between 1 and 65535"
             );
         }
     }

@@ -3,7 +3,8 @@
 The disposable local Proxmox lab has passed the Rust version/node inventory
 probe with verified TLS and a dedicated token. Local TLS fixture tests also
 verify transport, certificate trust/hostname checks, authentication/error mapping
-and parsing. A real source template has not yet been inspected.
+and parsing. Stopped Debian template 9000 has now been inspected with a
+VM.Audit-only role scoped to that VM; see [execution evidence](x86-template.md).
 
 ## Scope and permissions
 
@@ -42,10 +43,10 @@ application does not automatically load `.env` files.
 
 | Variable | Meaning |
 | --- | --- |
-| `POCKETLAB_PROXMOX_URL` | HTTPS origin, e.g. `https://pve.example:8006`, without API suffix, user info, query or fragment |
-| `POCKETLAB_PROXMOX_TOKEN_ID` | Dedicated token identifier, e.g. `reader@pve!pocketlab` |
-| `POCKETLAB_PROXMOX_TOKEN_SECRET` | Token secret, kept only in the control-plane process |
-| `POCKETLAB_PROXMOX_CA` | Optional path to a PEM CA certificate trusted for this server |
+| `VMANYWARE_PROXMOX_URL` | HTTPS origin, e.g. `https://pve.example:8006`, without API suffix, user info, query or fragment |
+| `VMANYWARE_PROXMOX_TOKEN_ID` | Dedicated token identifier, e.g. `reader@pve!vmanyware` |
+| `VMANYWARE_PROXMOX_TOKEN_SECRET` | Token secret, kept only in the control-plane process |
+| `VMANYWARE_PROXMOX_CA` | Optional path to a PEM CA certificate trusted for this server |
 
 For a cluster CA, obtain its **public CA certificate** through a trusted channel
 and use a hostname present in the server certificate. Do not bypass verification.
@@ -56,7 +57,7 @@ are refused so credentials cannot be forwarded to a different destination.
 After explicitly selecting a test endpoint and configuring these variables:
 
 ```sh
-POCKETLAB_PROXMOX_PROBE=read-only cargo run -p pocketlab-server --example proxmox_probe
+VMANYWARE_PROXMOX_PROBE=read-only cargo run -p vmanyware-server --example proxmox_probe
 ```
 
 The extra opt-in prevents accidental live probing. Default tests use generated
@@ -64,7 +65,7 @@ short-lived TLS identities on localhost and never use runtime credentials.
 
 The probe reports version, node status and templates visible to the token.
 It emits fixed errors rather than raw HTTP bodies, transport URLs or headers.
-Template VMIDs/versions must still be mapped explicitly to PocketLab image names.
+Template VMIDs/versions must still be mapped explicitly to VMAnyware image names.
 
 ## Preparing the template
 
@@ -92,7 +93,7 @@ The existing Rust example returned version 9.2.2/release 9.2 and
 GETs returned HTTP 200 for `/version`, `/nodes`, `/nodes/pve-lab/qemu`
 (empty array) and `/access/permissions` (empty object).
 
-The approved account is `pocketlab-reader@pve`, created without a password,
+The approved account is `vmanyware-reader@pve`, created without a password,
 group or ACL grant. Token `inventory` uses privilege separation and has no ACL
 grant. Administrative readback confirms these settings and matching account/
 token expiry: **2026-10-18 21:22:17 UTC**. This expiry applies only to the lab
@@ -105,7 +106,7 @@ metadata readback; it was not passed to the Rust probe. No credentials or
 response bodies containing them were printed.
 
 The lab CA is explicitly trusted. Bubblewrap supplies a process-local hosts
-file mapping `pve-lab.pocketlab.test` to 127.0.0.1 for port 18006; host DNS,
+file mapping `pve-lab.vmanyware.test` to 127.0.0.1 for port 18006; host DNS,
 `/etc/hosts` and system trust are unchanged. Separate live checks rejected
 an invalid token with HTTP 401, an untrusted CA and a wrong TLS hostname.
 The Rust probe also emitted the expected fixed errors for an invalid token
@@ -115,3 +116,10 @@ These results establish the minimal starting identity for an empty inventory.
 They do not prove template visibility, per-VM `VM.Audit`, storage audit access
 or provisioning permissions. The phase-0 known-template gate remains open.
 See [local lab details](x86-lab.md).
+
+On 2026-10-18 the approved reader role was extended only by VM.Audit at
+`/vms/9000` for both user and token, nonpropagating. Template list/current-config
+GETs and the Rust inventory probe succeeded for the known stopped template.
+This supersedes the empty-inventory/empty-permission starting state above;
+account/token expiry is unchanged. No storage audit or mutation privilege was
+granted. Guest readiness and live provisioning preflight remain unverified.

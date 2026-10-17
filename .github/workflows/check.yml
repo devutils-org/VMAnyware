@@ -23,11 +23,11 @@ jobs:
       - name: Install repository-pinned Rust toolchain
         run: rustup show active-toolchain
       - name: Check formatting
-        run: cargo fmt -p pocketlab-server -- --check
+        run: cargo fmt -p vmanyware-server -- --check
       - name: Check server with Clippy
-        run: cargo clippy --locked -p pocketlab-server --all-targets -- -D warnings
+        run: cargo clippy --locked -p vmanyware-server --all-targets -- -D warnings
       - name: Run server and local TLS/process tests
-        run: cargo test --locked -p pocketlab-server
+        run: cargo test --locked -p vmanyware-server
 
   frontend:
     runs-on: ubuntu-24.04

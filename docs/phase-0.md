@@ -74,3 +74,10 @@ or a successful TCP connection does not prove interactive SSH support.
 - [Proxmox administration guide](https://pve.proxmox.com/pve-docs/pve-admin-guide.html)
 
 Verify API/library details against official documentation during each spike.
+
+## Prepared snapshot slice — 0D
+
+[Clone 202 snapshot/rollback plan](x86-snapshot.md) records read-only storage and
+feature observations, concrete mutation scope and guest-state acceptance proof.
+Preparation does not complete 0D; execution/restore approval and actual evidence
+remain required.

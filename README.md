@@ -1,8 +1,11 @@
-# PocketLab
+# VMAnyware
 
 A native client for reproducible Linux environments on a self-managed Proxmox
-homelab. The repository directory is currently named `VMAnyware`; PocketLab is
-the working product name used in the roadmap.
+homelab. VMAnyware is the project and product name.
+
+Configuration uses `VMANYWARE_*`, YAML API `vmanyware.dev/v1`, and Tauri
+identifier `dev.vmanyware.client`. Existing data/configuration requires explicit
+migration; see [naming decision](docs/decisions/0018-vmanyware-product-name.md).
 
 **Status: Phase 0.** The frontend build, workspace Rust checks/tests and local
 control-plane HTTP smoke check pass on macOS arm64. The native development
@@ -34,7 +37,7 @@ You can also edit, save and reload reusable YAML definitions without Proxmox.
 The server validates the schema and persists definitions in SQLite, without
 creating VMs. See [definition format and storage](docs/definitions.md).
 
-To preview provisioning, configure `POCKETLAB_TEMPLATES` with your explicit
+To preview provisioning, configure `VMANYWARE_TEMPLATES` with your explicit
 [image-to-template catalog](docs/provisioning-plan.md), enter a candidate VMID
 and click **Preview provisioning**. The offline plan never reserves or creates
 a VM. **Check against Proxmox** performs read-only preflight checks when a

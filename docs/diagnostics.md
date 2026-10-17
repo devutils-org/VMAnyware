@@ -30,7 +30,7 @@ Useful failure codes include:
 
 | Reason | Inspect locally |
 | --- | --- |
-| `invalid_port_configuration` | `POCKETLAB_PORT` range/encoding |
+| `invalid_port_configuration` | `VMANYWARE_PORT` range/encoding |
 | `invalid_provider_configuration` | Explicit provider variables and trusted CA |
 | `invalid_template_configuration` | Explicit catalog path and documented schema |
 | `invalid_database_configuration` | Database setting is nonempty and valid |

@@ -258,7 +258,7 @@ fn preflight_bounds_and_configuration_errors_are_safe() {
         .err()
         .unwrap();
     task.join().unwrap();
-    assert!(error.contains("Proxmox provider") && error.contains("POCKETLAB_TEMPLATES"));
+    assert!(error.contains("Proxmox provider") && error.contains("VMANYWARE_TEMPLATES"));
     assert!(!error.contains("private-provider-body"));
 }
 

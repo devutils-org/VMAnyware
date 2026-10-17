@@ -17,10 +17,10 @@ impl Drop for Process {
 }
 
 fn start(database: &std::path::Path, port: u16) -> (Process, mpsc::Receiver<String>) {
-    let mut child = Command::new(env!("CARGO_BIN_EXE_pocketlab-server"))
+    let mut child = Command::new(env!("CARGO_BIN_EXE_vmanyware-server"))
         .env_clear()
-        .env("POCKETLAB_PORT", port.to_string())
-        .env("POCKETLAB_DATABASE", database)
+        .env("VMANYWARE_PORT", port.to_string())
+        .env("VMANYWARE_DATABASE", database)
         .stdout(Stdio::null())
         .stderr(Stdio::piped())
         .spawn()
@@ -50,7 +50,7 @@ fn stop(process: &mut Process, signal: &str) {
         .args([
             "-c",
             "kill -s \"$1\" \"$2\"",
-            "pocketlab-test-signal",
+            "vmanyware-test-signal",
             signal.trim_start_matches('-'),
             &process.0.id().to_string(),
         ])
@@ -168,9 +168,9 @@ async fn binary_logs_only_safe_fields_and_releases_lock_after_sigterm() {
 
 #[test]
 fn startup_errors_do_not_echo_configuration() {
-    let output = Command::new(env!("CARGO_BIN_EXE_pocketlab-server"))
+    let output = Command::new(env!("CARGO_BIN_EXE_vmanyware-server"))
         .env_clear()
-        .env("POCKETLAB_PORT", "configuration-secret-marker")
+        .env("VMANYWARE_PORT", "configuration-secret-marker")
         .output()
         .unwrap();
     assert!(!output.status.success());

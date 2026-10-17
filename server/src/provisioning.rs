@@ -38,7 +38,7 @@ pub struct Catalog {
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
 enum CatalogVersion {
-    #[serde(rename = "pocketlab.dev/v1")]
+    #[serde(rename = "vmanyware.dev/v1")]
     V1,
 }
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -117,7 +117,7 @@ impl Catalog {
     }
 
     pub fn from_environment() -> Result<Option<Self>, Error> {
-        let path = match std::env::var("POCKETLAB_TEMPLATES") {
+        let path = match std::env::var("VMANYWARE_TEMPLATES") {
             Ok(path) if !path.is_empty() => path,
             Err(std::env::VarError::NotPresent) => return Ok(None),
             _ => return Err(Error::InvalidCatalog),

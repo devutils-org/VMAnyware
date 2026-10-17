@@ -1,12 +1,14 @@
 # Prepare a Debian 13 Cloud-Init template
 
-Status: documentation checked against official sources on 2026-10-16; these
-commands have not been executed on a real Proxmox host. This is a proposed
-amd64/KVM baseline for an Intel/AMD test PC, not a verified supported platform.
-PocketLab currently previews and checks plans; it cannot execute provisioning.
+Status: documentation checked against official sources on 2026-10-16. The
+unbooted preparation path was executed on the disposable nested x86 Proxmox
+lab on 2026-10-18; see [exact target and evidence](x86-template.md). A separate
+[static-network clone smoke](x86-clone.md) booted and verified real SSH/resources;
+Cloud-Init completed with a deprecation warning, so clean readiness remains open.
+VMAnyware currently previews and checks plans; it cannot execute provisioning.
 
 Run the host commands manually in Bash on the selected Proxmox node, not on the
-Mac running PocketLab. Creating/importing/resizing/converting a VM changes that
+Mac running VMAnyware. Creating/importing/resizing/converting a VM changes that
 host. Before execution, select the concrete node, unused template VMID, storage
 and bridge and approve those operations. Preparing this document authorizes no
 remote operations. The optional clone test needs a separately selected VMID.
@@ -33,7 +35,7 @@ Record the following before creating anything:
 | Guest user | `debian` | Used consistently in Cloud-Init and the catalog |
 
 A bridge does not provide a DHCP server automatically. The storage/bridge names
-are examples, not defaults PocketLab discovers. On the selected node, inspect:
+are examples, not defaults VMAnyware discovers. On the selected node, inspect:
 
 ```sh
 pveversion
@@ -63,8 +65,8 @@ and change the directory, filenames and catalog revision together.
 In a new working directory on the Proxmox node:
 
 ```sh
-mkdir -p /var/lib/vz/pocketlab-images/debian-13-20261015-2632
-cd /var/lib/vz/pocketlab-images/debian-13-20261015-2632
+mkdir -p /var/lib/vz/vmanyware-images/debian-13-20261015-2632
+cd /var/lib/vz/vmanyware-images/debian-13-20261015-2632
 IMAGE_BUILD=20261015-2632
 IMAGE_FILE="debian-13-genericcloud-amd64-${IMAGE_BUILD}.qcow2"
 IMAGE_BASE="https://cloud.debian.org/images/cloud/trixie/${IMAGE_BUILD}"
@@ -103,7 +105,7 @@ From the image working directory, with `IMAGE_FILE` still set:
 
 ```sh
 pvesh get /cluster/nextid --vmid 9000
-qm create 9000 --name pocketlab-debian-13-20261015 \
+qm create 9000 --name vmanyware-debian-13-20261015 \
   --memory 2048 --cores 2 --ostype l26 \
   --scsihw virtio-scsi-pci --net0 virtio,bridge=vmbr0
 qm set 9000 --scsi0 "local-lvm:0,import-from=$(pwd)/$IMAGE_FILE"
@@ -150,21 +152,25 @@ image digest. Never start the template to validate it; validate a disposable clo
 
 ## 4. Optional manual clone smoke test
 
+The local x86 lab now preserves a stopped clone 201; do not replay these example
+commands against that existing VM. Its actual isolated-network test differs
+from the DHCP example below and is recorded in docs/x86-clone.md.
+
 This section performs real mutations. First approve the concrete source/target,
 full clone, configuration, start and eventual cleanup independently. Example
-clone **201** must be unused and disposable. It is not managed by PocketLab;
+clone **201** must be unused and disposable. It is not managed by VMAnyware;
 a successful manual test does not demonstrate application provisioning.
 
 Copy only your intended **public** OpenSSH key to
-`/root/pocketlab-test.pub` on the host through a trusted channel. No private key
+`/root/vmanyware-test.pub` on the host through a trusted channel. No private key
 belongs on the Proxmox host. Check its public fingerprint before use.
 Then, after substituting the approved IDs and storage:
 
 ```sh
 pvesh get /cluster/nextid --vmid 201
-qm clone 9000 201 --name pocketlab-manual-smoke --full 1 --storage local-lvm
+qm clone 9000 201 --name vmanyware-manual-smoke --full 1 --storage local-lvm
 qm set 201 --cores 2 --memory 2048 --ciuser debian \
-  --sshkeys /root/pocketlab-test.pub --ipconfig0 ip=dhcp
+  --sshkeys /root/vmanyware-test.pub --ipconfig0 ip=dhcp
 qm disk resize 201 scsi0 12G
 qm cloudinit dump 201 user
 qm cloudinit dump 201 network
@@ -213,7 +219,7 @@ login/user, 2 guest CPUs, approximately 2 GiB RAM (allowing guest overhead), a
 filesystem capacity; disk growth alone does not prove filesystem growth. If
 Cloud-Init fails, collect relevant guest diagnostics locally; do not publish
 raw configuration/logs containing identity or secret material. Package installs,
-snapshots, restores and PocketLab SSH/PTY remain separate, unverified tests.
+snapshots, restores and VMAnyware SSH/PTY remain separate, unverified tests.
 
 Stop the test after collecting evidence. Use the Proxmox UI to gracefully shut
 down the approved clone and verify its identity before any separately approved
@@ -221,14 +227,14 @@ removal of that clone and its disks. No automatic destroy/cleanup command is
 provided. Preserve the template and reusable definition. If a command failed
 partway, record the VMID and disks that exist before deciding how to clean up.
 
-## 5. Configure PocketLab and run read-only checks
+## 5. Configure VMAnyware and run read-only checks
 
 On the Mac/control-plane machine, copy `examples/templates.yaml` to a local file
 outside the repository and replace every example value using your recorded
 metadata. For the example preparation above the mapping would be:
 
 ```yaml
-apiVersion: pocketlab.dev/v1
+apiVersion: vmanyware.dev/v1
 kind: TemplateCatalog
 images:
   - image: debian-13
@@ -244,7 +250,7 @@ images:
 
 Configure trusted TLS and a dedicated read-only token using
 [Proxmox setup](proxmox-setup.md). Never put the token in this YAML or in chat.
-Set `POCKETLAB_TEMPLATES` to the local catalog path and restart `make server`.
+Set `VMANYWARE_TEMPLATES` to the local catalog path and restart `make server`.
 The server does not load dotenv files automatically. Approve the concrete test
 endpoint for read-only access, then use the opt-in inventory probe or native
 **Connect**, **Preview provisioning**, and **Check against Proxmox** actions.
@@ -281,3 +287,8 @@ requires implementing and testing application execution with concrete approval.
 
 The online sources establish available syntax/artifacts, not execution evidence
 on the user's hardware. `STATE.md` records the actual verification boundary.
+
+The fresh clone 202 [compatibility retest](cloud-init-compatibility.md) proves
+clean Cloud-Init first boot with the target-specific mapped-user snippet.
+The original 201 degraded result remains diagnostic evidence; this recipe
+requires explicit snippet ownership and regeneration when its inputs change.

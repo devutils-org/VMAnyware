@@ -1,5 +1,5 @@
 [package]
-name = "pocketlab-server"
+name = "vmanyware-server"
 version.workspace = true
 edition.workspace = true
 publish.workspace = true

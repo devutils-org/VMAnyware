@@ -39,7 +39,7 @@
         if (++starts === 1) return { id: "session-one" };
         return new Promise(resolve => { lateStart = resolve; });
       case "read_ssh_session":
-        if (++reads === 1) return { type: "data", bytes: [...new TextEncoder().encode("PocketLab fixture "), 0xe2, 0x82] };
+        if (++reads === 1) return { type: "data", bytes: [...new TextEncoder().encode("VMAnyware fixture "), 0xe2, 0x82] };
         if (reads === 2) return { type: "data", bytes: [0xac, 13, 10] };
         return new Promise(resolve => pendingReads.push(resolve));
       case "close_ssh_session": pendingReads.splice(0).forEach(resolve => resolve({ type: "closed" })); return;
@@ -145,7 +145,7 @@
       document.querySelector('input[name="ssh-identity"]').click();
       await wait(() => !button("Open terminal").disabled);
       button("Open terminal").click();
-      await wait(() => document.querySelector(".xterm-rows")?.textContent.includes("PocketLab fixture €"));
+      await wait(() => document.querySelector(".xterm-rows")?.textContent.includes("VMAnyware fixture €"));
       await wait(() => count("resize_ssh_session") > 0);
       check(starts === 1, "StrictMode started duplicate native connections");
       check(count("close_ssh_session") === 0, "StrictMode prematurely closed the session");

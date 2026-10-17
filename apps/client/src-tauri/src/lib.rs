@@ -75,5 +75,5 @@ pub fn run() {
             control_plane::preflight_provisioning
         ])
         .run(tauri::generate_context!())
-        .expect("failed to run PocketLab");
+        .expect("failed to run VMAnyware");
 }

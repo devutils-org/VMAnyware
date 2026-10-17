@@ -124,7 +124,7 @@ function App() {
     setConnecting(true);
     setInventory(null);
     setConnectionError("");
-    const cacheKey = `pocketlab.inventory.request.${value}`;
+    const cacheKey = `vmanyware.inventory.request.${value}`;
     try {
       const requestKey = savedRequestKey(cacheKey) ?? crypto.randomUUID();
       rememberRequestKey(cacheKey, requestKey);
@@ -163,7 +163,7 @@ function App() {
     <div className="app-shell">
       <a className="skip-link" href="#workspace-title">Skip to workspace</a>
       <aside className="sidebar" aria-label="Workspace navigation">
-        <a className="brand" href="#workspace-title"><span className="brand-mark" aria-hidden="true">›_</span>PocketLab</a>
+        <a className="brand" href="#workspace-title"><span className="brand-mark" aria-hidden="true">›_</span>VMAnyware</a>
         <p className="nav-label">Workspace</p>
         <nav aria-label="Workspace tools">
           <a href="#connection-heading"><span aria-hidden="true">01</span>Connection</a>
@@ -280,7 +280,7 @@ function App() {
         </button>
         <p role="status">{native ? status : "Open the native application to check its connection to Rust."}</p>
       </section>
-      <footer className="workspace-footer"><span>PocketLab · A reproducible systems lab</span><span>Prototype / Phase 0</span></footer>
+      <footer className="workspace-footer"><span>VMAnyware · A reproducible systems lab</span><span>Prototype / Phase 0</span></footer>
     </main>
     </div>
   );

@@ -1,4 +1,4 @@
-# PocketLab — instructions for coding agents
+# VMAnyware — instructions for coding agents
 
 Read `STATE.md` first, then the relevant section of `VMAnyware.md` and
 `docs/phase-0.md`. The roadmap remains the product specification.

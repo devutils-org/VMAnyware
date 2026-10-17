@@ -7,7 +7,7 @@ pub const MAX_YAML_BYTES: usize = 64 * 1024;
 
 #[derive(Debug, Clone, PartialEq, Eq, Serialize, Deserialize)]
 pub enum ApiVersion {
-    #[serde(rename = "pocketlab.dev/v1")]
+    #[serde(rename = "vmanyware.dev/v1")]
     V1,
 }
 
@@ -97,7 +97,7 @@ impl Definition {
         let value: Self = serde_norway::from_str(yaml).map_err(|_| {
             invalid(
                 "yaml",
-                "Invalid schema, unknown field or unsupported version. Use pocketlab.dev/v1.",
+                "Invalid schema, unknown field or unsupported version. Use vmanyware.dev/v1.",
             )
         })?;
         value.validate()?;

@@ -1,25 +1,25 @@
 //! Explicitly opt-in, read-only live probe. Never used by default tests.
-use pocketlab_server::proxmox::Proxmox;
+use vmanyware_server::proxmox::Proxmox;
 
 fn required(name: &str) -> Result<String, String> {
     std::env::var(name).map_err(|_| format!("Missing or invalid {name}."))
 }
 
 async fn probe() -> Result<(), String> {
-    if std::env::var("POCKETLAB_PROXMOX_PROBE").as_deref() != Ok("read-only") {
+    if std::env::var("VMANYWARE_PROXMOX_PROBE").as_deref() != Ok("read-only") {
         return Err(
-            "Set POCKETLAB_PROXMOX_PROBE=read-only to explicitly enable the live probe.".into(),
+            "Set VMANYWARE_PROXMOX_PROBE=read-only to explicitly enable the live probe.".into(),
         );
     }
-    let ca = match std::env::var("POCKETLAB_PROXMOX_CA") {
+    let ca = match std::env::var("VMANYWARE_PROXMOX_CA") {
         Ok(path) => Some(std::fs::read(path).map_err(|_| "Cannot read the configured CA file.")?),
         Err(std::env::VarError::NotPresent) => None,
         Err(_) => return Err("Invalid CA file configuration.".into()),
     };
     let client = Proxmox::new(
-        &required("POCKETLAB_PROXMOX_URL")?,
-        &required("POCKETLAB_PROXMOX_TOKEN_ID")?,
-        &required("POCKETLAB_PROXMOX_TOKEN_SECRET")?,
+        &required("VMANYWARE_PROXMOX_URL")?,
+        &required("VMANYWARE_PROXMOX_TOKEN_ID")?,
+        &required("VMANYWARE_PROXMOX_TOKEN_SECRET")?,
         ca.as_deref(),
     )
     .map_err(|e| e.to_string())?;

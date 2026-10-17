@@ -2,9 +2,9 @@ use axum::{
     body::{to_bytes, Body},
     http::{header, Method, Request, StatusCode},
 };
-use pocketlab_server::router;
 use serde_json::{json, Value};
 use tower::ServiceExt;
+use vmanyware_server::router;
 
 #[tokio::test]
 async fn inventory_requires_explicit_provider_configuration() {

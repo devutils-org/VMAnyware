@@ -12,7 +12,7 @@ example value with metadata from a known test template. These example values
 have not been verified against a real host. Set its path explicitly:
 
 ```sh
-POCKETLAB_TEMPLATES=/absolute/path/to/templates.yaml make server
+VMANYWARE_TEMPLATES=/absolute/path/to/templates.yaml make server
 ```
 
 No catalog is loaded by default. Runtime credentials remain in their existing
@@ -23,7 +23,7 @@ oversized files refuse startup with a redacted configuration error.
 The file is UTF-8 YAML, at most 64 KiB:
 
 ```yaml
-apiVersion: pocketlab.dev/v1
+apiVersion: vmanyware.dev/v1
 kind: TemplateCatalog
 images:
   - image: debian-13

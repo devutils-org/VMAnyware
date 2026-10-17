@@ -1,11 +1,11 @@
 [package]
-name = "pocketlab-client"
+name = "vmanyware-client"
 version.workspace = true
 edition.workspace = true
 publish.workspace = true
 
 [lib]
-name = "pocketlab_client_lib"
+name = "vmanyware_client_lib"
 crate-type = ["staticlib", "cdylib", "rlib"]
 
 [build-dependencies]

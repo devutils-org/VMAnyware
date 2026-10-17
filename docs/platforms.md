@@ -1,6 +1,6 @@
 # Platform and toolchain evidence
 
-PocketLab has one validated development baseline as of 2026-10-17. No signed
+VMAnyware has one validated development baseline as of 2026-10-17. No signed
 release or broad minimum-OS support guarantee is available yet. Future roadmap
 targets must be proven separately; upstream Tauri support alone is insufficient.
 

@@ -16,7 +16,7 @@ documents are rejected. Definitions are limited to 64 KiB of UTF-8 YAML.
 
 | Field | Rule/default |
 | --- | --- |
-| `apiVersion` | Required literal `pocketlab.dev/v1` |
+| `apiVersion` | Required literal `vmanyware.dev/v1` |
 | `kind` | Required literal `Environment` |
 | `metadata.name` | Required, 1–63 lowercase letters/digits/hyphens; no leading/trailing hyphen |
 | `metadata.description` | Optional, default empty string, maximum 1024 bytes |
@@ -79,7 +79,7 @@ future work. This initial API is for a small local homelab catalog.
 
 ## Persistence and recovery
 
-`POCKETLAB_DATABASE` selects the SQLite file; default `pocketlab.sqlite` relative
+`VMANYWARE_DATABASE` selects the SQLite file; default `vmanyware.sqlite` relative
 to the server's working directory. The application does not load dotenv files.
 The first launch applies `migrations/0001_definitions.sql` in a transaction and
 sets `user_version=1`, then applies `0002_operations.sql` to reach version 2.

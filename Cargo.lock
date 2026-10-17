@@ -3565,43 +3565,6 @@ dependencies = [
 ]
 
 [[package]]
-name = "pocketlab-client"
-version = "0.1.0"
-dependencies = [
- "libc",
- "portable-pty",
- "rand 0.10.3",
- "reqwest",
- "russh",
- "serde",
- "serde_json",
- "tauri",
- "tauri-build",
- "tempfile",
- "tokio",
- "uuid",
-]
-
-[[package]]
-name = "pocketlab-server"
-version = "0.1.0"
-dependencies = [
- "axum",
- "rcgen",
- "reqwest",
- "rusqlite",
- "serde",
- "serde_json",
- "serde_norway",
- "sha2 0.10.9",
- "ssh-key 0.6.7",
- "tempfile",
- "tokio",
- "tokio-rustls",
- "tower",
-]
-
-[[package]]
 name = "poly1305"
 version = "0.9.1"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -5940,6 +5903,43 @@ name = "version_check"
 version = "0.9.5"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "0b928f33d975fc6ad9f86c8f283853ad26bdd5b10b7f1542aa2fa15e2289105a"
+
+[[package]]
+name = "vmanyware-client"
+version = "0.1.0"
+dependencies = [
+ "libc",
+ "portable-pty",
+ "rand 0.10.3",
+ "reqwest",
+ "russh",
+ "serde",
+ "serde_json",
+ "tauri",
+ "tauri-build",
+ "tempfile",
+ "tokio",
+ "uuid",
+]
+
+[[package]]
+name = "vmanyware-server"
+version = "0.1.0"
+dependencies = [
+ "axum",
+ "rcgen",
+ "reqwest",
+ "rusqlite",
+ "serde",
+ "serde_json",
+ "serde_norway",
+ "sha2 0.10.9",
+ "ssh-key 0.6.7",
+ "tempfile",
+ "tokio",
+ "tokio-rustls",
+ "tower",
+]
 
 [[package]]
 name = "vswhom"

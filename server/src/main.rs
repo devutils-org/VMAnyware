@@ -1,8 +1,8 @@
-use pocketlab_server::{
+use std::{future::IntoFuture, time::Duration};
+use vmanyware_server::{
     config::Config, diagnostics, provisioning::Catalog, proxmox::Proxmox, router_with_catalog,
     store::Store,
 };
-use std::{future::IntoFuture, time::Duration};
 
 const DRAIN_LIMIT: Duration = Duration::from_secs(5);
 
@@ -15,7 +15,7 @@ async fn main() {
 }
 
 async fn run() -> Result<(), &'static str> {
-    let port = match std::env::var("POCKETLAB_PORT") {
+    let port = match std::env::var("VMANYWARE_PORT") {
         Ok(value) => Some(value),
         Err(std::env::VarError::NotPresent) => None,
         Err(_) => return Err("invalid_port_configuration"),
@@ -23,13 +23,13 @@ async fn run() -> Result<(), &'static str> {
     let config = Config::from_port(port.as_deref()).map_err(|_| "invalid_port_configuration")?;
     let provider = Proxmox::from_environment().map_err(|_| "invalid_provider_configuration")?;
     let catalog = Catalog::from_environment().map_err(|_| "invalid_template_configuration")?;
-    let database = match std::env::var("POCKETLAB_DATABASE") {
+    let database = match std::env::var("VMANYWARE_DATABASE") {
         Ok(value) if !value.is_empty() => value,
-        Err(std::env::VarError::NotPresent) => "pocketlab.sqlite".into(),
+        Err(std::env::VarError::NotPresent) => "vmanyware.sqlite".into(),
         _ => return Err("invalid_database_configuration"),
     };
     let _database_lock =
-        pocketlab_server::service_lock::ServiceLock::acquire(std::path::Path::new(&database))
+        vmanyware_server::service_lock::ServiceLock::acquire(std::path::Path::new(&database))
             .map_err(|_| "database_lock_unavailable")?;
     let store = Store::open(database).map_err(|_| "database_unavailable")?;
     let shutdown = Shutdown::register()?;
@@ -39,7 +39,7 @@ async fn run() -> Result<(), &'static str> {
     store
         .recover_interrupted_operations()
         .map_err(|_| "operation_recovery_failed")?;
-    let mut worker = tokio::spawn(pocketlab_server::worker::run(
+    let mut worker = tokio::spawn(vmanyware_server::worker::run(
         store.clone(),
         provider.clone(),
     ));

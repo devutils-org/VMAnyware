@@ -15,7 +15,7 @@ web:
 	npm --prefix apps/client run dev
 
 server:
-	cargo run -p pocketlab-server
+	cargo run -p vmanyware-server
 
 check: check-client check-rust
 
@@ -29,7 +29,7 @@ check-terminal-webkit: check-client
 
 # Real bundled Tauri/IPC/agent/shell fixture. macOS GUI session required.
 check-terminal-native: check-client
-	cargo build --locked --release -p pocketlab-client --example terminal_smoke --features tauri/custom-protocol
+	cargo build --locked --release -p vmanyware-client --example terminal_smoke --features tauri/custom-protocol
 	node experiments/terminal-native/check.mjs
 
 check-rust:
@@ -45,9 +45,9 @@ check-linux-client:
 	node scripts/check-linux.mjs client
 
 check-server:
-	cargo fmt -p pocketlab-server -- --check
-	cargo clippy -p pocketlab-server --all-targets -- -D warnings
-	cargo test -p pocketlab-server
+	cargo fmt -p vmanyware-server -- --check
+	cargo clippy -p vmanyware-server --all-targets -- -D warnings
+	cargo test -p vmanyware-server
 
 # Isolated localhost experiment; intentionally outside the application workspace.
 check-ssh:

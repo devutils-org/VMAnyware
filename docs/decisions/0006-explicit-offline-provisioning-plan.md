@@ -6,7 +6,7 @@ Status: Implemented; live provider checks and execution remain pending.
 Require the operator to map image identifiers to explicit template/node/version,
 boot disk size/device, target storage/bridge and guest user. No VMID, version,
 storage or bridge is inferred from an image name. Load this strict catalog only
-from the explicitly configured `POCKETLAB_TEMPLATES` path, without credentials.
+from the explicitly configured `VMANYWARE_TEMPLATES` path, without credentials.
 
 Build plans from current validated YAML, the selected mapping and an explicit
 candidate VMID. Bind those inputs with deterministic hashes and refuse disk

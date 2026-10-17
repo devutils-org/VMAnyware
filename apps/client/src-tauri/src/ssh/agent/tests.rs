@@ -657,7 +657,7 @@ async fn native_real_shell_stalled_output_fails_visibly_and_closes_owned_process
         .unwrap();
     shell_output_until(&sessions, &id, "\r\nREADY\r\n").await;
     sessions
-        .write("main", &id, b"yes pocketlab-pressure\n".to_vec())
+        .write("main", &id, b"yes vmanyware-pressure\n".to_vec())
         .unwrap();
     let shell = fixture.shells.lock().unwrap().last().unwrap().clone();
     tokio::time::timeout(Duration::from_secs(1), async {
@@ -725,7 +725,7 @@ async fn native_real_shell_stalled_output_fails_visibly_and_closes_owned_process
         .unwrap();
     shell_output_until(&sessions, &id, "\r\nREADY\r\n").await;
     sessions
-        .write("main", &id, b"yes pocketlab-pressure\n".to_vec())
+        .write("main", &id, b"yes vmanyware-pressure\n".to_vec())
         .unwrap();
     assert!(matches!(
         next_output(&sessions, &id).await,
