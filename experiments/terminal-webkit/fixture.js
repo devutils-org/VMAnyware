@@ -54,6 +54,30 @@
       document.querySelector('input[name="ssh-identity"]').click();
       await wait(() => !button("Open terminal").disabled);
       button("Open terminal").click();
+      if (new URLSearchParams(location.search).get("rendererFailure") === "1") {
+        await wait(() => document.querySelector('[role="alert"]')?.textContent.includes("Cannot prepare or open"));
+        check(starts === 0, "Renderer loading failure opened an SSH connection");
+        check(count("cancel_ssh_authentication") > 0, "Failed renderer retained the selection");
+        window.webkit.messageHandlers.result.postMessage({ ok: true, message: "WebKit renderer-load failure passed: visible error, selection cancelled, zero native starts (fixture IPC only)." });
+        return;
+      }
+      const moduleDeadline = Date.now() + 5000;
+      while (!(await (await fetch("/__terminal_fixture/pending")).json()).pending) {
+        check(Date.now() < moduleDeadline, "Renderer module did not reach fixture gate");
+        await new Promise(resolve => setTimeout(resolve, 10));
+      }
+      check(starts === 0, "SSH started before renderer finished loading");
+      input("ssh-username", "changed-before-renderer");
+      await fetch("/__terminal_fixture/release");
+      await wait(() => globalThis.__terminalFixtureLoaded);
+      await new Promise(resolve => setTimeout(resolve, 0));
+      check(starts === 0, "Cancelled renderer load started a late SSH connection");
+      input("ssh-username", "fixture");
+      button("List agent identities").click();
+      await wait(() => document.querySelector('input[name="ssh-identity"]'));
+      document.querySelector('input[name="ssh-identity"]').click();
+      await wait(() => !button("Open terminal").disabled);
+      button("Open terminal").click();
       await wait(() => document.querySelector(".xterm-rows")?.textContent.includes("PocketLab fixture €"));
       await wait(() => count("resize_ssh_session") > 0);
       check(starts === 1, "StrictMode started duplicate native connections");
@@ -77,7 +101,7 @@
       lateStart({ id: "session-late" });
       await wait(() => calls.some(call => call.command === "close_ssh_session" && call.args.sessionId === "session-late"));
       check(!document.querySelector(".ssh-terminal"), "Stale session mounted a terminal");
-      window.webkit.messageHandlers.result.postMessage({ ok: true, message: "WebKit development smoke passed: explicit selection, split UTF-8 rendering, resize, Unicode input, Ctrl-C, StrictMode lifecycle, disconnect and stale-start cleanup (fixture IPC only)." });
+      window.webkit.messageHandlers.result.postMessage({ ok: true, message: "WebKit development smoke passed: cancelled module load, explicit selection, split UTF-8 rendering, resize, Unicode input, Ctrl-C, StrictMode lifecycle, disconnect and stale-start cleanup (fixture IPC only)." });
     } catch (error) {
       window.webkit.messageHandlers.result.postMessage({ ok: false, message: String(error) });
     }

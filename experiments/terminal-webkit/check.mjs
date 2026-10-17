@@ -24,10 +24,45 @@ async function run(command, args, deadline) {
 try {
   const binary = join(directory, "webkit-smoke");
   await run("/usr/bin/swiftc", ["experiments/terminal-webkit/main.swift", "-o", binary], 60000);
-  server = await createServer({ root: join(root, "apps/client"), server: { host: "127.0.0.1", port: 0, strictPort: false } });
-  await server.listen();
-  const address = server.httpServer.address();
-  await run(binary, [`http://127.0.0.1:${address.port}`, join(root, "experiments/terminal-webkit/fixture.js")], 40000);
+  for (const failRenderer of [false, true]) {
+    let blocked = true;
+    let pending = false;
+    const releases = [];
+    server = await createServer({
+      root: join(root, "apps/client"),
+      server: { host: "127.0.0.1", port: 0, strictPort: false },
+      plugins: [{
+        name: "isolated-terminal-module-gate",
+        configureServer(vite) {
+          vite.middlewares.use((request, response, next) => {
+            const path = request.url?.split("?")[0];
+            if (path === "/__terminal_fixture/pending") {
+              response.setHeader("Content-Type", "application/json");
+              response.end(JSON.stringify({ pending }));
+            } else if (path === "/__terminal_fixture/release") {
+              blocked = false; releases.splice(0).forEach(resolve => resolve());
+              response.end("released");
+            } else if (path === "/src/SshTerminal.tsx") {
+              if (failRenderer) { response.statusCode = 503; response.end("fixture renderer failure"); }
+              else if (blocked) { pending = true; releases.push(next); }
+              else next();
+            } else next();
+          });
+        },
+        transform(code, id) {
+          if (id.endsWith("/src/SshTerminal.tsx")) return `${code}\nglobalThis.__terminalFixtureLoaded = true;`;
+        },
+      }],
+    });
+    await server.listen();
+    const address = server.httpServer.address();
+    try {
+      await run(binary, [`http://127.0.0.1:${address.port}/?rendererFailure=${Number(failRenderer)}`, join(root, "experiments/terminal-webkit/fixture.js")], 40000);
+    } finally {
+      blocked = false; releases.splice(0).forEach(resolve => resolve());
+      await server.close(); server = undefined;
+    }
+  }
 } finally {
   await server?.close();
   await rm(directory, { recursive: true, force: true });

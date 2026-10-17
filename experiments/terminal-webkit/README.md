@@ -26,3 +26,10 @@ IPC. It does not establish real Tauri IPC integration, packaged CSP behavior,
 hardware keyboard mappings, a native-to-real-shell round trip, a real guest or
 mobile compatibility. Native Rust protocol tests and the isolated actual-shell
 fixture provide their own separate evidence. See docs/ssh-terminal.md.
+
+The harness also gates the terminal module in development middleware. One run
+cancels the UI while loading is paused and proves zero late native starts before
+continuing the rendering checks. Another returns a fixture-only module-load error
+and requires a visible error, cancelled identity selection and zero native starts.
+A test-only module-evaluation marker makes the loading assertion deterministic.
+None of this middleware/marker is included in production assets.

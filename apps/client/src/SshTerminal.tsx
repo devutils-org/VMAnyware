@@ -7,7 +7,6 @@ import "@xterm/xterm/css/xterm.css";
 
 export function SshTerminal({ id, account }: { id: string; account: string }) {
   const container = useRef<HTMLDivElement>(null);
-  const mounted = useRef<{ id: string; token: object } | null>(null);
   const transport = useRef<TerminalSession | null>(null);
   const emulator = useRef<Terminal | null>(null);
   const [status, setStatus] = useState("Connected");
@@ -16,8 +15,6 @@ export function SshTerminal({ id, account }: { id: string; account: string }) {
   useEffect(() => {
     if (!container.current) return;
     let active = true;
-    const token = {};
-    mounted.current = { id, token };
     setStatus("Connected"); setError(""); setClosed(false);
     const term = new Terminal({
       cols: 80, rows: 24, scrollback: 1000, fontSize: 13,
@@ -67,11 +64,8 @@ export function SshTerminal({ id, account }: { id: string; account: string }) {
       if (emulator.current === term) emulator.current = null;
       observer.disconnect(); window.clearTimeout(timer);
       text.dispose(); binary.dispose(); term.dispose();
-      queueMicrotask(() => {
-        if (mounted.current?.id !== id || mounted.current?.token === token) {
-          void invoke("close_ssh_session", { sessionId: id }).catch(() => {});
-        }
-      });
+      // SshAuthentication owns native lifetime, including a pending lazy mount.
+      // Disposing this renderer must not close a surviving StrictMode session.
     };
   }, [id]);
   function disconnect() {

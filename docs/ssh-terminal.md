@@ -7,7 +7,9 @@ identity** still authenticates and closes without a terminal. A fresh connection
 always requires a fresh explicit identity listing and verified host handshake.
 
 The graphical prototype uses pinned xterm.js 6.0.0 and addon-fit 0.11.0, bundled
-locally. Text input is UTF-8; xterm binary input stays raw. **Send Ctrl-C** emits
+locally and loaded only when explicitly opening a terminal. Renderer loading
+finishes before the native connection starts; a load error cancels the selection.
+The parent retains socket ownership during lazy rendering and cancellation. Text input is UTF-8; xterm binary input stays raw. **Send Ctrl-C** emits
 byte 3, while **Disconnect** closes the current Rust-owned session. Resizing the
 terminal container propagates dimensions, clamped to the native limit of 500.
 After closure, choose/list an identity again rather than replaying a consumed ID.
@@ -58,8 +60,8 @@ process cleanup. `make check-ssh` retains its separate actual-shell exercise.
 A manual native application walkthrough combining the renderer, Tauri IPC and an
 approved disposable shell endpoint is still pending, as are packaged-runtime CSP,
 actual keyboard mappings, real guest/agent interoperability and mobile lifecycle.
-Vite currently warns that the bundled main chunk is about 580 KiB before gzip;
-code splitting/performance tuning is deferred. `STATE.md` records actual build
+The main bundle is about 246 KiB and the lazy terminal about 335 KiB before gzip;
+the original large-main-chunk warning is gone. `STATE.md` records actual build
 and test evidence; none of these local fixtures closes the real-host Phase 0 gate.
 
 Primary references: [xterm terminal API](https://xtermjs.org/docs/api/terminal/classes/terminal/),

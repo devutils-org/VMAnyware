@@ -1,6 +1,7 @@
-import { useEffect, useRef, useState, type FormEvent } from "react";
+import { lazy, Suspense, useEffect, useRef, useState, type FormEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { SshTerminal } from "./SshTerminal";
+const loadTerminal = () => import("./SshTerminal");
+const SshTerminal = lazy(async () => ({ default: (await loadTerminal()).SshTerminal }));
 
 type Identity = { algorithm: string; fingerprint: string };
 type Selection = {
@@ -29,10 +30,17 @@ export function SshAuthentication({ host, port }: { host: string; port: number }
   const [now, setNow] = useState(Date.now());
   const generation = useRef(0);
   const selectionId = useRef<string | null>(null);
+  const terminalId = useRef<string | null>(null);
+  function closeOwnedTerminal() {
+    const sessionId = terminalId.current;
+    terminalId.current = null;
+    if (sessionId) void invoke("close_ssh_session", { sessionId }).catch(() => {});
+  }
   useEffect(() => () => {
     generation.current += 1;
     cancel(selectionId.current);
     selectionId.current = null;
+    closeOwnedTerminal();
   }, [host, port]);
   useEffect(() => {
     if (!selection) return;
@@ -47,6 +55,7 @@ export function SshAuthentication({ host, port }: { host: string; port: number }
     setFingerprint("");
     setError("");
     setResult(null);
+    closeOwnedTerminal();
     setTerminal(null);
     setBusy(false);
     setDeadline(0);
@@ -85,11 +94,15 @@ export function SshAuthentication({ host, port }: { host: string; port: number }
     setError("");
     try {
       if (openTerminal) {
+        // Load the renderer before consuming the native selection or opening SSH.
+        await loadTerminal();
+        if (request !== generation.current) return;
         const started = await invoke<{ id: string }>("start_ssh_session", { selectionId: current.id, fingerprint, cols: 80, rows: 24 });
         if (request !== generation.current) {
           void invoke("close_ssh_session", { sessionId: started.id }).catch(() => {});
           return;
         }
+        terminalId.current = started.id;
         setTerminal({ id: started.id, account: `${current.username}@${host} · port ${port}` });
         return;
       }
@@ -101,7 +114,7 @@ export function SshAuthentication({ host, port }: { host: string; port: number }
       }
       setResult(authenticated);
     } catch (failure) {
-      if (request === generation.current) setError(typeof failure === "string" ? failure : "SSH authentication failed. List identities to retry.");
+      if (request === generation.current) setError(typeof failure === "string" ? failure : openTerminal ? "Cannot prepare or open the SSH terminal. List identities to retry." : "SSH authentication failed. List identities to retry.");
     } finally {
       cancel(current.id);
       if (request === generation.current) { selectionId.current = null; setBusy(false); }
@@ -137,6 +150,6 @@ export function SshAuthentication({ host, port }: { host: string; port: number }
       </div>
     </>}
     {result && <p role="status">Authenticated as {result.username} on {result.host} · port {result.port} with <span className="operation-id">{result.fingerprint}</span>. Connection closed. No terminal was opened.</p>}
-    {terminal && <SshTerminal key={terminal.id} id={terminal.id} account={terminal.account} />}
+    {terminal && <Suspense fallback={<p role="status">Preparing terminal…</p>}><SshTerminal key={terminal.id} id={terminal.id} account={terminal.account} /></Suspense>}
   </div>;
 }

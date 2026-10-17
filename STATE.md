@@ -63,9 +63,10 @@ Apple CommandLineTools. Dependency locks and compiler pin are committed.
 
 - Latest `make check` passed frontend TypeScript/Vite build, seven Node terminal
   controller tests, Rust formatting/all-target Clippy with warnings denied and
-  all 80 workspace tests: 49 server, 31 native. Latest transport-fixture
-  `make check-rust` passed 82 tests: 49 server, 33 native. Vite reports a nonblocking main
-  chunk-size warning (~580 KiB before gzip); performance tuning is deferred.
+  all 80 workspace tests: 49 server, 31 native. Latest `make check-rust` passed
+  82 tests: 49 server, 33 native. Latest `make check-terminal-webkit` passed the
+  frontend build/seven controller tests and both WebKit scenarios. The main
+  bundle is now ~246 KiB and the lazy terminal ~335 KiB; no chunk-size warning.
 - Provider tests use generated localhost TLS fixtures, never runtime credentials.
   They cover certificate/hostname/authentication failures, time/size bounds,
   inventory, preflight, task status validation and bounded polling.
@@ -137,6 +138,12 @@ Apple CommandLineTools. Dependency locks and compiler pin are committed.
   cleanup of a late start after edits. It never invokes Rust SSH commands or
   accesses a personal agent. See `make check-terminal-webkit`. This is not an
   integrated native-to-shell test or packaged CSP/real-keyboard evidence.
+- Deferred renderer slice: xterm loads only on explicit terminal opening, before
+  any native start. The parent owns the native ID even while a lazy mount is
+  pending. WebKit tests now deterministically pause/fail the renderer module: an
+  edit during loading starts no late connection; a load error is visible, cancels
+  the selection and starts no native connection. Existing render/input/resize/
+  StrictMode/stale-native-result checks still pass. No new dependency was added.
 - The running local service was rebuilt/restarted with the current code; a real
   validation POST returned HTTP 200, canonical hash and generated request ID.
   Current UI features compile; their manual native walkthrough remains pending.
@@ -155,10 +162,10 @@ No Proxmox infrastructure has been contacted. Phase 0 remains incomplete.
 
 ## Next single task
 
-Load the graphical terminal only when explicitly opening it, keeping connection
-ownership safe if module loading fails or the UI is cancelled before rendering.
-Remove the existing main-chunk warning without weakening limits or native cleanup;
-verify lifecycle with the isolated WebKit smoke and controller tests.
+Bound control-plane shutdown when an HTTP client leaves a request body unfinished.
+Preserve graceful fast shutdown, log a fixed timeout event on forced drain, and
+verify actual SIGTERM/restart/database-lock release with an owned stalled client.
+The packaged Tauri UI/IPC/shell walkthrough and real infrastructure remain open.
 
 ## External inputs and limits
 
