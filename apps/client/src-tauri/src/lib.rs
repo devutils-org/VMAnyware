@@ -64,6 +64,7 @@ pub fn run() {
             ssh::write_ssh_session,
             ssh::resize_ssh_session,
             ssh::close_ssh_session,
+            control_plane::check_control_plane,
             control_plane::inspect_control_plane,
             control_plane::list_definitions,
             control_plane::save_definition,

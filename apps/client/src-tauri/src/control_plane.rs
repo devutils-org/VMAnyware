@@ -82,6 +82,21 @@ pub async fn read_operation(port: u16, id: String) -> Result<Operation, String> 
     request(port, &format!("/api/v1/operations/{id}"), None).await
 }
 
+#[derive(Deserialize)]
+struct ServiceHealth {
+    status: String,
+}
+
+/// Checks the local service independently of provider configuration.
+#[tauri::command]
+pub async fn check_control_plane(port: u16) -> Result<(), String> {
+    let health: ServiceHealth = request(port, "/api/v1/health", None).await?;
+    if health.status != "ok" {
+        return Err("The local service did not report a healthy status.".into());
+    }
+    Ok(())
+}
+
 /// Initial local-only spike; arbitrary remote URLs are intentionally not exposed.
 #[tauri::command]
 pub async fn inspect_control_plane(port: u16) -> Result<Inventory, String> {

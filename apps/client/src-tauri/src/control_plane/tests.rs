@@ -330,3 +330,25 @@ fn definition_errors_select_only_known_field_messages() {
         assert!(!error.contains("secret"));
     }
 }
+
+#[test]
+fn service_health_is_independent_of_inventory_and_requires_ok_status() {
+    for (body, healthy) in [
+        (r#"{"status":"ok"}"#, true),
+        (r#"{"status":"degraded"}"#, false),
+        (r#"{"unexpected":"ok"}"#, false),
+    ] {
+        let (port, task) = response("GET", "/api/v1/health", "200 OK", body);
+        assert_eq!(
+            tauri::async_runtime::block_on(super::check_control_plane(port)).is_ok(),
+            healthy
+        );
+        task.join().unwrap();
+    }
+    assert!(tauri::async_runtime::block_on(super::check_control_plane(0)).is_err());
+    let listener = TcpListener::bind("127.0.0.1:0").unwrap();
+    let port = listener.local_addr().unwrap().port();
+    drop(listener);
+    let error = tauri::async_runtime::block_on(super::check_control_plane(port)).unwrap_err();
+    assert!(error.contains("Cannot reach the local control plane"));
+}

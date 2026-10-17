@@ -8,7 +8,8 @@ the working product name used in the roadmap.
 control-plane HTTP smoke check pass on macOS arm64. The native development
 process starts; the user confirmed the UI bridge returns `macos`.
 VM management is not implemented. A macOS SSH terminal prototype is wired to
-the native transport; real guest and integrated native walkthroughs are pending.
+the native transport; an isolated real-Tauri/local-shell walkthrough passes,
+while real guest and normal application walkthroughs remain pending.
 
 The native client can now connect to the local control plane and list Proxmox
 nodes/templates in read-only mode. Configure the server using
@@ -17,6 +18,12 @@ nodes/templates in read-only mode. Configure the server using
 Real Proxmox verification is pending; default tests use localhost TLS fixtures.
 Inventory refreshes run as persisted background operations, with status polling,
 idempotent requests and restart recovery. See [operation behavior](docs/operations.md).
+
+For a local demo without Proxmox, run `make server` in one terminal and
+`make dev` in another. Click **Check local service**: availability is checked
+independently of provider configuration. If it is unavailable, check the port,
+start the service and click **Retry service check**. Changing the port clears the
+previous result. **Connect** separately requests read-only Proxmox inventory.
 
 You can also edit, save and reload reusable YAML definitions without Proxmox.
 The server validates the schema and persists definitions in SQLite, without

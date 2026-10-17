@@ -214,6 +214,18 @@ No Proxmox infrastructure has been contacted. Phase 0 remains incomplete.
   target/debug/pocketlab-client. README documents single-session recovery.
   No application code changed; native UI interaction was not asserted here.
 
+- Local-service demo slice: an explicit Check local service / Retry service
+  check action calls the native health command without requesting inventory or
+  discovering an SSH agent. The UI distinguishes unchecked/checking/available/
+  unavailable, clears errors on retry and resets health state on port changes.
+  A healthy service does not imply Proxmox is configured. README gives the demo
+  steps. `make check-client`, `make check-rust` and `make check-terminal-webkit`
+  passed: seven JavaScript tests, 84 Rust tests (50 server/34 native), formatting,
+  all-target Clippy and both WebKit scenarios. Native HTTP tests cover healthy,
+  unhealthy/malformed responses, invalid port and refused connection; simulated
+  WebKit IPC covers unavailable/retry/reset with zero inventory calls. These
+  are separate transport/UI checks, not a normal-app end-to-end walkthrough.
+
 ## Next single task
 
 Verify normal macOS application startup and unavailable-service behavior in an

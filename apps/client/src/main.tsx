@@ -55,6 +55,8 @@ function App() {
   const [checking, setChecking] = useState(false);
   const native = isTauri();
   const [port, setPort] = useState("8080");
+  const [serviceState, setServiceState] = useState<"unchecked" | "checking" | "ready" | "unavailable">("unchecked");
+  const [serviceError, setServiceError] = useState("");
   const [inventory, setInventory] = useState<Inventory | null>(null);
   const [connectionError, setConnectionError] = useState("");
   const [connecting, setConnecting] = useState(false);
@@ -91,6 +93,24 @@ function App() {
       setDefinitionError(typeof error === "string" ? error : "Cannot load or save definitions. Please retry.");
     } finally {
       setDefinitionBusy(false);
+    }
+  }
+
+  async function checkService() {
+    const value = Number(port);
+    if (!Number.isInteger(value) || value < 1 || value > 65535) {
+      setServiceState("unavailable");
+      setServiceError("Enter a port between 1 and 65535.");
+      return;
+    }
+    setServiceState("checking");
+    setServiceError("");
+    try {
+      await invoke("check_control_plane", { port: value });
+      setServiceState("ready");
+    } catch (error) {
+      setServiceState("unavailable");
+      setServiceError(typeof error === "string" ? error : "Cannot reach the local service. Check the port and retry.");
     }
   }
 
@@ -151,8 +171,10 @@ function App() {
           <label htmlFor="port">Local service port</label>
           <div className="connection-fields">
             <input id="port" type="number" min="1" max="65535" required value={port}
-              disabled={connecting || definitionBusy} onChange={(event) => {
+              disabled={connecting || definitionBusy || serviceState === "checking"} onChange={(event) => {
                 setPort(event.target.value);
+                setServiceState("unchecked");
+                setServiceError("");
                 setInventory(null);
                 setConnectionError("");
                 setOperation(null);
@@ -160,11 +182,22 @@ function App() {
                 setDefinitionMessage("");
                 setDefinitionError("");
               }} />
+            <button type="button" disabled={!native || serviceState === "checking"} onClick={checkService}>
+              {serviceState === "checking" ? "Checking service…" : serviceState === "unavailable" ? "Retry service check" : "Check local service"}
+            </button>
             <button disabled={!native || connecting} type="submit">
               {connecting ? "Reading inventory…" : inventory ? "Refresh inventory" : "Connect"}
             </button>
           </div>
         </form>
+        <p id="service-status" role="status">
+          {serviceState === "unchecked" ? "Local service not checked." :
+            serviceState === "checking" ? "Checking the local service…" :
+            serviceState === "ready" ? "Local service available. Definitions and provisioning previews can be used without Proxmox." :
+            "Local service unavailable."}
+        </p>
+        {serviceError && <p role="alert" className="error">{serviceError}</p>}
+        <p>Check the local service first, then use Connect to read Proxmox inventory once the provider is configured.</p>
         {!native && <p>Open the native application to connect to the local service.</p>}
         {connectionError && <p role="alert" className="error">{connectionError}</p>}
         {operation && <p role="status">Inventory refresh: {operation.status} · <span className="operation-id">{operation.id}</span></p>}

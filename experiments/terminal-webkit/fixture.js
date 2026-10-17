@@ -1,13 +1,16 @@
 // Deliberately simulated native IPC. Never invokes Rust or discovers an agent.
 (() => {
   const calls = [];
-  let reads = 0, starts = 0, lateStart;
+  let reads = 0, starts = 0, healthChecks = 0, lateStart;
   const pendingReads = [];
   window.isTauri = true;
   window.__TAURI_INTERNALS__ = { invoke: async (command, args = {}) => {
     calls.push({ command, args });
     const endpoint = { host: "fixture.local", port: 22 };
     switch (command) {
+      case "check_control_plane":
+        if (++healthChecks === 1) throw "Cannot reach the local control plane. Start it with make server and check the port.";
+        return;
       case "ssh_host_support": return true;
       case "inspect_ssh_host": return { ...endpoint, algorithm: "ssh-ed25519", fingerprint: "SHA256:fixture-host", status: "trusted", challengeId: null, expiresInSeconds: 0 };
       case "list_ssh_identities": return { ...endpoint, username: args.username, id: `selection-${starts}`, identities: [{ algorithm: "ssh-ed25519", fingerprint: "SHA256:fixture-user" }], expiresInSeconds: 120 };
@@ -42,6 +45,18 @@
     try {
       await wait(() => button("Inspect host key") && !button("Inspect host key").disabled);
       check(count("list_ssh_identities") === 0, "Startup accessed agent");
+      check(healthChecks === 0, "Startup automatically checked the service");
+      button("Check local service").click();
+      await wait(() => button("Retry service check"));
+      check(document.getElementById("service-status").textContent.includes("unavailable"), "Missing service failure status");
+      check(document.querySelector('[role="alert"]').textContent.includes("make server"), "Missing recovery hint");
+      button("Retry service check").click();
+      await wait(() => document.getElementById("service-status").textContent.includes("available."));
+      check(!document.querySelector('[role="alert"]'), "Retry retained stale error");
+      check(count("begin_inventory_refresh") === 0, "Health check requested Proxmox inventory");
+      input("port", "8081");
+      await wait(() => document.getElementById("service-status").textContent.includes("not checked"));
+      input("port", "8080");
       input("ssh-host", "fixture.local"); button("Inspect host key").click();
       await wait(() => document.getElementById("ssh-username"));
       check(count("list_ssh_identities") === 0, "Host inspection accessed agent");
