@@ -11,7 +11,7 @@ been demonstrated. See `STATE.md` for current counts and commands.
 | Provider transport | Verified localhost TLS; trust/hostname/auth/error/deadline/size tests | Actual endpoint, CA and dedicated effective token ACLs |
 | Inventory/preflight | HTTP/TLS fixtures, explicit catalog, observed checks and unknowns | Real source template, VMID/storage/network observations |
 | Provider task status | Validated task identity, exact success semantics, bounded polling fixtures | Durable linkage/reconciliation and real provider task |
-| Local process ownership | Real process lock/restart and signal tests | Service packaging and forced shutdown deadline |
+| Local process ownership | Real process lock/restart and signal tests, five-second drain bound with stalled HTTP body | Service packaging and installed-service operational experience |
 | Diagnostics | Real binary tests for allowed fields and sensitive-input redaction | Operational experience on an installed service |
 | CI | Pinned workflow, local command checks and actionlint | First actual GitHub/Linux run; native/mobile runners |
 | VM provisioning | Explicit plan and template preparation procedure | Clone/configuration implementation plus approved disposable-host tests |

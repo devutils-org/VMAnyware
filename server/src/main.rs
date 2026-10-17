@@ -2,7 +2,9 @@ use pocketlab_server::{
     config::Config, diagnostics, provisioning::Catalog, proxmox::Proxmox, router_with_catalog,
     store::Store,
 };
-use std::future::IntoFuture;
+use std::{future::IntoFuture, time::Duration};
+
+const DRAIN_LIMIT: Duration = Duration::from_secs(5);
 
 #[tokio::main]
 async fn main() {
@@ -41,14 +43,26 @@ async fn run() -> Result<(), &'static str> {
         store.clone(),
         provider.clone(),
     ));
+    let (stopping, stopped_signal) = tokio::sync::oneshot::channel();
     let server = axum::serve(listener, router_with_catalog(provider, store, catalog))
-        .with_graceful_shutdown(shutdown.wait())
+        .with_graceful_shutdown(async move {
+            shutdown.wait().await;
+            let _ = stopping.send(());
+        })
         .into_future();
+    tokio::pin!(server);
     diagnostics::listening(config.address().port());
     tokio::select! {
-        result = server => {
+        result = &mut server => {
             worker.abort();
             result.map_err(|_| "server_stopped_unexpectedly")?;
+        }
+        _ = stopped_signal => {
+            match tokio::time::timeout(DRAIN_LIMIT, &mut server).await {
+                Ok(result) => result.map_err(|_| "server_stopped_unexpectedly")?,
+                Err(_) => diagnostics::drain_timed_out(),
+            }
+            worker.abort();
         }
         _ = &mut worker => return Err("operation_worker_stopped_unexpectedly"),
     }

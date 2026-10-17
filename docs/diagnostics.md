@@ -22,7 +22,8 @@ not authentication tokens. A completion event measures response construction;
 it does not prove a client received the full body or that a guest is ready.
 Requests aborted before response construction may have no completion event.
 
-Lifecycle events are `server_listening` (numeric loopback port), `server_stopped`,
+Lifecycle events are `server_listening` (numeric loopback port),
+`server_drain_timed_out` (no fields), `server_stopped`,
 and `server_failed` (a fixed application-owned stage code). A failure exits with
 code 1 without printing the underlying error or user-supplied configuration.
 Useful failure codes include:
@@ -42,16 +43,24 @@ Useful failure codes include:
 | `server_stopped_unexpectedly` | Local HTTP listener/runtime failure |
 
 On Unix, SIGINT and SIGTERM are registered before readiness is announced and
-both request Axum graceful shutdown. After active requests drain, the inventory
-worker is aborted and the service releases its database lock. Running records
+both request Axum graceful shutdown. Active requests have up to five seconds to
+drain. If an unfinished request prevents completion, the service emits the fixed
+`server_drain_timed_out` event, aborts its inventory worker and returns from the
+server runtime; remaining async connections close during runtime teardown. An
+idle service exits immediately. The service releases its database lock on exit. Running records
 remain durable and become interrupted on the next exclusive startup; queued
 work remains queued. There is no provider-task cancellation or VM cleanup.
-There is no forced shutdown deadline yet. Windows Ctrl-C handling is prepared
-in source but has not been compiled or run on Windows.
+A requested shutdown exits zero even if the drain deadline expires;
+`server_stopped` means the process is stopping, not that every request completed.
+This bounds HTTP draining, not arbitrary blocking OS/database I/O. Windows Ctrl-C
+handling is prepared in source but has not been compiled or run on Windows.
 
 Actual subprocess tests on macOS verify redaction, generated IDs, unknown routes
 and methods, SIGTERM/SIGINT exit status zero and restart with the same database.
-They use an empty process environment and temporary database, with no provider.
+An additional subprocess test keeps a request body unfinished through SIGTERM,
+observes the five-second timeout event/exit, verifies socket closure and restarts
+with the same database/port. Idle SIGINT must still exit in under two seconds.
+Tests use an empty process environment and temporary database, with no provider.
 
 Implementation references: [Axum middleware](https://docs.rs/axum/latest/axum/middleware/fn.from_fn.html),
 [Tokio Unix signals](https://docs.rs/tokio/latest/tokio/signal/unix/fn.signal.html).

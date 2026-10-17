@@ -20,7 +20,8 @@ Updated: 2026-10-17. Historical evidence and decisions are in Git and docs.
   redacted failure status and bounded polling. No durable provider-task linkage
   or guest readiness is implied by this helper.
 - Safe JSON request/lifecycle events and generated request IDs. Unix SIGINT and
-  SIGTERM request graceful shutdown; startup failures emit fixed stage codes.
+  SIGTERM request graceful shutdown with a five-second HTTP drain limit; startup
+  failures and drain timeout emit fixed stage codes.
 - Prepared GitHub Actions server/frontend checks with pinned actions and locks;
   workflow not pushed or executed, Linux success remains unverified.
 - Debian Cloud-Init template guide, platform/toolchain evidence matrix and
@@ -144,6 +145,11 @@ Apple CommandLineTools. Dependency locks and compiler pin are committed.
   edit during loading starts no late connection; a load error is visible, cancels
   the selection and starts no native connection. Existing render/input/resize/
   StrictMode/stale-native-result checks still pass. No new dependency was added.
+- Shutdown-bound slice: `make check-server` passed all 50 server tests. A real
+  child with an unfinished HTTP body exits zero after the five-second drain
+  deadline, emits only the fixed timeout/stopped events, closes its socket and
+  restarts with the same database/port. An idle restart still exits on SIGINT in
+  under two seconds. The bound covers HTTP drain, not arbitrary blocking OS I/O.
 - The running local service was rebuilt/restarted with the current code; a real
   validation POST returned HTTP 200, canonical hash and generated request ID.
   Current UI features compile; their manual native walkthrough remains pending.
@@ -162,10 +168,10 @@ No Proxmox infrastructure has been contacted. Phase 0 remains incomplete.
 
 ## Next single task
 
-Bound control-plane shutdown when an HTTP client leaves a request body unfinished.
-Preserve graceful fast shutdown, log a fixed timeout event on forced drain, and
-verify actual SIGTERM/restart/database-lock release with an owned stalled client.
-The packaged Tauri UI/IPC/shell walkthrough and real infrastructure remain open.
+Run a final complete local verification and refresh the optimized native build
+for the stalled-output/deferred-renderer changes. Then the next feasibility gate
+is an explicitly selected native Tauri UI/IPC/shell walkthrough; keep the real
+Proxmox, mobile and packaged-runtime evidence gaps visible.
 
 ## External inputs and limits
 

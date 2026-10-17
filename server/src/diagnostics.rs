@@ -69,6 +69,10 @@ pub fn stopped() {
     eprintln!("{}", serde_json::json!({"event": "server_stopped"}));
 }
 
+pub fn drain_timed_out() {
+    eprintln!("{}", serde_json::json!({"event": "server_drain_timed_out"}));
+}
+
 /// Reasons are static strings chosen by the service, never external errors.
 pub fn failed(reason: &'static str) {
     eprintln!(
