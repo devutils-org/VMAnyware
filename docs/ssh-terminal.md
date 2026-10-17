@@ -34,6 +34,13 @@ stay within the bundled renderer/native SSH path and are not logged or sent to
 the control plane. As with any terminal, content can influence terminal state;
 this prototype is not a sandbox for arbitrary untrusted applications.
 
+Unread output that remains blocked for three seconds fails and closes the
+connection. The pinned SSH library can otherwise stop processing outgoing Ctrl-C
+while its receive queue is full. A backgrounded/suspended renderer may therefore
+lose its session. Active output consumers can interrupt a fast producer; a
+fully paused consumer gets an explicit failure instead of an indefinite hang.
+See [ADR 0014](decisions/0014-stalled-terminal-output.md).
+
 ## Verification and limits
 
 `make check-client` compiles the renderer and runs seven Node tests of the actual

@@ -943,3 +943,134 @@ async fn native_agent_pty_real_shell_resize_interrupt_reconnect_and_process_clea
     }
     assert_eq!(fixture.auth.load(Ordering::SeqCst), 2);
 }
+
+#[tokio::test]
+async fn native_real_shell_stalled_output_fails_visibly_and_closes_owned_processes() {
+    use crate::ssh::session::{Event, SessionManager};
+    let agent = DisposableAgent::start().await;
+    let allowed = key();
+    let selected = fingerprint(allowed.public_key());
+    agent.add(&allowed).await;
+    let fixture = Fixture::with_configuration(allowed.public_key().clone(), true, None, true).await;
+    let (_root, manager, store) = manager(agent.socket.clone());
+    fixture.trust(&store);
+    let sessions = SessionManager::new(manager.clone());
+    let selection = manager
+        .list("main", "127.0.0.1", fixture.port, "fixture")
+        .await
+        .unwrap();
+    let started = sessions
+        .start("main", &selection.id, &selected, 80, 24)
+        .await
+        .unwrap();
+    let id = serde_json::to_value(started).unwrap()["id"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    shell_output_until(&sessions, &id, "fixture> ").await;
+    sessions
+        .write("main", &id, b"stty -echo; printf 'READY\\n'\n".to_vec())
+        .unwrap();
+    shell_output_until(&sessions, &id, "\r\nREADY\r\n").await;
+    sessions
+        .write("main", &id, b"yes pocketlab-pressure\n".to_vec())
+        .unwrap();
+    let shell = fixture.shells.lock().unwrap().last().unwrap().clone();
+    tokio::time::timeout(Duration::from_secs(1), async {
+        while shell.lock().unwrap().foreground_child().is_none() {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .unwrap();
+    // Intentionally stop pulling output so every bounded layer can fill.
+    tokio::time::sleep(Duration::from_millis(250)).await;
+    // russh's full channel queue can prevent processing queued input. Do not
+    // falsely claim Ctrl-C delivery; the output-stall policy must close instead.
+    sessions.write("main", &id, vec![3]).unwrap();
+    tokio::time::timeout(Duration::from_secs(5), async {
+        while !shell.lock().unwrap().is_closed() {
+            tokio::time::sleep(Duration::from_millis(10)).await;
+        }
+    })
+    .await
+    .expect("stalled output did not close the owned shell");
+    let mut drained = 0;
+    tokio::time::timeout(Duration::from_secs(2), async {
+        loop {
+            match sessions.read("main", &id).await.unwrap() {
+                Some(Event::Data { bytes }) => {
+                    drained += bytes.len();
+                    assert!(
+                        drained < 2 * 1024 * 1024,
+                        "pressure backlog exceeded fixture budget"
+                    );
+                }
+                Some(Event::Failed) => break,
+                Some(Event::Closed) => panic!("stalled output was reported as normal closure"),
+                _ => {}
+            }
+        }
+    })
+    .await
+    .unwrap();
+    assert!(matches!(
+        sessions.read("main", &id).await.unwrap(),
+        Some(Event::Closed)
+    ));
+    assert!(sessions.write("main", &id, vec![3]).is_err());
+    sessions.close("main", &id).unwrap();
+    wait_closed(&fixture).await;
+    // Freshly selected connections remain usable; active readers can interrupt
+    // a fast producer without the paused-output failure policy firing.
+    let selection = manager
+        .list("main", "127.0.0.1", fixture.port, "fixture")
+        .await
+        .unwrap();
+    let started = sessions
+        .start("main", &selection.id, &selected, 80, 24)
+        .await
+        .unwrap();
+    let id = serde_json::to_value(started).unwrap()["id"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    shell_output_until(&sessions, &id, "fixture> ").await;
+    sessions
+        .write("main", &id, b"stty -echo; printf 'READY\\n'\n".to_vec())
+        .unwrap();
+    shell_output_until(&sessions, &id, "\r\nREADY\r\n").await;
+    sessions
+        .write("main", &id, b"yes pocketlab-pressure\n".to_vec())
+        .unwrap();
+    assert!(matches!(
+        next_output(&sessions, &id).await,
+        Event::Data { .. }
+    ));
+    let interrupted_at = Instant::now();
+    sessions.write("main", &id, vec![3]).unwrap();
+    let mut tail = String::new();
+    let mut drained = 0;
+    tokio::time::timeout(Duration::from_secs(2), async {
+        while !tail.contains("fixture> ") {
+            let Event::Data { bytes } = next_output(&sessions, &id).await else {
+                panic!("streaming shell failed")
+            };
+            drained += bytes.len();
+            assert!(drained < 2 * 1024 * 1024);
+            tail.push_str(&String::from_utf8_lossy(&bytes));
+            if tail.len() > 128 {
+                tail = tail[tail.len() - 128..].to_owned();
+            }
+        }
+    })
+    .await
+    .unwrap();
+    assert!(interrupted_at.elapsed() < Duration::from_secs(2));
+    sessions
+        .write("main", &id, b"printf 'RECOVERED\\n'\n".to_vec())
+        .unwrap();
+    shell_output_until(&sessions, &id, "RECOVERED\r\n").await;
+    sessions.close("main", &id).unwrap();
+    wait_closed(&fixture).await;
+}

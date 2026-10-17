@@ -34,10 +34,14 @@ is blocked, retaining input handling. Each native output event carries at most
 binary stdout/stderr, exit status, EOF, closed or fixed failure event, or no event
 after 250 ms. It does not decode UTF-8, combine byte chunks into strings or log
 terminal content. An exit status/EOF does not replace final connection closure.
-Queued output drains before the closed result. A failure event is best effort if
-the output queue is already full; transport closure remains observable.
+Queued output drains before the closed result. Failure state survives a full queue: queued events drain, then Failed is
+reported once, then Closed. This distinguishes failure from normal closure.
 
-A three-second write/resize deadline closes a blocked transport. Client channel
+A three-second write/resize deadline closes a blocked transport. Output that
+cannot be forwarded for three seconds also fails and closes the connection; a
+write cannot extend that output-stall deadline. The pinned library can stop
+processing queued Ctrl-C when its receive queue is full. See ADR 0014: closing
+a stalled session is deliberate, and is not reported as successful Ctrl-C. Client channel
 queues contain at most sixteen messages, with a 256 KiB SSH window and 32 KiB
 maximum packets. Keepalives run every thirty seconds (three misses maximum),
 and the connection has a five-minute inactivity timeout. These limits bound the

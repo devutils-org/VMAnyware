@@ -3,13 +3,17 @@ use super::agent::{AgentManager, Authenticated};
 use russh::{client, Channel, ChannelMsg};
 use std::{
     collections::HashMap,
-    sync::{Arc, Mutex},
+    sync::{
+        atomic::{AtomicBool, Ordering},
+        Arc, Mutex,
+    },
     time::Duration,
 };
 use tokio::sync::{mpsc, Mutex as AsyncMutex};
 use uuid::Uuid;
 
 const CAPACITY: usize = 8;
+const OUTPUT_STALL: Duration = Duration::from_secs(3);
 const MAX_DATA: usize = 32 * 1024;
 const UNAVAILABLE: &str = "SSH session unavailable or closed";
 #[derive(serde::Serialize)]
@@ -31,9 +35,13 @@ enum Input {
     Data(Vec<u8>),
     Resize(u32, u32),
 }
+struct Output {
+    receiver: mpsc::Receiver<Event>,
+    failed: Arc<AtomicBool>,
+}
 struct Live {
     input: mpsc::Sender<Input>,
-    output: Arc<AsyncMutex<mpsc::Receiver<Event>>>,
+    output: Arc<AsyncMutex<Output>>,
     task: tokio::task::JoinHandle<()>,
 }
 impl Drop for Live {
@@ -168,10 +176,14 @@ impl SessionManager {
             .ok_or(UNAVAILABLE)?;
         let (input, commands) = mpsc::channel(CAPACITY);
         let (events, output) = mpsc::channel(CAPACITY);
-        let task = tokio::spawn(run(connection, channel, commands, events));
+        let failed = Arc::new(AtomicBool::new(false));
+        let task = tokio::spawn(run(connection, channel, commands, events, failed.clone()));
         slot.live = Some(Live {
             input,
-            output: Arc::new(AsyncMutex::new(output)),
+            output: Arc::new(AsyncMutex::new(Output {
+                receiver: output,
+                failed,
+            })),
             task,
         });
         Ok(Started { id })
@@ -215,8 +227,9 @@ impl SessionManager {
         let mut output = output
             .try_lock()
             .map_err(|_| "SSH output read already pending")?;
-        match tokio::time::timeout(Duration::from_millis(250), output.recv()).await {
+        match tokio::time::timeout(Duration::from_millis(250), output.receiver.recv()).await {
             Ok(Some(event)) => Ok(Some(event)),
+            Ok(None) if output.failed.swap(false, Ordering::SeqCst) => Ok(Some(Event::Failed)),
             Ok(None) => Ok(Some(Event::Closed)),
             Err(_) => Ok(None),
         }
@@ -240,14 +253,20 @@ async fn run(
     channel: Channel<client::Msg>,
     mut input: mpsc::Receiver<Input>,
     output: mpsc::Sender<Event>,
+    failed: Arc<AtomicBool>,
 ) {
     // Retain the owned socket for the entire actor, including blocked output.
     let _shutdown = connection.shutdown;
     let _handle = connection.handle;
     let (mut reader, writer) = channel.split();
     let mut pending = None;
+    let mut stall_deadline = tokio::time::Instant::now() + OUTPUT_STALL;
     loop {
         tokio::select! {
+            _ = tokio::time::sleep_until(stall_deadline), if pending.is_some() => {
+                failed.store(true, Ordering::SeqCst);
+                break;
+            },
             command = input.recv() => {
                 let operation = async {
                     match command {
@@ -256,8 +275,10 @@ async fn run(
                         None => Err(russh::Error::Disconnect),
                     }
                 };
-                if !matches!(tokio::time::timeout(Duration::from_secs(3), operation).await, Ok(Ok(()))) {
-                    let _ = output.try_send(Event::Failed);
+                let write_deadline = tokio::time::Instant::now() + Duration::from_secs(3);
+                let deadline = if pending.is_some() { write_deadline.min(stall_deadline) } else { write_deadline };
+                if !matches!(tokio::time::timeout_at(deadline, operation).await, Ok(Ok(()))) {
+                    failed.store(true, Ordering::SeqCst);
                     break;
                 }
             },
@@ -268,9 +289,10 @@ async fn run(
                     Some(ChannelMsg::ExitStatus { exit_status }) => Some(Event::Exit { status: exit_status }),
                     Some(ChannelMsg::Eof) => Some(Event::Eof),
                     Some(ChannelMsg::Close) | None => break,
-                    Some(ChannelMsg::Data { .. } | ChannelMsg::ExtendedData { .. }) => { let _ = output.try_send(Event::Failed); break; },
+                    Some(ChannelMsg::Data { .. } | ChannelMsg::ExtendedData { .. }) => { failed.store(true, Ordering::SeqCst); break; },
                     _ => None,
                 };
+                if pending.is_some() { stall_deadline = tokio::time::Instant::now() + OUTPUT_STALL; }
             },
             permit = output.reserve(), if pending.is_some() => {
                 let Ok(permit) = permit else { break; };
@@ -294,7 +316,10 @@ mod tests {
         let (_root, manager) = manager();
         let (input, _commands) = mpsc::channel(CAPACITY);
         let (events, output) = mpsc::channel(CAPACITY);
-        let output = Arc::new(AsyncMutex::new(output));
+        let output = Arc::new(AsyncMutex::new(Output {
+            receiver: output,
+            failed: Arc::new(AtomicBool::new(false)),
+        }));
         let task = tokio::spawn(std::future::pending());
         let abort = task.abort_handle();
         manager.owners.lock().unwrap().insert(

@@ -64,7 +64,7 @@ Apple CommandLineTools. Dependency locks and compiler pin are committed.
 - Latest `make check` passed frontend TypeScript/Vite build, seven Node terminal
   controller tests, Rust formatting/all-target Clippy with warnings denied and
   all 80 workspace tests: 49 server, 31 native. Latest transport-fixture
-  `make check-rust` passed 81 tests: 49 server, 32 native. Vite reports a nonblocking main
+  `make check-rust` passed 82 tests: 49 server, 33 native. Vite reports a nonblocking main
   chunk-size warning (~580 KiB before gzip); performance tuning is deferred.
 - Provider tests use generated localhost TLS fixtures, never runtime credentials.
   They cover certificate/hostname/authentication failures, time/size bounds,
@@ -119,6 +119,14 @@ Apple CommandLineTools. Dependency locks and compiler pin are committed.
   shell/foreground PIDs alive. The experimental and native tests share one
   bounded-output PTY fixture. portable-pty is a macOS dev-dependency only; no
   runtime dependency or user agent/credential/real infrastructure was accessed.
+- Output pressure slice: a real yes/paused-reader test exposed Ctrl-C starvation
+  in the pinned SSH library's full receive queue. The native actor now fails and
+  closes after three seconds of blocked output; failure survives a full queue
+  and is observed after queued data, followed by Closed. `make check-rust` passed
+  all 82 tests. The pressure test verifies bounded failure/owned-process cleanup,
+  then a fresh connection with actively consumed output interrupts yes within two
+  seconds and remains usable. This is a documented prototype limitation: a long
+  renderer pause can close a session (ADR 0014), not transparent indefinite pause.
 - Graphical terminal slice: seven Node tests cover binary/split UTF-8 output,
   renderer backpressure, stale results/errors, bounded serialized input, resize
   coalescing, overflow, native saturation retries and exit/EOF/close.
@@ -147,11 +155,10 @@ No Proxmox infrastructure has been contacted. Phase 0 remains incomplete.
 
 ## Next single task
 
-Exercise sustained real-shell output with a deliberately slow/paused native
-reader, then Ctrl-C, recovery and disconnect. Verify bounded buffering and no
-input starvation; fix any observed failure before expanding the SSH prototype.
-The renderer's isolated WebKit smoke and real native shell tests still do not
-prove the complete packaged Tauri UI/IPC/shell chain or real guest behavior.
+Load the graphical terminal only when explicitly opening it, keeping connection
+ownership safe if module loading fails or the UI is cancelled before rendering.
+Remove the existing main-chunk warning without weakening limits or native cleanup;
+verify lifecycle with the isolated WebKit smoke and controller tests.
 
 ## External inputs and limits
 
