@@ -24,6 +24,11 @@ For a local demo without Proxmox, run `make server` in one terminal and
 independently of provider configuration. If it is unavailable, check the port,
 start the service and click **Retry service check**. Changing the port clears the
 previous result. **Connect** separately requests read-only Proxmox inventory.
+The [normal macOS startup walkthrough](docs/macos-startup-smoke.md) describes
+the pending isolated launch and unavailable-service checks.
+The [x86 lab record](docs/x86-lab.md) describes the approved local Proxmox
+installation and verified read-only Rust probe. Further VM or credential
+changes require approval of their concrete target and operation.
 
 You can also edit, save and reload reusable YAML definitions without Proxmox.
 The server validates the schema and persists definitions in SQLite, without
@@ -136,3 +141,29 @@ over LAN/VPN. See the roadmap before implementing either path.
 The scaffold follows the official
 [Tauri project setup](https://v2.tauri.app/start/create-project/) and
 [Vite integration](https://v2.tauri.app/start/frontend/vite/) conventions.
+
+## macOS workspace verification
+
+After pulling the workspace layout changes on a Mac, run from a graphical
+session with the pinned toolchain and CommandLineTools:
+
+```sh
+git pull --ff-only
+npm --prefix apps/client ci
+make check
+make check-terminal-webkit
+make check-terminal-native
+```
+
+The WebKit target checks loaded/empty/error workspace states with simulated
+IPC. The native target uses real Tauri IPC, a disposable generated-key SSH
+peer/agent and local shell; it now checks navigation without replacing the
+terminal and requires fresh shell output afterward. Both targets isolate their
+resources and do not need the Linux Proxmox lab, an API token or a personal
+SSH agent. See their experiment READMEs for exact prerequisites and limits.
+These updated scenarios have not yet been run on macOS.
+
+For a visual review, run one `make dev` session and inspect desktop/narrow
+layouts, sidebar shortcuts and keyboard focus. Record revision, platform and
+actual command outcomes in `STATE.md`; keep failures visible rather than
+marking native acceptance from the Linux browser results.

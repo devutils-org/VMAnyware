@@ -267,8 +267,8 @@ Tasks:
 - [x] Create the repository and minimal Rust workspace.
 - [x] Create a minimal Tauri 2 app and verify development/build setup. (macOS arm64: dev/release builds pass; user confirmed native bridge returns `macos`.)
 - [x] Document the supported OS versions and toolchain. (Current macOS development baseline and unverified targets in docs/platforms.md; no release/minimum-OS guarantee.)
-- [ ] Connect a Rust prototype to a disposable/test Proxmox VE environment using a dedicated least-privilege API token.
-- [ ] Verify TLS certificate handling and API-token permissions.
+- [x] Connect a Rust prototype to a disposable/test Proxmox VE environment using a dedicated least-privilege API token. (Local pve-lab: Rust probe reads 9.2.2, online node and empty visible inventory with a privilege-separated token and no ACL grants.)
+- [x] Verify TLS certificate handling and API-token permissions. (Local pve-lab: explicit CA/hostname verified; bad token, untrusted CA and wrong hostname rejected; effective token privileges confirmed empty. Template/provisioning ACLs remain unverified.)
 - [ ] Read VM inventory and inspect a known template.
 - [ ] Prototype clone → Cloud-Init configuration → start → poll task → verify readiness.
 - [ ] Prototype create/list/restore snapshot on a disposable VM.

@@ -160,12 +160,38 @@ function App() {
   }
 
   return (
-    <main>
-      <p className="eyebrow">PocketLab · Phase 0</p>
-      <h1>Your systems lab, within reach.</h1>
-      <p>Connect to your local control plane to inspect Proxmox nodes and available templates.</p>
+    <div className="app-shell">
+      <a className="skip-link" href="#workspace-title">Skip to workspace</a>
+      <aside className="sidebar" aria-label="Workspace navigation">
+        <a className="brand" href="#workspace-title"><span className="brand-mark" aria-hidden="true">›_</span>PocketLab</a>
+        <p className="nav-label">Workspace</p>
+        <nav aria-label="Workspace tools">
+          <a href="#connection-heading"><span aria-hidden="true">01</span>Connection</a>
+          <a href="#definitions-heading"><span aria-hidden="true">02</span>Definitions</a>
+          <a href="#plan-heading"><span aria-hidden="true">03</span>Provisioning</a>
+          <a href="#ssh-trust-heading"><span aria-hidden="true">04</span>SSH terminal</a>
+          <a href="#runtime-heading"><span aria-hidden="true">05</span>Application</a>
+        </nav>
+        <div className="sidebar-note"><span className="phase-badge">Phase 0</span><p>A place to build,<br />inspect and start again.</p></div>
+      </aside>
+      <main>
+      <div className="workspace-bar"><span>Personal workspace / Overview</span><span className="runtime-badge">{native ? "Native application" : "Browser preview"}</span></div>
+      <header className="app-header">
+        <div className="app-identity">
+          <p className="eyebrow">Your infrastructure, in reach</p>
+          <span className="phase-badge">Phase 0 · Prototype</span>
+        </div>
+        <h1 id="workspace-title" tabIndex={-1}>Make room for your next idea.</h1>
+        <p>Connect to your local control plane to inspect Proxmox nodes and available templates.</p>
+      </header>
+      <div className="workspace-summary" aria-label="Current workspace observations">
+        <div className="summary-card"><span className="summary-label">Local service</span><strong className={`service-indicator ${serviceState}`}>{serviceState === "ready" ? "Available" : serviceState === "checking" ? "Checking…" : serviceState === "unavailable" ? "Unavailable" : "Not checked"}</strong><span>Port {port || "—"} · loopback</span></div>
+        <div className="summary-card"><span className="summary-label">Proxmox nodes</span><strong>{inventory ? inventory.nodes.length : "—"}</strong><span>{inventory ? `Last inventory · v${inventory.version}` : "Connect to read inventory"}</span></div>
+        <div className="summary-card"><span className="summary-label">Visible templates</span><strong>{inventory ? inventory.templates.length : "—"}</strong><span>{inventory ? "Visible to the configured token" : "No inventory loaded"}</span></div>
+      </div>
       <section aria-labelledby="connection-heading" aria-busy={connecting}>
-        <h2 id="connection-heading">Control plane</h2>
+        <p className="panel-kicker">01 / Connect</p>
+        <h2 id="connection-heading" tabIndex={-1}>Control plane</h2>
         <p>This prototype connects to the service on this computer. Proxmox credentials stay on the server.</p>
         <form onSubmit={connect}>
           <label htmlFor="port">Local service port</label>
@@ -203,15 +229,17 @@ function App() {
         {operation && <p role="status">Inventory refresh: {operation.status} · <span className="operation-id">{operation.id}</span></p>}
         {inventory && <div role="status"><p>Connected · Proxmox {inventory.version}</p></div>}
       </section>
+      <div className="definition-workspace">
       <section aria-labelledby="definitions-heading" aria-busy={definitionBusy}>
-        <h2 id="definitions-heading">Environment definitions</h2>
+        <p className="panel-kicker">02 / Define</p>
+        <h2 id="definitions-heading" tabIndex={-1}>Environment definitions</h2>
         <p>Save a reusable configuration before provisioning. Replace the example public key with your own. Saving does not create a VM.</p>
         <label htmlFor="definition-yaml">Environment YAML</label>
         <textarea id="definition-yaml" value={yaml} spellCheck={false} disabled={definitionBusy}
           onChange={(event) => { setYaml(event.target.value); setDefinitionMessage(""); setDefinitionError(""); }} />
         <div className="connection-fields">
           <button disabled={!native || definitionBusy} onClick={() => definitionsAction("validate")}>Validate YAML</button>
-          <button disabled={!native || definitionBusy} onClick={() => definitionsAction("save")}>
+          <button className="definition-save" disabled={!native || definitionBusy} onClick={() => definitionsAction("save")}>
             {definitionBusy ? "Working…" : "Save definition"}
           </button>
           <button disabled={!native || definitionBusy} onClick={() => definitionsAction("load")}>Load saved definitions</button>
@@ -226,6 +254,7 @@ function App() {
         </li>)}</ul>}
       </section>
       <ProvisioningPreview port={port} yaml={yaml} native={native} />
+      </div>
       <SshHostTrust native={native} />
       {inventory && <>
         <section aria-labelledby="nodes-heading">
@@ -243,14 +272,17 @@ function App() {
         </section>
       </>}
       <section aria-labelledby="runtime-heading">
-        <h2 id="runtime-heading">Application runtime</h2>
+        <p className="panel-kicker">05 / Application</p>
+        <h2 id="runtime-heading" tabIndex={-1}>Application runtime</h2>
         <p>{native ? "Native application" : "Browser preview"}</p>
         <button disabled={!native || checking} onClick={checkRuntime}>
           {checking ? "Checking…" : "Check native bridge"}
         </button>
         <p role="status">{native ? status : "Open the native application to check its connection to Rust."}</p>
       </section>
+      <footer className="workspace-footer"><span>PocketLab · A reproducible systems lab</span><span>Prototype / Phase 0</span></footer>
     </main>
+    </div>
   );
 }
 

@@ -50,6 +50,14 @@
         type("stty -echo; printf 'NATIVE_%s_OK\\n' UI\n");
         await wait(() => text().includes("NATIVE_UI_OK"), "shell stdout");
         const terminal = document.querySelector(".ssh-terminal");
+        for (const destination of ["definitions-heading", "plan-heading", "connection-heading", "ssh-trust-heading"]) {
+          document.querySelector(`nav a[href="#${destination}"]`).click();
+          await new Promise(resolve => setTimeout(resolve, 0));
+          check(document.activeElement.id === destination, "Workspace navigation did not focus its destination");
+          check(document.querySelector(".ssh-terminal") === terminal, "Workspace navigation replaced the terminal");
+        }
+        type("printf 'AFTER_%s_OK\\n' NAVIGATION\n");
+        await wait(() => text().includes("AFTER_NAVIGATION_OK"), "same shell remains usable after workspace navigation");
         terminal.style.height = "320px";
         await new Promise(resolve => setTimeout(resolve, 200));
         const rows = document.querySelector(".xterm-rows").children.length;

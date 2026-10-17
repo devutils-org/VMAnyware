@@ -33,3 +33,11 @@ continuing the rendering checks. Another returns a fixture-only module-load erro
 and requires a visible error, cancelled identity selection and zero native starts.
 A test-only module-evaluation marker makes the loading assertion deterministic.
 None of this middleware/marker is included in production assets.
+
+The workspace scenario also exercises loaded and empty inventories, failed
+refreshes with cleared summary counts, validation error/retry, mixed
+passed/failed/unknown provisioning checks and reset after a port change.
+It navigates among workspace anchors while xterm is mounted and requires the
+same terminal element, destination focus and no extra start/close calls.
+Loaded provisioning and terminal states must not widen the document viewport.
+These remain simulated IPC assertions, not provider or native-shell evidence.

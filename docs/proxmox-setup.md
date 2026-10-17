@@ -1,7 +1,9 @@
 # Read-only Proxmox feasibility probe
 
-No real host has been tested yet. Local TLS fixture tests verify transport,
-certificate trust/hostname checks, authentication/error mapping and parsing.
+The disposable local Proxmox lab has passed the Rust version/node inventory
+probe with verified TLS and a dedicated token. Local TLS fixture tests also
+verify transport, certificate trust/hostname checks, authentication/error mapping
+and parsing. A real source template has not yet been inspected.
 
 ## Scope and permissions
 
@@ -81,3 +83,35 @@ References: [Proxmox API viewer](https://pve.proxmox.com/pve-docs/api-viewer/),
 [API schema data](https://pve.proxmox.com/pve-docs/api-viewer/apidoc.js),
 [API documentation](https://pve.proxmox.com/wiki/Proxmox_VE_API),
 [Reqwest TLS configuration](https://docs.rs/reqwest/0.13.5/reqwest/struct.ClientBuilder.html).
+
+## Disposable lab evidence — 2026-10-17
+
+Target: only `pve-lab` in the approved local QEMU VM, Proxmox 9.2.2.
+The existing Rust example returned version 9.2.2/release 9.2 and
+`Node pve-lab: online`, with no visible templates. Separate authenticated
+GETs returned HTTP 200 for `/version`, `/nodes`, `/nodes/pve-lab/qemu`
+(empty array) and `/access/permissions` (empty object).
+
+The approved account is `pocketlab-reader@pve`, created without a password,
+group or ACL grant. Token `inventory` uses privilege separation and has no ACL
+grant. Administrative readback confirms these settings and matching account/
+token expiry: **2026-10-18 21:22:17 UTC**. This expiry applies only to the lab
+identity; renewal/replacement is a credential change requiring approval.
+
+The token secret remains in ignored `.lab/pve/inventory-token.json`, mode 0600,
+and is passed only in the probe child environment. The root credential was
+used over verified HTTPS only for approved identity creation and administrative
+metadata readback; it was not passed to the Rust probe. No credentials or
+response bodies containing them were printed.
+
+The lab CA is explicitly trusted. Bubblewrap supplies a process-local hosts
+file mapping `pve-lab.pocketlab.test` to 127.0.0.1 for port 18006; host DNS,
+`/etc/hosts` and system trust are unchanged. Separate live checks rejected
+an invalid token with HTTP 401, an untrusted CA and a wrong TLS hostname.
+The Rust probe also emitted the expected fixed errors for an invalid token
+and missing lab CA. No mutation request was used as a negative permission test.
+
+These results establish the minimal starting identity for an empty inventory.
+They do not prove template visibility, per-VM `VM.Audit`, storage audit access
+or provisioning permissions. The phase-0 known-template gate remains open.
+See [local lab details](x86-lab.md).

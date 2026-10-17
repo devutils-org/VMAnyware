@@ -8,8 +8,8 @@ been demonstrated. See `STATE.md` for current counts and commands.
 | --- | --- | --- |
 | Native macOS foundation | Compiled development/release executable; user confirmed native bridge | Manual walkthrough of newly added screens; signing/installers |
 | Definitions | Strict YAML, deterministic hashes, SQLite migration/reopen, native HTTP and validation tests | Editing/versioning and large-catalog pagination are future product work |
-| Provider transport | Verified localhost TLS; trust/hostname/auth/error/deadline/size tests | Actual endpoint, CA and dedicated effective token ACLs |
-| Inventory/preflight | HTTP/TLS fixtures, explicit catalog, observed checks and unknowns | Real source template, VMID/storage/network observations |
+| Provider transport | Local Proxmox 9.2.2 Rust probe with explicit CA/hostname and dedicated privilege-separated token; bad token/CA/hostname rejected; effective privileges empty; fixture deadline/size tests | Scoped template/storage ACLs and provisioning permissions |
+| Inventory/preflight | Live Rust version/online-node reads and empty visible VM list on disposable pve-lab; HTTP/TLS fixtures, explicit catalog and unknowns | Known source template, scoped visibility and live preflight |
 | Provider task status | Validated task identity, exact success semantics, bounded polling fixtures | Durable linkage/reconciliation and real provider task |
 | Local process ownership | Real process lock/restart and signal tests, five-second drain bound with stalled HTTP body | Service packaging and installed-service operational experience |
 | Diagnostics | Real binary tests for allowed fields and sensitive-input redaction | Operational experience on an installed service |

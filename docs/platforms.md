@@ -7,7 +7,7 @@ targets must be proven separately; upstream Tauri support alone is insufficient.
 | Target | Current evidence | Still required |
 | --- | --- | --- |
 | macOS 27.0.1 arm64, Apple M1 | Native dev launch/bridge; workspace tests/release executable; real Tauri/IPC/bundled-terminal/disposable-agent/shell smoke | Normal startup with deliberately selected real agent/guest, physical keyboard, signing/installers |
-| Linux | Debian 12 arm64 container: server fmt, locked Clippy and 50 tests; frontend locked install, build and seven tests passed (Rust 1.99.1 / Node 26.11.1); Ubuntu 24.04 CI prepared | First CI run; Linux desktop dependencies, launch and terminal tests |
+| Linux | Arch Linux x86_64: server fmt/Clippy and 50 tests; frontend locked install/build and seven tests passed (Rust 1.99.1 / Node 26.11.1 / npm 12.2.0). Earlier Debian 12 arm64 container checks also passed; Ubuntu 24.04 CI prepared | First CI run; WebKitGTK 4.1 dependencies, Linux desktop launch and terminal implementation/tests |
 | Windows | Portable source plus Ctrl-C handling prepared | MSVC/WebView2 setup, compilation, launch, process/terminal tests |
 | iOS | No application build/runtime evidence | Full Xcode, signing, simulator/device and SSH/terminal/lifecycle proof |
 | Android | No application build/runtime evidence | SDK/NDK, Rust targets, emulator/device and SSH/terminal/lifecycle proof |

@@ -50,3 +50,9 @@ OpenSSH server. Input events are synthetic, not physical keyboard/IME tests. The
 example imports the real commands and frontend but does not exercise normal app
 startup configuration, distribution signing/installers, the user's agent or mobile
 platforms. Keep those gates open in STATE.md and the roadmap.
+
+The workspace navigation assertion retains the terminal element across four
+anchor destinations, checks destination focus, then requires fresh stdout from
+the same real shell before continuing resize/Ctrl-C/disconnect checks. This
+assertion was source-prepared on Linux; run the native target on macOS before
+claiming it passes. No simulated-IPC browser result substitutes for that run.

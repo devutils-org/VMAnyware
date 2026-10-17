@@ -187,7 +187,9 @@ older renderer smoke uses an isolated WebKit host. The new optimized Cargo
 example now proves real Tauri IPC/custom-protocol/CSP integration with disposable
 resources; normal app startup/distribution and real guest tests remain open.
 Windows shutdown code is source-prepared, not compiled or tested on Windows.
-No Proxmox infrastructure has been contacted. Phase 0 remains incomplete.
+At that historical macOS verification point, no Proxmox infrastructure had
+been contacted. The later local x86 lab evidence is recorded below. Phase 0
+remains incomplete.
 
 - Linux server slice: `make check-linux-server` passed on committed revision
   9f126f8: Debian 12 aarch64, Rust/Cargo 1.99.1, formatting, locked all-target
@@ -235,7 +237,7 @@ No Proxmox infrastructure has been contacted. Phase 0 remains incomplete.
 ## Remote repository
 
 Private GitHub repository: https://github.com/moha-bekh/VMAnyware
-Local remote: origin (HTTPS). Created at the user's explicit request to publish
+Local remote: origin (currently SSH). Created at the user's explicit request to publish
 existing commits. Main is the branch to push; verify remote HEAD after transfer.
 Pushing the prepared workflow may trigger GitHub Actions; local checks are not
 proof of a successful hosted run.
@@ -261,17 +263,65 @@ proof of a successful hosted run.
 
 ## Next single task
 
-Verify normal macOS application startup and unavailable-service behavior in an
-isolated app-data environment without accessing a personal SSH agent. Record
-actual launch/UI evidence separately from the existing real-IPC test example.
+Prepare a concrete Debian template plan (dated image/checksum, VMID, storage
+and network) for approval on pve-lab, including scoped VM.Audit for its account
+and token. The Rust version/node/empty-inventory probe now passes with verified
+TLS. No inner guest exists. The current read-only identity expires on
+2026-10-18 at 21:22:17 UTC; replacement requires approval. Normal macOS startup
+remains deferred to a Mac.
+
+## Resumed session — Linux environment
+
+- Current execution host is Linux x86_64, not the historical macOS arm64 host.
+  `make doctor` failed: Node.js, npm, Rust and Cargo are unavailable to the
+  process. No build, test suite or native application launch was performed here.
+- Prepared `docs/macos-startup-smoke.md` for the normal application entry point:
+  distinct test identifier, removed agent environment, unused loopback port,
+  unavailable/retry/reset observations and owned-process cleanup. README links
+  it. Reviewed against the native startup source, UI labels and Tauri config;
+  the procedure and data/WebView isolation remain unexecuted on macOS.
+- No roadmap item is newly complete. No service was started/stopped, no
+  credentials were inspected and no Proxmox endpoint was contacted.
+
+## x86 host readiness slice — 2026-10-17
+
+- User redirected work toward tests previously blocked by the M1. Actual host:
+  Arch Linux x86_64/kernel 7.2.9, Ryzen 9 3900X, 24 threads, approximately
+  62 GiB usable RAM and 278 GiB repository-filesystem free space.
+- AMD-V (`svm`) is exposed; `kvm_amd` nested parameter is `1`. Outside the
+  sandbox, `/dev/kvm` opens and KVM_GET_API_VERSION returns 12. The sandbox's
+  missing device is not a host failure. No VM was created to obtain this result;
+  successful nested guest execution remains unproven.
+- Earlier doctor output was misleading: sandboxed Node spawnSync reports EPERM
+  even when a subprocess prints a version. Rustup also encountered read-only
+  paths and an incomplete pinned toolchain. Approved external diagnostics let
+  rustup repair/install 1.99.1. External `make doctor` now passes: Rust/Cargo
+  1.99.1, Node 26.11.1, npm 12.2.0. No doctor code was changed.
+- Locked frontend `npm ci --no-audit --no-fund` installed 26 packages. npm
+  blocked esbuild's postinstall under its existing script policy; no policy was
+  changed, and the actual Vite build still passed. `make check-client` passed
+  TypeScript/Vite and all seven tests. `make check-server` passed formatting,
+  all-target Clippy with warnings denied and all 50 server tests, including
+  subprocess shutdown/restart. Checks ran outside sandbox subprocess/network
+  restrictions. Tracked dependency locks remain unchanged.
+- QEMU/libvirt/container runtime executables were not found on PATH; WebKitGTK
+  4.1 pkg-config metadata is absent. No Linux native application was built or
+  launched. Native SSH managers remain macOS-only; x86 does not enable them.
+- Prepared `docs/x86-lab.md` with host evidence, outer-VM resources, disk path,
+  loopback management/console ports and acceptance boundaries. Requested explicit
+  approval for QEMU installation and this VM's creation/start; no VM mutation
+  or package installation has occurred. Credentials, inner guests and restores
+  need separate concrete approval. No Proxmox endpoint was contacted.
 
 ## External inputs and limits
 
-- User will install Proxmox on another PC. The current Apple M1 Mac supports
-  native virtualization but reports nested virtualization unsupported; no local
-  VM was installed or changed.
-- Live inventory/preflight needs an explicitly approved test endpoint, trusted
-  CA, dedicated token and prepared catalog. Follow `docs/debian-template.md`.
+- Historical Apple M1 host reports nested virtualization unsupported. Current
+  Ryzen x86 host now runs the approved disposable Proxmox lab described in
+  `docs/x86-lab.md`; inner guest execution remains unproven.
+- Live version/node/empty-inventory reads now pass against the approved lab
+  with an explicit CA and dedicated token. Known-template visibility and
+  preflight still need a prepared catalog and scoped permissions. Follow
+  `docs/debian-template.md`.
 - Real clone/configure/start/snapshot/restore/cleanup operations need approval of
   the concrete disposable target and operations. Guest readiness remains untested.
 - SSH/PTY on a real guest and iOS/Android require their own hosts/devices/toolchains.
@@ -286,3 +336,253 @@ Default tests work without configured Proxmox, user credentials or mutable VMs.
 The macOS native target now includes the pinned russh candidate for handshake/
 trust, explicit agent authentication and PTY transport (ADRs 0010–0013); no
 production/mobile library guarantee is implied.
+
+## Approved outer lab preparation — 2026-10-17
+
+- User explicitly approved QEMU installation and creation/start of only
+  `pocketlab-pve-lab` with the resources/network/disk in `docs/x86-lab.md`.
+  This supersedes the earlier pending-approval status. Inner guests and
+  credential creation remain outside this approval.
+- Added `/.lab/` to `.gitignore`; `git check-ignore` confirms exclusion.
+- Downloaded official amd64 Proxmox VE 9.2-1 over verified HTTPS from
+  https://enterprise.proxmox.com/iso/proxmox-ve_9.2-1.iso into `.lab/pve/`.
+  SHA256 is `4e88fe416df9b527624a175f24c9aa07c714d3332afb1ee3dbf3879573ef2c6c`,
+  matching both the official release page and downloaded checksum. The ISO
+  was renamed from `.part` only after hashing succeeded. No boot occurred.
+- `download.proxmox.com` failed hostname verification; verification was never
+  bypassed. The official enterprise download host verified successfully.
+- Ports 18006/5901 were free; `/dev/kvm` is visible to this process. QEMU
+  executables remain absent. `sudo -n pacman -S --needed --noconfirm
+  qemu-system-x86 qemu-img` failed with `a password is required`, without
+  installing packages. User was asked to run the package command locally.
+- No virtual disk, VM process, credentials or service changes were made.
+  No application tests were run for this preparation-only slice.
+
+## Outer VM boot evidence — 2026-10-17
+
+- User completed local package installation. Both QEMU system and image tools
+  report 11.1.2. Read installed invocation help before selecting arguments.
+- Rehashed the ISO successfully, checked free ports and refused any preexisting
+  disk before creating `.lab/pve/pve.qcow2` (64 GiB virtual capacity).
+- Started `pocketlab-pve-lab` as UID 1000, PID 171988, with q35/KVM, host CPU,
+  eight vCPUs, 16 GiB RAM, virtio disk/network and user-mode NAT. No host bridge,
+  service, firewall, shared folder or physical disk was changed. Actual launch
+  arguments and PID are saved under ignored `.lab/pve/`; verify PID identity
+  before future process operations.
+- QMP query-status reports running; query-kvm reports present/enabled;
+  query-cpus-fast reports eight CPUs. Screenshot inspection shows the Proxmox
+  VE 9.2 ISO release 1 boot menu. No installer selection was made.
+- `ss -ltnp` confirms this process alone listens on `127.0.0.1:5901` (VNC) and
+  `127.0.0.1:18006` (forward to guest 8006). This is forwarding evidence, not
+  an available Proxmox API. QMP is an ignored local Unix socket.
+- VM remains running for the next installation step. No credentials or inner
+  guests were created. Nested guest execution and installed Proxmox remain
+  unproven; no roadmap checkbox was completed. No application code changed or
+  application tests ran. `git diff --check` passed.
+
+## Installer boot preparation — 2026-10-17
+
+- User authorized continuing the outer installation. Sent Enter at the verified
+  ISO boot menu through the owned QMP socket. The installer kernel booted;
+  console shows DHCP assignment of 10.0.2.15 on enp0s2 from QEMU 10.0.2.2.
+- No disk installation or credential creation was initiated. Asked the user
+  to approve concrete hostname/network defaults and choose local root-password
+  handling (self-entry over VNC or explicitly authorized generated local file).
+  That answer remains required before dependent installation steps.
+- Proposed hostname: pve-lab.pocketlab.test; address 10.0.2.15/24; gateway
+  10.0.2.2; DNS 10.0.2.3; ext4/LVM on the sole 64 GiB virtual disk.
+  Existing credential files were never read. VM remains running.
+
+## Installed outer Proxmox lab — 2026-10-17
+
+- User explicitly approved the proposed installation settings and generation
+  of the local administrator password. Installed only on `/dev/vda` (the new
+  64 GiB qcow2), ext4/LVM. Country France, Europe/Paris, US English keyboard;
+  hostname pve-lab.pocketlab.test; nic0 bridged by installer vmbr0 with
+  10.0.2.15/24, gateway 10.0.2.2 and DNS 10.0.2.3. Notification address
+  root@pocketlab.test is a lab placeholder, not working email delivery.
+- The generated 32-character random root credential is in ignored
+  `.lab/pve/root-password`, mode 0600, used only for owned local-console login.
+  No secret was printed. Initial rapid simulated keystrokes failed password
+  confirmation; slower input and regenerated pre-installation credential
+  succeeded. The final credential was validated by actual console login.
+- Installer completed and automatically rebooted from disk. Console reports
+  pve-manager/9.2.2/b9984c6d90a4bd80, kernel 7.0.2-6-pve. `pvesm status`
+  shows local (dir) and local-lvm (lvmthin), both active. `ip -br address`
+  confirms nic0 UP and vmbr0 UP with 10.0.2.15/24. `/dev/kvm` exists and
+  `grep -c svm /proc/cpuinfo` returns eight. No inner guest was booted; nested
+  execution remains unproven. Root console was logged out afterward.
+- Exported only public `/etc/pve/pve-root-ca.pem` via the owned console to a
+  temporary bounded loopback HTTP receiver. Receiver closed after receipt.
+  CA SHA256 fingerprint:
+  D6:11:0C:E7:1B:12:F5:B6:79:22:99:22:E9:19:34:E8:98:FE:84:0D:88:69:56:70:0E:5F:A0:A6:38:5D:1D:2D.
+  curl with this explicit CA and hostname pve-lab.pocketlab.test resolved to
+  127.0.0.1:18006 returned HTTP 200 from the login page with TLS verification.
+  No system trust/DNS configuration was modified or verification bypassed.
+- VM PID 171988 remains running; ss confirms both 5901 and 18006 still bind
+  only to 127.0.0.1. This is an installed lab and verified login-page transport,
+  not Rust/API-token inventory, template, provisioning or snapshot evidence.
+  No API user/token or inner VM was created. No roadmap item was checked off.
+- Updated lab instructions and state; `git diff --check` passed. No application
+  source changed and no application check suite ran for this infrastructure slice.
+
+## Inventory credential preparation — 2026-10-17
+
+- Inspected existing probe and runtime configuration. Downloaded the installed
+  Proxmox API schema with verified TLS: version/nodes/qemu-list GET endpoints
+  allow authenticated users; VM visibility requires per-VM VM.Audit.
+- Prepared `.lab/pve/create-reader.py` for only pve-lab: root HTTPS login,
+  passwordless pocketlab-reader@pve, privsep inventory token, no ACLs, both
+  expiring in 24 hours. Secret output is exclusive/0600 under ignored .lab.
+  Script syntax parsed successfully; it has NOT been executed. Concrete
+  credential approval was requested and remains pending.
+- `cargo build --locked -p pocketlab-server --example proxmox_probe` passed.
+  Bubblewrap read-only hosts-file override resolved pve-lab.pocketlab.test to
+  127.0.0.1 without changing host DNS/hosts. No new dependency or production
+  code was introduced. Live authenticated inventory remains untested.
+- Next: after approval, run the prepared script in the isolated hosts namespace,
+  then pass the generated token only in the probe child environment and record
+  actual version/node/empty-template evidence. No template or VM operation is
+  part of this slice. `git diff --check` passed.
+
+## Live Rust inventory slice — 2026-10-17
+
+- User explicitly approved the prepared account/token operation. Created only
+  pocketlab-reader@pve (no password/group/ACL) and privsep inventory token on
+  the disposable pve-lab. Both expire 2026-10-18 21:22:17 UTC. Secret output
+  is `.lab/pve/inventory-token.json`, verified mode 0600, never printed.
+- Root credentials/tickets were used over verified HTTPS only for approved
+  creation and readback, not by the Rust probe. Administrative GETs confirmed
+  privsep=1, matching expiry and no direct user/token ACLs. Token GET
+  /access/permissions returned HTTP 200 with an empty object.
+- Existing compiled Rust proxmox_probe exited zero: Proxmox 9.2.2/release 9.2,
+  pve-lab online, no visible templates. Separate token GETs to version/nodes/
+  nodes/pve-lab/qemu returned 200; qemu data was an empty array. This does not
+  prove VM/template visibility or template permissions.
+- All connections verified the lab CA and hostname. Process-local Bubblewrap
+  hosts mapping avoided any host DNS/trust changes. Only probe child
+  environment carried the token; no credential command arguments were used.
+- Live invalid-token GET returned 401; TLS handshakes rejected an untrusted CA
+  and wrong hostname. Rust probe also exited one with its expected fixed error
+  for a bad token and absent lab CA. No mutation request was attempted with
+  the reader token. Initial diagnostic helper wrongly assumed 401 bodies were
+  JSON; it was corrected to inspect status without parsing error bodies.
+- `cargo build --locked -p pocketlab-server --example proxmox_probe` passed.
+  No application source/dependency changes; no broad test suite was repeated.
+  `git diff --check` passed. Updated roadmap's live connection and TLS/token
+  checks only; known-template/provisioning gates and Phase 0 remain open.
+- Updated docs/proxmox-setup.md, docs/x86-lab.md, docs/feasibility.md and state.
+  VM remains running; no inner guest/template, ACL grant, snapshot or restore
+  was created. Next single task is the concrete template preparation plan.
+
+## Frontend visual direction — 2026-10-17
+
+- User selected sibling ../devutils as the temporary visual reference while
+  its organization name may change. Read its src/style.css and index.html;
+  did not modify that repository or copy its organization identity/assets.
+- Bounded visual slice: adapted near-black background, cyan/violet accents,
+  fine panel borders, translucent-looking gradients, monospace labels, light
+  primary actions and visible cyan keyboard focus. Added a product header and
+  phase badge; retained all existing actions, labels and component state logic.
+  No dependency, external font request, WebGL or animation system was added.
+- Changed apps/client/src/styles.css and main.tsx. Responsive controls wrap and
+  stack on narrow screens; reduced-motion preference removes button transitions.
+  Existing native terminal transport/rendering logic was untouched.
+- `make check-client` passed TypeScript/Vite and all seven Node controller tests;
+  `git diff --check` passed. Firefox headless screenshots of the built browser
+  preview at 1280x1000 and 390x844 were visually inspected for header/initial
+  controls. Captures are ignored under .lab/frontend-preview/. These are not
+  full-page, native Tauri, terminal, physical keyboard or mobile-device checks.
+- Used fresh disposable browser profiles and a temporary loopback static server;
+  server stopped after capture. No native IPC, credentials or VM operation was
+  invoked. The underlying application remains a Phase 0 prototype.
+- Next single task remains the concrete Debian template preparation plan on
+  pve-lab; further frontend layout work should follow a separate bounded slice.
+
+## Workspace layout slice — 2026-10-17
+
+- User asked to take the devutils-inspired frontend further. Kept one bounded
+  workspace-layout slice: persistent desktop sidebar, wrapping narrow-screen
+  navigation, compact workspace header, observed service/node/template summary,
+  and adjacent definition editor/provisioning preview on wide screens.
+- Navigation uses normal fragment links to focusable section headings. All
+  components remain mounted: navigation does not reset YAML or intentionally
+  close an SSH session. Active destination styling uses CSS :target/:has.
+  Added a keyboard skip link, visible heading focus and native-size checkbox/
+  radio controls. No routing library, new runtime dependency or provider action.
+- Summary cards derive exclusively from current UI state: service starts as
+  Not checked, node/template values are dashes until inventory is loaded.
+  Browser preview is identified explicitly; historical lab results are never
+  injected as current application data.
+- Modified main.tsx, styles.css and section headings in ProvisioningPreview.tsx
+  and SshHostTrust.tsx. Existing action handlers, native IPC and terminal
+  transport remain unchanged. No sibling repository was modified.
+- `make check-client` passed TypeScript/Vite and seven Node tests on the final
+  changes; `git diff --check` passed. An isolated Firefox/Marionette browser
+  smoke verified all five fragment links/focus destinations, unknown initial
+  state, YAML edit persistence and actual Tab/Enter skip-link activation.
+  No horizontal document overflow at actual widths 1440, 800 and 500. Firefox
+  window resizing clamps requests below 500; no narrower automated assertion
+  is claimed. Separate CLI screenshots at 390x844 and 1440x1100 were visually
+  reviewed. Captures are in ignored .lab/frontend-preview/workspace-*.png.
+- Early browser helper read fragment/focus before the default anchor action
+  completed; separated click/read commands fixed the assertion. No production
+  behavior change was needed. No native IPC or credentials were used.
+- This does not validate macOS Tauri layout, live inventory states, error/result
+  layouts or SSH continuity during navigation. Next frontend task: validate
+  this workspace with loaded/error states and a live terminal in the isolated
+  macOS native walkthrough. Infrastructure next remains the Debian template
+  plan, not an authorized template/guest creation.
+
+## Workspace state/lifecycle validation — 2026-10-17
+
+- Host is Linux; macOS Tauri/WebKit execution is unavailable here. Continued
+  the authorized validation by extending existing fixture scenarios rather
+  than claiming native evidence or changing the product's support boundaries.
+- Extended experiments/terminal-webkit/fixture.js: loaded one-node/one-template
+  inventory; failed refresh clears counts; successful empty inventory shows
+  zeros; validation error/retry; mixed passed/failed/unknown preflight; port
+  changes invalidate results. All data/IPC is explicitly simulated.
+- While xterm is mounted, four workspace anchors must focus their headings,
+  preserve the exact terminal DOM element and cause no additional session
+  start/close. Loaded preflight and terminal states assert no horizontal
+  document overflow. Existing lazy-renderer cancellation/failure, split UTF-8,
+  input/Ctrl-C, resize, StrictMode and stale-result checks remain in the runs.
+- Executed this same extended fixture under isolated Firefox 158 on Linux
+  using temporary Vite injection/module gating and a disposable Marionette
+  profile. Both normal and renderer-failure scenarios passed at 1440 and 500
+  CSS-pixel viewport widths (four scenario runs). Temporary adaptation lives
+  under ignored .lab/frontend-preview/; it is not a new supported check target.
+  Browser profiles and Vite instances were closed/removed by the harness.
+- Extended experiments/terminal-native/scenario.js to navigate the same four
+  anchors during each actual shell session, require the same terminal element,
+  then require fresh AFTER_NAVIGATION_OK shell output. Syntax checked only;
+  the modified native scenario and macOS WKWebView fixture have NOT run.
+- Updated both experiment READMEs with the assertions and platform evidence
+  boundary. `make check-client` passed TypeScript/Vite and seven Node tests;
+  both scenario files passed node --check; git diff --check passed. No product
+  source/dependency changes were needed and no Rust suite was repeated.
+- No credentials, agents, SSH peers, Proxmox endpoints or VMs were accessed by
+  these browser tests. Next frontend task: run make check-terminal-webkit and
+  make check-terminal-native on a macOS GUI host for native workspace evidence.
+  The Debian template plan remains the independent infrastructure next task.
+
+## macOS transfer handoff — 2026-10-17
+
+- User requested commit/push so the Mac can pull and execute the native checks.
+  Reviewed the accumulated workspace/tests and x86 lab evidence documents.
+  Remote main was still ca2db67, equal to the local base, before publication.
+- Publishing only application source, fixture source and repository documents.
+  All .lab runtime files (disk/ISO/credentials/CA/profiles/screenshots/helpers)
+  remain ignored. No dependency lock or Rust source changed in these slices.
+- Current checks: make check-client passes build/seven tests; extended normal
+  and renderer-failure fixture scenarios pass in Firefox at 1440/500 widths;
+  both fixture scripts parse; git diff --check passes. Existing x86 server and
+  real read-only provider evidence is recorded separately above.
+- README now gives the Mac handoff: git pull --ff-only, locked npm ci,
+  make check, make check-terminal-webkit, make check-terminal-native. Then
+  review the normal UI in one make dev session. Neither smoke needs the x86
+  lab or any transferred credential. No new macOS execution is claimed.
+- Next single frontend task: execute those checks in a macOS GUI session and
+  record native workspace/terminal outcomes. Linux work can proceed later on
+  the independent Debian template plan without treating native gates as passed.

@@ -74,7 +74,8 @@ export function ProvisioningPreview({ port, yaml, native }: { port: string; yaml
   }
 
   return <section aria-labelledby="plan-heading" aria-busy={busy !== null}>
-    <h2 id="plan-heading">Provisioning preview</h2>
+    <p className="panel-kicker">03 / Preview</p>
+    <h2 id="plan-heading" tabIndex={-1}>Provisioning preview</h2>
     <p>Preview the current YAML using the template mapping configured on the control plane.</p>
     <form onSubmit={preview}>
       <label htmlFor="target-vmid">Requested VMID</label>
