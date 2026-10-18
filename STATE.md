@@ -6,6 +6,14 @@ Naming note: historical lab resource identifiers below are normalized to the
 current VMAnyware name. External resources were not renamed; use VMIDs and
 ignored local lab records to verify actual identifiers before operations.
 
+## README presentation
+
+The README follows the devutils structure: overview, install, use, documentation,
+development and license. Detailed text is preserved in `REFERENCE.md`.
+Documentation-only verification: checked relative link targets and section order;
+no application or infrastructure tests were run. Product verification is unchanged.
+Next documentation task: keep the concise entry points aligned with implementation.
+
 ## Implemented
 
 - Tauri 2/React/TypeScript native shell; user confirmed the macOS native bridge.
