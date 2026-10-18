@@ -6,6 +6,15 @@ Naming note: historical lab resource identifiers below are normalized to the
 current VMAnyware name. External resources were not renamed; use VMIDs and
 ignored local lab records to verify actual identifiers before operations.
 
+## Licensing
+
+Original code, documentation and assets are offered under MIT OR Apache-2.0.
+Added both license texts and aligned Cargo workspace/client/server/SSH experiment
+and npm metadata. Third-party licenses remain unchanged.
+Verification: parsed manifests and checked license inheritance/texts; no native,
+application or infrastructure tests were needed for metadata changes.
+Next: include both texts in future application installers when packaging is added.
+
 ## README presentation
 
 The README follows the devutils structure: overview, install, use, documentation,

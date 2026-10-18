@@ -62,4 +62,4 @@ Native launches and real infrastructure checks are separate from local tests.
 
 ## License
 
-No license file is declared in this repository.
+[MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE), at your option.

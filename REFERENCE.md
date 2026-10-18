@@ -172,3 +172,7 @@ For a visual review, run one `make dev` session and inspect desktop/narrow
 layouts, sidebar shortcuts and keyboard focus. Record revision, platform and
 actual command outcomes in `STATE.md`; keep failures visible rather than
 marking native acceptance from the Linux browser results.
+
+## License
+
+[MIT](LICENSE-MIT) or [Apache-2.0](LICENSE-APACHE), at your option.
