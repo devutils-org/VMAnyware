@@ -265,7 +265,7 @@ API rules:
 Tasks:
 
 - [x] Create the repository and minimal Rust workspace.
-- [x] Create a minimal Tauri 2 app and verify development/build setup. (macOS arm64: dev/release builds pass; user confirmed native bridge returns `macos`.)
+- [x] Create a minimal Tauri 2 app and verify development/build setup. (macOS arm64: dev/release builds and native bridge pass. Android ARM64/x86_64 debug APKs now build; Android 15 x86_64 actual bridge/key-restart/painted-launch passes. No mobile SSH or release claim.)
 - [x] Document the supported OS versions and toolchain. (Current macOS development baseline and unverified targets in docs/platforms.md; no release/minimum-OS guarantee.)
 - [x] Connect a Rust prototype to a disposable/test Proxmox VE environment using a dedicated least-privilege API token. (Local pve-lab: Rust probe reads 9.2.2, online node and empty visible inventory with a privilege-separated token and no ACL grants.)
 - [x] Verify TLS certificate handling and API-token permissions. (Local pve-lab: explicit CA/hostname verified; bad token, untrusted CA and wrong hostname rejected; effective token privileges confirmed empty. Template/provisioning ACLs remain unverified.)
@@ -274,7 +274,7 @@ Tasks:
 - [ ] Prototype create/list/restore snapshot on a disposable VM.
 - [ ] Test SSH authentication, host-key verification, interactive PTY and terminal resizing on desktop. (Real macOS Tauri UI/IPC/agent/local-shell fixture passes, including resize/Ctrl-C/reconnect; normal startup, real guest/agent and mobile validation remain open.)
 - [ ] Test whether the chosen terminal and SSH approach works on both iOS and Android.
-- [ ] Record mobile limitations and any platform-specific implementation required.
+- [x] Record mobile limitations and any platform-specific implementation required. (ADRs 0034/0047/0048: application-key Unix path plus Android APK/native launch preparation; Android SSH/keyboard/lifecycle and iOS proof remain open.)
 - [ ] Write short ADRs for the decisions that materially affect architecture.
 
 **Acceptance criteria:**
@@ -293,7 +293,7 @@ Tasks:
 
 Tasks:
 
-- [ ] Add formatting, linting and test commands for Rust and TypeScript.
+- [x] Add formatting, linting and test commands for Rust and TypeScript. (`make check`, server/client variants and isolated SSH checks exist; current Linux server and frontend checks pass, native checks require WebKitGTK.)
 - [x] Add a README with setup and development commands.
 - [ ] Implement core domain types and validation.
 - [ ] Define lifecycle and operation states.
@@ -316,14 +316,14 @@ Tasks:
 
 Tasks:
 
-- [ ] Implement the Axum service and versioned API routes.
+- [x] Implement the Axum service and versioned API routes. (Loopback Axum service; health, definitions, inventory, operations, preview/preflight and read-only VM status routes exercised by local HTTP/TLS tests. Confirmed start/shutdown enqueue routes are locally tested; other mutations remain pending.)
 - [x] Implement Proxmox client configuration and verified TLS. (Trusted/untrusted TLS and hostname checks covered by local fixtures; live host verification pending.)
 - [ ] Support listing nodes/templates/managed VMs as required by the domain.
-- [ ] Implement VM start and stop.
+- [ ] Implement VM start and stop. (Confirmed HTTP enqueue, durable executor and fixed start/graceful-shutdown transport pass local HTTPS tests. Generated-HTTPS real binary start/restart/no-replay passes; approved real-target behavior remains unverified.)
 - [ ] Poll and track Proxmox tasks without blocking the HTTP request.
 - [ ] Persist operations and their terminal states.
 - [ ] Add request validation, timeouts and safe error mapping.
-- [ ] Add control-plane authentication before exposing it beyond localhost/private network.
+- [ ] Add control-plane authentication before exposing it beyond localhost/private network. (Whole-API bearer authentication and fail-closed configuration pass local router/actual binary tests; listener stays loopback and remote verified-TLS/client integration remain pending.)
 - [ ] Document the dedicated Proxmox user, token and minimum required permissions.
 
 **Acceptance criteria:**
@@ -342,11 +342,11 @@ Tasks:
 
 - [x] Document how to prepare/import a supported Debian template in Proxmox. (Proposed Debian 13 amd64 procedure reviewed against official sources; real-host support validation pending.)
 - [x] Implement an explicit VMAnyware image-to-Proxmox-template mapping. (Strict server catalog and offline plan; live template verification pending.)
-- [ ] Implement clone and resource configuration.
-- [ ] Apply Cloud-Init settings and SSH public keys.
-- [ ] Implement provisioning/readiness polling with timeout and failure handling.
-- [ ] Persist definition, definition hash, provider reference and operation state.
-- [ ] Implement environment list/detail views in the API.
+- [ ] Implement clone and resource configuration. (Opt-in confirmed create API and production worker now pass generated-HTTPS end-to-end journeys with clone/resources and optional disk expansion, restart and no duplicate mutations. Real-host validation remains open; ADR 0043.)
+- [ ] Apply Cloud-Init settings and SSH public keys. (Durable fixed settings, attested image-default user, seed checks/regeneration and full local API/worker path pass. Actual mapped-template/guest validation remains open.)
+- [ ] Implement provisioning/readiness polling with timeout and failure handling. (Durable stage/task recovery, fixed five-minute guest deadline and strict Cloud-Init/IP checks pass local storage/HTTPS tests. A minimal workflow completes only after guest proof; real infrastructure acceptance remains open.)
+- [ ] Persist definition, definition hash, provider reference and operation state. (Local registration now retains canonical YAML/hash/revision and endpoint-scoped node/VMID in schema 3; instance observation operations are persisted; durable start/shutdown intent/provider-task linkage now passes local restart tests; provisioning intent/definition/catalog/plan/stage linkage is now locally tested; provisioning execution/readiness remain pending.)
+- [ ] Implement environment list/detail views in the API. (Registered associations have bounded list/detail reads and scoped read-only observations; ownership reconciliation, lifecycle state and provisioning remain pending.)
 - [ ] Implement deletion of an instance while retaining its definition.
 - [ ] Implement recreation from the retained definition.
 - [ ] Ensure partial failures are reported and recoverable; do not silently leave unmanaged VMs.
@@ -392,9 +392,9 @@ Tasks:
 - [ ] Implement environment catalog and detail screens.
 - [ ] Implement create-environment form and configuration validation.
 - [ ] Implement operation progress, errors and retry affordances.
-- [ ] Implement start/stop/recreate/delete actions with confirmation where needed.
+- [ ] Implement start/stop/recreate/delete actions with confirmation where needed. (Start/graceful shutdown confirmation/resume pass simulated-IPC browser tests; native commands compile/pass HTTP tests. Isolated Linux WebKit/Tauri/Axum/generated-HTTPS start/shutdown also passes; normal packaged startup/real provider, recreate and delete remain open.)
 - [ ] Implement snapshot list/create/restore flows.
-- [ ] Implement SSH connection management and known-host verification.
+- [ ] Implement SSH connection management and known-host verification. (Application-key Unix source passes Linux localhost authentication/strict trust/PTY and real-shell tests, with separate browser UI evidence. New native GUI/IPC, mobile and real guest gates remain open.)
 - [ ] Implement a usable terminal experience on desktop.
 - [ ] Implement a mobile terminal layout, software keyboard handling, special keys and reconnection.
 - [ ] Test the same core journey on macOS, Linux, Windows, iOS and Android.

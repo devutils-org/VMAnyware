@@ -352,3 +352,291 @@ fn service_health_is_independent_of_inventory_and_requires_ok_status() {
     let error = tauri::async_runtime::block_on(super::check_control_plane(port)).unwrap_err();
     assert!(error.contains("Cannot reach the local control plane"));
 }
+
+#[test]
+fn history_reads_typed_summaries_without_inventory_payloads() {
+    let body = serde_json::json!([{
+        "id": "a".repeat(32), "kind": "inventory_refresh", "status": "interrupted",
+        "failure": "process_interrupted", "createdAt": "2026-10-18", "updatedAt": "2026-10-18"
+    }]);
+    let (port, task) = response("GET", "/api/v1/operations", "200 OK", &body.to_string());
+    let summaries = tauri::async_runtime::block_on(super::list_operations(port)).unwrap();
+    assert_eq!(summaries.len(), 1);
+    assert!(matches!(summaries[0].status, OperationStatus::Interrupted));
+    assert_eq!(summaries[0].failure.as_deref(), Some("process_interrupted"));
+    task.join().unwrap();
+}
+
+#[test]
+fn instance_observation_commands_bind_operation_and_target_identity() {
+    let id = "a".repeat(32);
+    let operation_id = "b".repeat(32);
+    let operation = serde_json::json!({"id":operation_id,"kind":"instance_observe","instanceId":id,"status":"queued","result":null,"failure":null,"createdAt":"2026-10-18","updatedAt":"2026-10-18"});
+    let (port, task) = response(
+        "POST",
+        &format!("/api/v1/environments/{id}/refresh"),
+        "202 Accepted",
+        &operation.to_string(),
+    );
+    let queued = tauri::async_runtime::block_on(super::begin_instance_refresh(
+        port,
+        id.clone(),
+        "instance-request".into(),
+    ))
+    .unwrap();
+    assert_eq!(queued.instance_id, id);
+    assert!(task
+        .join()
+        .unwrap()
+        .to_ascii_lowercase()
+        .contains("idempotency-key: instance-request\r\n"));
+    let mut unrelated = operation.clone();
+    unrelated["instanceId"] = serde_json::json!("c".repeat(32));
+    let (port, task) = response(
+        "GET",
+        &format!("/api/v1/operations/{operation_id}"),
+        "200 OK",
+        &unrelated.to_string(),
+    );
+    assert!(
+        tauri::async_runtime::block_on(super::read_instance_operation(
+            port,
+            operation_id.clone(),
+            id.clone()
+        ))
+        .is_err()
+    );
+    task.join().unwrap();
+    assert!(
+        tauri::async_runtime::block_on(super::begin_instance_refresh(
+            1,
+            "../escape".into(),
+            "valid".into()
+        ))
+        .is_err()
+    );
+    assert!(
+        tauri::async_runtime::block_on(super::begin_instance_refresh(1, id, "bad key".into()))
+            .is_err()
+    );
+}
+
+#[test]
+fn lifecycle_command_reads_fixed_path_accepts_boolean_capability_and_rejects_unrelated_reports() {
+    let id = "a".repeat(32);
+    let report = serde_json::json!({"instanceId":id,"providerScopeId":"b".repeat(64),"definitionHash":"c".repeat(64),
+        "expectedMarker":format!("vmanyware-{id}"),"configDigest":"d".repeat(40),
+        "observation":{"node":"pve-test","vmid":202,"status":"stopped","qmpStatus":null},
+        "checks":[{"code":"instance_marker","status":"failed","message":"Fixed check"},{"code":"not_template","status":"passed","message":"Fixed check"},{"code":"unlocked","status":"passed","message":"Fixed check"},{"code":"no_pending_changes","status":"passed","message":"Fixed check"},{"code":"configuration_unchanged","status":"passed","message":"Fixed check"}],"startPreconditions":"failed","shutdownPreconditions":"unknown","executionEnabled":false});
+    let path = format!("/api/v1/environments/{id}/lifecycle-preflight");
+    let (port, task) = response("GET", &path, "200 OK", &report.to_string());
+    let checked =
+        tauri::async_runtime::block_on(super::check_instance_lifecycle(port, id.clone())).unwrap();
+    assert!(!checked.execution_enabled);
+    let mut enabled = report.clone();
+    enabled["executionEnabled"] = serde_json::json!(true);
+    let (enabled_port, enabled_task) = response("GET", &path, "200 OK", &enabled.to_string());
+    assert!(
+        tauri::async_runtime::block_on(super::check_instance_lifecycle(enabled_port, id.clone()))
+            .unwrap()
+            .execution_enabled
+    );
+    enabled_task.join().unwrap();
+    assert_eq!(checked.instance_id, id);
+    task.join().unwrap();
+    for (field, value) in [
+        ("instanceId", serde_json::json!("f".repeat(32))),
+        ("executionEnabled", serde_json::json!("true")),
+    ] {
+        let mut unrelated = report.clone();
+        unrelated[field] = value;
+        let (port, task) = response("GET", &path, "200 OK", &unrelated.to_string());
+        assert!(
+            tauri::async_runtime::block_on(super::check_instance_lifecycle(port, id.clone()))
+                .is_err()
+        );
+        task.join().unwrap();
+    }
+    assert!(
+        tauri::async_runtime::block_on(super::check_instance_lifecycle(1, "../escape".into()))
+            .is_err()
+    );
+}
+
+fn lifecycle_approval(action: &str) -> serde_json::Value {
+    serde_json::json!({"action":action,"instanceId":"a".repeat(32),"providerScopeId":"b".repeat(64),
+        "node":"pve-test","vmid":202,"definitionHash":"c".repeat(64),"configDigest":"d".repeat(40),"confirmed":true})
+}
+fn lifecycle_job(action: &str, succeeded: bool) -> serde_json::Value {
+    serde_json::json!({"id":"e".repeat(32),"kind":if action == "start" {"vm_start"} else {"vm_shutdown"},
+        "instanceId":"a".repeat(32),"status":if succeeded {"succeeded"} else {"uncertain"},
+        "providerTaskKnown":succeeded,"failure":if succeeded {None} else {Some("provider_submission_unconfirmed")},
+        "result":if succeeded {serde_json::json!({"action":action,"instanceId":"a".repeat(32),"providerScopeId":"b".repeat(64),
+            "taskStatus":"succeeded","observation":{"node":"pve-test","vmid":202,"status":if action == "start" {"running"} else {"stopped"},"qmpStatus":null}})} else {serde_json::Value::Null},
+        "createdAt":"2026-10-18","updatedAt":"2026-10-18"})
+}
+
+#[test]
+fn native_lifecycle_posts_fixed_action_full_approval_and_same_request_key() {
+    for action in ["start", "shutdown"] {
+        let approval = lifecycle_approval(action);
+        let mut queued = lifecycle_job(action, false);
+        queued["status"] = serde_json::json!("queued");
+        queued["failure"] = serde_json::Value::Null;
+        let path = format!("/api/v1/environments/{}/{action}", "a".repeat(32));
+        let (port, task) = response("POST", &path, "202 Accepted", &queued.to_string());
+        let operation = tauri::async_runtime::block_on(super::begin_lifecycle_action(
+            port,
+            serde_json::from_value(approval.clone()).unwrap(),
+            "confirmed-key".into(),
+        ))
+        .unwrap();
+        assert_eq!(operation.status, OperationStatus::Queued);
+        let request = task.join().unwrap();
+        assert!(request
+            .to_ascii_lowercase()
+            .contains("idempotency-key: confirmed-key\r\n"));
+        assert_eq!(
+            serde_json::from_str::<serde_json::Value>(request.split_once("\r\n\r\n").unwrap().1)
+                .unwrap(),
+            approval
+        );
+        assert!(!request.to_ascii_lowercase().contains("origin:"));
+    }
+}
+
+#[test]
+fn native_lifecycle_get_resumes_uncertain_and_verifies_separate_task_power_evidence() {
+    let id = "e".repeat(32);
+    for (action, succeeded) in [("start", false), ("start", true), ("shutdown", true)] {
+        let body = lifecycle_job(action, succeeded);
+        let (port, task) = response(
+            "GET",
+            &format!("/api/v1/operations/{id}"),
+            "200 OK",
+            &body.to_string(),
+        );
+        let operation = tauri::async_runtime::block_on(super::read_lifecycle_operation(
+            port,
+            id.clone(),
+            serde_json::from_value(lifecycle_approval(action)).unwrap(),
+        ))
+        .unwrap();
+        assert_eq!(
+            operation.status,
+            if succeeded {
+                OperationStatus::Succeeded
+            } else {
+                OperationStatus::Uncertain
+            }
+        );
+        let request = task.join().unwrap();
+        assert!(!request.to_ascii_lowercase().contains("idempotency-key:"));
+    }
+    for (field, value) in [
+        ("id", serde_json::json!("f".repeat(32))),
+        ("kind", serde_json::json!("vm_shutdown")),
+        ("instanceId", serde_json::json!("f".repeat(32))),
+        ("providerTaskKnown", serde_json::json!(false)),
+        ("failure", serde_json::json!("private message")),
+        ("status", serde_json::json!("running")),
+    ] {
+        let mut body = lifecycle_job("start", true);
+        body[field] = value;
+        let (port, task) = response(
+            "GET",
+            &format!("/api/v1/operations/{id}"),
+            "200 OK",
+            &body.to_string(),
+        );
+        assert!(
+            tauri::async_runtime::block_on(super::read_lifecycle_operation(
+                port,
+                id.clone(),
+                serde_json::from_value(lifecycle_approval("start")).unwrap()
+            ))
+            .is_err()
+        );
+        task.join().unwrap();
+    }
+    for (field, value) in [
+        ("providerScopeId", serde_json::json!("f".repeat(64))),
+        ("action", serde_json::json!("shutdown")),
+        ("taskStatus", serde_json::json!("running")),
+        (
+            "observation",
+            serde_json::json!({"node":"pve-test","vmid":203,"status":"running","qmpStatus":null}),
+        ),
+        (
+            "observation",
+            serde_json::json!({"node":"pve-test","vmid":202,"status":"stopped","qmpStatus":null}),
+        ),
+    ] {
+        let mut body = lifecycle_job("start", true);
+        body["result"][field] = value;
+        let (port, task) = response(
+            "GET",
+            &format!("/api/v1/operations/{id}"),
+            "200 OK",
+            &body.to_string(),
+        );
+        assert!(
+            tauri::async_runtime::block_on(super::read_lifecycle_operation(
+                port,
+                id.clone(),
+                serde_json::from_value(lifecycle_approval("start")).unwrap()
+            ))
+            .is_err()
+        );
+        task.join().unwrap();
+    }
+}
+
+#[test]
+fn native_lifecycle_rejects_invalid_confirmation_before_transport_and_owns_error_messages() {
+    for (field, value) in [
+        ("confirmed", serde_json::json!(false)),
+        ("node", serde_json::json!("../escape")),
+        ("vmid", serde_json::json!(99)),
+        ("configDigest", serde_json::json!("bad")),
+        ("providerScopeId", serde_json::json!("F".repeat(64))),
+    ] {
+        let mut approval = lifecycle_approval("start");
+        approval[field] = value;
+        let error = tauri::async_runtime::block_on(super::begin_lifecycle_action(
+            1,
+            serde_json::from_value(approval).unwrap(),
+            "key".into(),
+        ))
+        .err()
+        .unwrap();
+        assert_eq!(error, "Invalid lifecycle confirmation or request key.");
+    }
+    let mut extra = lifecycle_approval("start");
+    extra["forceStop"] = serde_json::json!(true);
+    assert!(serde_json::from_value::<super::LifecycleApproval>(extra).is_err());
+    for (code, expected) in [
+        ("lifecycle_disabled", "disabled"),
+        ("invalid_lifecycle_approval", "complete target"),
+        ("lifecycle_target_changed", "changed"),
+        ("operation_conflict", "conflicts"),
+    ] {
+        let body = serde_json::json!({"error":{"code":code,"message":"private provider message"}});
+        let (port, task) = response(
+            "POST",
+            &format!("/api/v1/environments/{}/start", "a".repeat(32)),
+            "403 Forbidden",
+            &body.to_string(),
+        );
+        let error = tauri::async_runtime::block_on(super::begin_lifecycle_action(
+            port,
+            serde_json::from_value(lifecycle_approval("start")).unwrap(),
+            "key".into(),
+        ))
+        .err()
+        .unwrap();
+        assert!(error.contains(expected));
+        assert!(!error.contains("private"));
+        task.join().unwrap();
+    }
+}

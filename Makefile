@@ -1,4 +1,4 @@
-.PHONY: doctor install-client dev web server check check-client check-rust check-server check-ssh check-terminal-webkit check-terminal-native check-linux-server check-linux-client
+.PHONY: doctor install-client dev web server check check-client check-rust check-server check-ssh check-terminal-webkit check-terminal-native check-instances-browser check-lifecycle-native check-linux-server check-linux-client
 
 .DEFAULT_GOAL := doctor
 
@@ -22,6 +22,17 @@ check: check-client check-rust
 check-client:
 	npm --prefix apps/client run build
 	npm --prefix apps/client test
+
+# Opt-in Linux Firefox check with a disposable profile and simulated native IPC.
+check-instances-browser: check-client
+	node experiments/instances-browser/check.mjs
+
+# Opt-in Linux real WebView/IPC/control-plane flow, confined to generated HTTPS fixtures.
+check-lifecycle-native: check-client
+	test -n "$(NATIVE_TEST_PREFIX)"
+	PKG_CONFIG_PATH="$(NATIVE_TEST_PREFIX)/sysroot/usr/lib/pkgconfig" LD_LIBRARY_PATH="$(NATIVE_TEST_PREFIX)/sysroot/usr/lib" LIBRARY_PATH="$(NATIVE_TEST_PREFIX)/sysroot/usr/lib" cargo build --locked -p vmanyware-client --example lifecycle_smoke --features tauri/custom-protocol
+	cargo build --locked -p vmanyware-server
+	python3 experiments/lifecycle-native/check.py --prefix "$(NATIVE_TEST_PREFIX)"
 
 # Opt-in macOS renderer smoke; simulated IPC, never a user agent or real SSH host.
 check-terminal-webkit: check-client

@@ -162,7 +162,7 @@ async fn api_previews_without_provider_or_database_mutations_and_exposes_mapping
         "debian-13-cloud-20261016"
     );
     assert!(store.list().unwrap().is_empty());
-    assert!(store.claim_inventory().unwrap().is_none());
+    assert!(store.claim_operation().unwrap().is_none());
     let response = app
         .oneshot(
             Request::builder()
@@ -306,4 +306,31 @@ async fn preflight_requires_explicit_provider_and_rejects_origins_and_invalid_re
         .status(),
         StatusCode::UNPROCESSABLE_ENTITY
     );
+}
+
+#[test]
+fn image_default_attestation_is_explicit_bound_and_preserves_legacy_hash_material() {
+    let definition = Definition::parse(DEFINITION).unwrap();
+    let legacy = Catalog::parse(CATALOG).unwrap();
+    let original: Value = serde_json::to_value(&legacy).unwrap();
+    assert!(original["images"][0].get("imageDefaultUser").is_none());
+    let mut declared = original.clone();
+    declared["images"][0]["imageDefaultUser"] = json!({"name":"debian","templateVersion":"debian-13-cloud-20261016","passwordLocked":true,"noAuthorizedKeys":true});
+    let opted = Catalog::parse(&declared.to_string()).unwrap();
+    assert_ne!(
+        legacy.plan(&definition, 201).unwrap().plan_hash,
+        opted.plan(&definition, 201).unwrap().plan_hash
+    );
+    assert_eq!(serde_json::to_value(&legacy).unwrap(), original);
+    for (key, value) in [
+        ("name", json!("root")),
+        ("templateVersion", json!("other")),
+        ("passwordLocked", json!(false)),
+        ("noAuthorizedKeys", json!(false)),
+        ("unexpected", json!(true)),
+    ] {
+        let mut invalid = declared.clone();
+        invalid["images"][0]["imageDefaultUser"][key] = value;
+        assert!(Catalog::parse(&invalid.to_string()).is_err());
+    }
 }

@@ -1,5 +1,16 @@
 use crate::definition::Definition;
+mod instances;
+mod lifecycle;
+mod provisioning;
+mod provisioning_cloud_init;
+mod provisioning_disk;
+mod provisioning_readiness;
+mod provisioning_seed;
+mod provisioning_start;
+pub use provisioning::ProvisioningError;
 mod operations;
+pub use instances::RegistrationError;
+pub use lifecycle::LifecycleError;
 use rusqlite::{params, Connection, OptionalExtension};
 use serde::Serialize;
 use std::{
@@ -63,7 +74,7 @@ impl Store {
         let version: u32 = transaction
             .pragma_query_value(None, "user_version", |row| row.get(0))
             .map_err(|_| Error::Unavailable)?;
-        if version > 2 {
+        if version > 10 {
             return Err(Error::Unavailable);
         }
         if version < 1 {
@@ -80,6 +91,78 @@ impl Store {
                 .map_err(|_| Error::Unavailable)?;
             transaction
                 .pragma_update(None, "user_version", 2)
+                .map_err(|_| Error::Unavailable)?;
+        }
+        if version < 3 {
+            transaction
+                .execute_batch(include_str!("../../migrations/0003_instances.sql"))
+                .map_err(|_| Error::Unavailable)?;
+            transaction
+                .pragma_update(None, "user_version", 3)
+                .map_err(|_| Error::Unavailable)?;
+        }
+        if version < 4 {
+            transaction
+                .execute_batch(include_str!(
+                    "../../migrations/0004_instance_observations.sql"
+                ))
+                .map_err(|_| Error::Unavailable)?;
+            transaction
+                .pragma_update(None, "user_version", 4)
+                .map_err(|_| Error::Unavailable)?;
+        }
+        if version < 5 {
+            transaction
+                .execute_batch(include_str!(
+                    "../../migrations/0005_lifecycle_operations.sql"
+                ))
+                .map_err(|_| Error::Unavailable)?;
+            transaction
+                .pragma_update(None, "user_version", 5)
+                .map_err(|_| Error::Unavailable)?;
+        }
+        if version < 6 {
+            transaction
+                .execute_batch(include_str!(
+                    "../../migrations/0006_provisioning_intent.sql"
+                ))
+                .map_err(|_| Error::Unavailable)?;
+            transaction
+                .pragma_update(None, "user_version", 6)
+                .map_err(|_| Error::Unavailable)?;
+        }
+        if version < 7 {
+            transaction
+                .execute_batch(include_str!("../../migrations/0007_resource_dispatch.sql"))
+                .map_err(|_| Error::Unavailable)?;
+            transaction
+                .pragma_update(None, "user_version", 7)
+                .map_err(|_| Error::Unavailable)?;
+        }
+        if version < 8 {
+            transaction
+                .execute_batch(include_str!("../../migrations/0008_disk_dispatch.sql"))
+                .map_err(|_| Error::Unavailable)?;
+            transaction
+                .pragma_update(None, "user_version", 8)
+                .map_err(|_| Error::Unavailable)?;
+        }
+        if version < 9 {
+            transaction
+                .execute_batch(include_str!(
+                    "../../migrations/0009_cloud_init_dispatch.sql"
+                ))
+                .map_err(|_| Error::Unavailable)?;
+            transaction
+                .pragma_update(None, "user_version", 9)
+                .map_err(|_| Error::Unavailable)?;
+        }
+        if version < 10 {
+            transaction
+                .execute_batch(include_str!("../../migrations/0010_seed_regeneration.sql"))
+                .map_err(|_| Error::Unavailable)?;
+            transaction
+                .pragma_update(None, "user_version", 10)
                 .map_err(|_| Error::Unavailable)?;
         }
         transaction.commit().map_err(|_| Error::Unavailable)?;

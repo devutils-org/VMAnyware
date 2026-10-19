@@ -5911,15 +5911,19 @@ dependencies = [
  "libc",
  "portable-pty",
  "rand 0.10.3",
+ "rcgen",
  "reqwest",
  "russh",
  "serde",
  "serde_json",
+ "ssh-key 0.7.0-rc.11",
  "tauri",
  "tauri-build",
  "tempfile",
  "tokio",
+ "tokio-rustls",
  "uuid",
+ "zeroize",
 ]
 
 [[package]]
@@ -5927,6 +5931,7 @@ name = "vmanyware-server"
 version = "0.1.0"
 dependencies = [
  "axum",
+ "form_urlencoded",
  "rcgen",
  "reqwest",
  "rusqlite",
@@ -5935,6 +5940,7 @@ dependencies = [
  "serde_norway",
  "sha2 0.10.9",
  "ssh-key 0.6.7",
+ "subtle",
  "tempfile",
  "tokio",
  "tokio-rustls",

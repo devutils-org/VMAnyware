@@ -3,9 +3,11 @@ import { invoke } from "@tauri-apps/api/core";
 import { Terminal } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import { TerminalSession } from "./terminalSession";
+import { MobileTerminalInput } from "./MobileTerminalInput";
 import "@xterm/xterm/css/xterm.css";
 
 export function SshTerminal({ id, account }: { id: string; account: string }) {
+  const androidInput = /Android/i.test(navigator.userAgent);
   const container = useRef<HTMLDivElement>(null);
   const transport = useRef<TerminalSession | null>(null);
   const emulator = useRef<Terminal | null>(null);
@@ -20,6 +22,7 @@ export function SshTerminal({ id, account }: { id: string; account: string }) {
       cols: 80, rows: 24, scrollback: 1000, fontSize: 13,
       theme: { background: "#101820", foreground: "#e4eaf1" },
       allowProposedApi: false, allowTransparency: false,
+      disableStdin: androidInput,
       linkHandler: { activate: () => {} },
     });
     const fit = new FitAddon();
@@ -56,7 +59,7 @@ export function SshTerminal({ id, account }: { id: string; account: string }) {
     const observer = new ResizeObserver(resize);
     observer.observe(container.current);
     // StrictMode's discarded first effect must never issue a native read/close.
-    queueMicrotask(() => { if (active) { session.start(); resize(); term.focus(); } });
+    queueMicrotask(() => { if (active) { session.start(); resize(); if (!androidInput) term.focus(); } });
     return () => {
       active = false;
       session.stop(false);
@@ -78,10 +81,10 @@ export function SshTerminal({ id, account }: { id: string; account: string }) {
     <p role="status">{status}</p>
     {error && <p role="alert" className="error">{error}</p>}
     <div ref={container} className="ssh-terminal" aria-label={`SSH terminal for ${account}`} />
-    <div className="connection-fields">
+    {androidInput ? <MobileTerminalInput disabled={closed} send={bytes => transport.current?.write(bytes)} disconnect={disconnect} /> : <div className="connection-fields">
       <button type="button" disabled={closed} onClick={() => transport.current?.write(new Uint8Array([3]))}>Send Ctrl-C</button>
       <button type="button" disabled={closed} onClick={disconnect}>Disconnect</button>
-    </div>
+    </div>}
     {closed && <p>List identities again to open a fresh connection.</p>}
   </div>;
 }

@@ -1,4 +1,5 @@
 mod control_plane;
+mod remote_connection;
 mod ssh;
 use tauri::Manager;
 
@@ -11,7 +12,12 @@ fn runtime_platform() -> &'static str {
 pub fn run() {
     tauri::Builder::default()
         .setup(|app| {
-            #[cfg(target_os = "macos")]
+            app.manage(remote_connection::RemoteConnection::default());
+            #[cfg(unix)]
+            app.manage(ssh::identity::IdentityStore::new(
+                app.path().app_local_data_dir()?.join("ssh-identity-v1"),
+            ));
+            #[cfg(unix)]
             {
                 let hosts = ssh::HostManager::new(
                     app.path()
@@ -21,21 +27,22 @@ pub fn run() {
                         })?
                         .join("ssh-host-trust-v1"),
                 );
-                let agents = ssh::AgentManager::new(hosts.clone(), None);
+                let agents = ssh::AgentManager::new(hosts.clone(), None)
+                    .with_identity(app.state::<ssh::identity::IdentityStore>().inner().clone());
                 app.manage(ssh::SessionManager::new(agents.clone()));
                 app.manage(agents);
                 app.manage(hosts);
             }
-            #[cfg(not(target_os = "macos"))]
+            #[cfg(not(unix))]
             app.manage(ssh::HostManager);
-            #[cfg(not(target_os = "macos"))]
+            #[cfg(not(unix))]
             app.manage(ssh::AgentManager);
-            #[cfg(not(target_os = "macos"))]
+            #[cfg(not(unix))]
             app.manage(ssh::SessionManager);
             Ok(())
         })
         .on_window_event(|window, event| {
-            #[cfg(target_os = "macos")]
+            #[cfg(unix)]
             if matches!(event, tauri::WindowEvent::Destroyed) {
                 if let Some(manager) = window.try_state::<ssh::HostManager>() {
                     manager.forget_owner(window.label());
@@ -47,11 +54,25 @@ pub fn run() {
                     manager.forget_owner(window.label());
                 }
             }
-            #[cfg(not(target_os = "macos"))]
+            #[cfg(not(unix))]
             let _ = (window, event);
         })
         .invoke_handler(tauri::generate_handler![
             runtime_platform,
+            ssh::identity_support,
+            ssh::ssh_agent_support,
+            ssh::list_app_ssh_identity,
+            ssh::create_app_identity,
+            ssh::unlock_app_identity,
+            remote_connection::connect_remote,
+            remote_connection::disconnect_remote,
+            remote_connection::create::prepare_remote_create,
+            remote_connection::create::confirm_remote_create,
+            remote_connection::create::read_remote_create,
+            remote_connection::create::read_remote_creations,
+            remote_connection::create::recover_remote_creation,
+            remote_connection::read_remote_images,
+            remote_connection::read_remote_environments,
             ssh::ssh_host_support,
             ssh::inspect_ssh_host,
             ssh::confirm_ssh_host,
@@ -71,6 +92,13 @@ pub fn run() {
             control_plane::validate_definition,
             control_plane::begin_inventory_refresh,
             control_plane::read_operation,
+            control_plane::list_operations,
+            control_plane::list_instances,
+            control_plane::begin_instance_refresh,
+            control_plane::read_instance_operation,
+            control_plane::check_instance_lifecycle,
+            control_plane::begin_lifecycle_action,
+            control_plane::read_lifecycle_operation,
             control_plane::preview_provisioning,
             control_plane::preflight_provisioning
         ])

@@ -56,7 +56,8 @@ async fn real_shell_stdout_terminal_resize_and_ctrl_c_interrupt() {
                 assert!(!shell.is_closed());
             }
             channel
-                .data(&b"stty -echo; printf 'READY\\n'\n"[..])
+                // Produce our own line boundary; shell command echo differs by OS.
+                .data(&b"stty -echo; printf '\\nREADY\\n'\n"[..])
                 .await
                 .unwrap();
             output_until(&mut channel, "\r\nREADY\r\n").await;

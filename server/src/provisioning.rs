@@ -59,6 +59,18 @@ pub struct ImageMapping {
     #[serde(rename = "sourceDiskGiB")]
     pub(crate) source_disk_gib: u32,
     guest_user: String,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub(crate) image_default_user: Option<ImageDefaultUser>,
+}
+
+/// Operator declaration about this exact mapped image, not observed guest evidence.
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+pub struct ImageDefaultUser {
+    name: String,
+    template_version: String,
+    password_locked: bool,
+    no_authorized_keys: bool,
 }
 
 #[derive(Debug, Clone, Deserialize, Serialize)]
@@ -80,7 +92,13 @@ impl Catalog {
         }
         let mut images = HashSet::new();
         for mapping in &catalog.images {
-            if mapping.image.is_empty()
+            if mapping.image_default_user.as_ref().is_some_and(|u| {
+                u.name != mapping.guest_user
+                    || u.name == "root"
+                    || u.template_version != mapping.template_version
+                    || !u.password_locked
+                    || !u.no_authorized_keys
+            }) || mapping.image.is_empty()
                 || mapping.image.len() > 64
                 || !mapping
                     .image
@@ -168,6 +186,7 @@ impl Catalog {
             definition_hash,
             plan_hash: format!("{:x}", Sha256::digest(material)),
             provider: "proxmox",
+            provider_scope_id: None,
             source: mapping.clone(),
             target: Target {
                 node: mapping.node.clone(),
@@ -207,11 +226,11 @@ fn identifier(value: &str, max: usize) -> bool {
 pub struct Target {
     pub(crate) node: String,
     pub(crate) vmid: u32,
-    name: String,
+    pub(crate) name: String,
     pub(crate) storage: String,
     pub(crate) bridge: String,
     pub(crate) resources: Resources,
-    guest_user: String,
+    pub(crate) guest_user: String,
     ipv4: &'static str,
 }
 
@@ -222,6 +241,8 @@ pub struct Plan {
     pub definition_hash: String,
     pub plan_hash: String,
     provider: &'static str,
+    #[serde(skip_serializing_if = "Option::is_none")]
+    pub(crate) provider_scope_id: Option<String>,
     pub(crate) source: ImageMapping,
     pub(crate) target: Target,
     ssh_key_count: usize,
@@ -230,5 +251,124 @@ pub struct Plan {
     steps: Vec<&'static str>,
     live_verified: bool,
     vmid_reserved: bool,
-    creation_enabled: bool,
+    pub(crate) creation_enabled: bool,
+}
+
+impl Plan {
+    /// Fixed transport inputs only; this does not reserve a target or authorize dispatch.
+    pub fn clone_request(
+        &self,
+        instance_id: &str,
+    ) -> Result<crate::proxmox::CloneRequest, crate::proxmox::Error> {
+        use crate::proxmox::{CloneRequest, VmReference};
+        CloneRequest::new(
+            VmReference::new(&self.source.node, self.source.template_vmid)?,
+            VmReference::new(&self.target.node, self.target.vmid)?,
+            &self.target.storage,
+            &self.target.name,
+            instance_id,
+            &self.definition_hash,
+            &self.plan_hash,
+        )
+    }
+}
+
+impl Catalog {
+    pub(crate) fn canonical_yaml(&self) -> Result<String, Error> {
+        serde_norway::to_string(self).map_err(|_| Error::InvalidCatalog)
+    }
+}
+impl Plan {
+    pub(crate) fn steps(&self) -> &[&'static str] {
+        &self.steps
+    }
+}
+
+impl Plan {
+    /// Fixed stopped-clone resources; does not authorize dispatch or reserve a VMID.
+    pub fn resource_request(
+        &self,
+        instance_id: &str,
+        digest: &str,
+    ) -> Result<crate::proxmox::ResourceRequest, crate::proxmox::Error> {
+        crate::proxmox::ResourceRequest::new(
+            self.clone_request(instance_id)?,
+            digest,
+            self.target.resources.cpu,
+            self.target.resources.memory_mib,
+        )
+    }
+}
+
+impl Plan {
+    /// Bind expansion to the exact observed volume; callers must retain it before dispatch.
+    pub fn disk_request(
+        &self,
+        instance_id: &str,
+        digest: &str,
+        volume: &str,
+    ) -> Result<crate::proxmox::DiskRequest, crate::proxmox::Error> {
+        let device = match self.source.disk_device {
+            DiskDevice::Scsi0 => "scsi0",
+            DiskDevice::Virtio0 => "virtio0",
+            DiskDevice::Sata0 => "sata0",
+        };
+        crate::proxmox::DiskRequest::new(
+            self.clone_request(instance_id)?,
+            self.resource_request(instance_id, digest)?,
+            digest,
+            device,
+            volume,
+            self.source.source_disk_gib,
+            self.target.resources.disk_gib,
+        )
+    }
+}
+
+impl Plan {
+    /// Bind public keys and exact observed primary volume/network to this plan.
+    pub fn cloud_init_request(
+        &self,
+        definition: &Definition,
+        instance_id: &str,
+        digest: &str,
+        volume: &str,
+        network: &str,
+    ) -> Result<crate::proxmox::CloudInitRequest, crate::proxmox::Error> {
+        crate::proxmox::CloudInitRequest::new(
+            self,
+            definition,
+            instance_id,
+            digest,
+            volume,
+            network,
+        )
+    }
+}
+
+impl Plan {
+    /// Fixed read-only guest probe inputs; durable start/readiness gates belong to the executor.
+    pub fn readiness_request(
+        &self,
+        instance_id: &str,
+        network: &str,
+        digest: &str,
+    ) -> Result<crate::proxmox::ReadinessRequest, crate::proxmox::Error> {
+        crate::proxmox::ReadinessRequest::new(self.clone_request(instance_id)?, network, digest)
+    }
+}
+
+impl Plan {
+    pub(crate) fn minimum_create_issue(&self) -> Option<(&'static str, &'static str)> {
+        if !self.packages.is_empty() || self.snapshot_after_provisioning {
+            Some(("provisioning_features_unsupported","Initial creation requires an empty packages list and snapshotAfterProvisioning=false."))
+        } else if self.source.image_default_user.is_none() {
+            Some((
+                "template_user_attestation_required",
+                "Initial creation requires an explicitly attested image-default user mapping.",
+            ))
+        } else {
+            None
+        }
+    }
 }

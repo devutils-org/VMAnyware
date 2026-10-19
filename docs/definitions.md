@@ -82,15 +82,17 @@ future work. This initial API is for a small local homelab catalog.
 `VMANYWARE_DATABASE` selects the SQLite file; default `vmanyware.sqlite` relative
 to the server's working directory. The application does not load dotenv files.
 The first launch applies `migrations/0001_definitions.sql` in a transaction and
-sets `user_version=1`, then applies `0002_operations.sql` to reach version 2.
+sets `user_version=1`, then applies `0002_operations.sql` and
+`0003_instances.sql` and `0004_instance_observations.sql` to reach version 4. See [instance associations](instances.md)
+for definition snapshots retained by registered instances.
 Reopening reuses the schema and existing records. A newer
 unknown schema is refused rather than downgraded. Database errors are redacted.
 SQLite work runs on blocking workers, not the asynchronous HTTP executor.
 
 Back up the database before future migration upgrades. No private keys or
-Proxmox credentials belong in this database. Database upgrades, backup tooling,
-concurrent multi-process deployment and deletion/instance lifecycle await later
-slices.
+Proxmox credentials belong in this database. Backup tooling, concurrent multi-process deployment and VM deletion/lifecycle
+execution await later slices. Registered instance snapshots and read-only
+observations are documented separately.
 
 ## Try without Proxmox
 
@@ -105,3 +107,10 @@ curl --fail-with-body -H 'Content-Type: application/yaml' \
 
 Default tests use in-memory or temporary databases and never alter a user's
 normal catalog or call a real Proxmox endpoint.
+
+
+The prepared Cloud-Init provider transport canonicalizes public keys without their
+comments before encoding them, preserving key material. The saved definition and
+its hash retain the original supplied values. Applied API settings alone do not
+prove seed compatibility or guest readiness; see
+[ADR 0030](decisions/0030-fixed-cloud-init-settings.md).

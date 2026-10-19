@@ -81,3 +81,13 @@ Verify API/library details against official documentation during each spike.
 feature observations, concrete mutation scope and guest-state acceptance proof.
 Preparation does not complete 0D; execution/restore approval and actual evidence
 remain required.
+
+
+## Android 0F build/launch evidence
+
+The [owned native Android check](../experiments/android-native/README.md) now
+builds ARM64/x86_64 debug APKs and runs actual bridge, encrypted identity/restart,
+input-guard and painted-layout checks on Android 15 x86_64. This advances 0F but
+does not close it: no Android SSH/PTY/IME/suspend-resume or iOS runtime is proven.
+Keep the real mobile terminal journey as the next acceptance gate; do not replace
+it with more browser mocks or assume ARM64 runtime from a compiled APK.

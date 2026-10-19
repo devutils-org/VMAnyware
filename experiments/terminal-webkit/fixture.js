@@ -33,6 +33,7 @@
           { code: "storage", status: "failed", message: "Fixture storage has insufficient capacity." },
           { code: "network", status: "unknown", message: "Fixture network requires verification." }] };
       case "ssh_host_support": return true;
+      case "ssh_agent_support": return true;
       case "inspect_ssh_host": return { ...endpoint, algorithm: "ssh-ed25519", fingerprint: "SHA256:fixture-host", status: "trusted", challengeId: null, expiresInSeconds: 0 };
       case "list_ssh_identities": return { ...endpoint, username: args.username, id: `selection-${starts}`, identities: [{ algorithm: "ssh-ed25519", fingerprint: "SHA256:fixture-user" }], expiresInSeconds: 120 };
       case "start_ssh_session":
@@ -112,6 +113,9 @@
       input("ssh-host", "fixture.local"); button("Inspect host key").click();
       await wait(() => document.getElementById("ssh-username"));
       check(count("list_ssh_identities") === 0, "Host inspection accessed agent");
+      const source = document.getElementById("ssh-source");
+      source.value = "agent"; source.dispatchEvent(new Event("change", { bubbles: true }));
+      await wait(() => button("List agent identities"));
       input("ssh-username", "fixture");
       document.querySelector('label input[type="checkbox"]').click();
       await wait(() => !button("List agent identities").disabled);

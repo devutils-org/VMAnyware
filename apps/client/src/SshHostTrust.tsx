@@ -127,7 +127,7 @@ export function SshHostTrust({ native }: { native: boolean }) {
     <p className="panel-kicker">04 / Secure shell</p>
     <h2 id="ssh-trust-heading" tabIndex={-1}>SSH host trust</h2>
     <p>Inspect and verify a host key before choosing an SSH identity. A separate authentication check is available after host verification.</p>
-    {!native ? <p>Open the native application to inspect SSH hosts.</p> : supported === false ? <p>SSH host inspection is available only in the supported macOS prototype.</p> : supported === null && <p>Checking SSH inspection support…</p>}
+    {!native ? <p>Open the native application to inspect SSH hosts.</p> : supported === false ? <p>SSH host inspection is unavailable on this platform.</p> : supported === null && <p>Checking SSH inspection support…</p>}
     <form onSubmit={inspect}>
       <label htmlFor="ssh-host">Hostname or IP address</label>
       <div className="connection-fields">

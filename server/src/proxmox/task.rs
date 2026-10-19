@@ -17,6 +17,34 @@ impl std::fmt::Debug for TaskReference {
 }
 
 impl TaskReference {
+    pub(crate) fn upid(&self) -> &str {
+        &self.upid
+    }
+    pub(crate) fn matches_action(
+        &self,
+        target: &super::VmReference,
+        action: crate::lifecycle::Action,
+    ) -> bool {
+        let fields: Vec<_> = self.upid.split(':').collect();
+        self.node == target.node()
+            && fields[5] == action.task_kind()
+            && fields[6] == target.vmid().to_string()
+    }
+
+    pub(crate) fn matches_clone(&self, source: &super::VmReference) -> bool {
+        let fields: Vec<_> = self.upid.split(':').collect();
+        self.node == source.node()
+            && fields[5] == "qmclone"
+            && fields[6] == source.vmid().to_string()
+    }
+
+    pub(crate) fn matches_resize(&self, target: &super::VmReference) -> bool {
+        let fields: Vec<_> = self.upid.split(':').collect();
+        self.node == target.node()
+            && fields[5] == "resize"
+            && fields[6] == target.vmid().to_string()
+    }
+
     pub fn new(node: &str, upid: &str) -> Result<Self, Error> {
         let fields: Vec<_> = upid.split(':').collect();
         let valid_node = !node.is_empty()
@@ -53,7 +81,7 @@ impl TaskReference {
     }
 }
 
-#[derive(Debug, Clone, Copy, Serialize, PartialEq, Eq)]
+#[derive(Debug, Clone, Copy, Deserialize, Serialize, PartialEq, Eq)]
 #[serde(rename_all = "snake_case")]
 pub enum TaskStatus {
     Running,

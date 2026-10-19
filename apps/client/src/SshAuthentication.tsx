@@ -19,6 +19,14 @@ function cancel(selectionId: string | null) {
 
 export function SshAuthentication({ host, port }: { host: string; port: number }) {
   const [username, setUsername] = useState("");
+  const [agentSupported, setAgentSupported] = useState(false);
+  const [source, setSource] = useState("application");
+  const [passphrase, setPassphrase] = useState("");
+  useEffect(() => {
+    let active = true;
+    void invoke<boolean>("ssh_agent_support").then(value => { if (active) setAgentSupported(value); }).catch(() => {});
+    return () => { active = false; };
+  }, []);
   const [consent, setConsent] = useState(false);
   const [selection, setSelection] = useState<Selection | null>(null);
   const [fingerprint, setFingerprint] = useState("");
@@ -47,7 +55,7 @@ export function SshAuthentication({ host, port }: { host: string; port: number }
     const timer = window.setInterval(() => setNow(Date.now()), 500);
     return () => window.clearInterval(timer);
   }, [selection]);
-  function invalidate() {
+  function invalidate(clearSecret = true) {
     generation.current += 1;
     cancel(selectionId.current);
     selectionId.current = null;
@@ -59,15 +67,19 @@ export function SshAuthentication({ host, port }: { host: string; port: number }
     setTerminal(null);
     setBusy(false);
     setDeadline(0);
+    if (clearSecret) setPassphrase("");
   }
   async function list(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
     if (!consent || busy) return;
+    const secret = passphrase;
     invalidate();
     const request = generation.current;
     setBusy(true);
     try {
-      const found = await invoke<Selection>("list_ssh_identities", { host, port, username });
+      const found = source === "application"
+        ? await invoke<Selection>("list_app_ssh_identity", { host, port, username, passphrase: secret })
+        : await invoke<Selection>("list_ssh_identities", { host, port, username });
       if (request !== generation.current) { cancel(found.id); return; }
       if (found.host !== host || found.port !== port || found.username !== username) {
         cancel(found.id);
@@ -80,7 +92,7 @@ export function SshAuthentication({ host, port }: { host: string; port: number }
       setNow(received);
       setDeadline(received + found.expiresInSeconds * 1000);
     } catch (failure) {
-      if (request === generation.current) setError(typeof failure === "string" ? failure : "Cannot list SSH agent identities.");
+      if (request === generation.current) setError(typeof failure === "string" ? failure : "Cannot prepare the selected SSH identity.");
     } finally {
       if (request === generation.current) setBusy(false);
     }
@@ -122,17 +134,26 @@ export function SshAuthentication({ host, port }: { host: string; port: number }
   }
   const seconds = Math.max(0, Math.ceil((deadline - now) / 1000));
   return <div aria-busy={busy}>
-    <h3>Connect with an SSH agent</h3>
-    <p>Use the SSH agent configured when this application was launched. Choose one public identity for {host} · port {port}, then test authentication or open a terminal.</p>
+    <h3>Connect with an SSH identity</h3>
+    <p>Choose an identity for {host} · port {port}, then test authentication or open a terminal. The application key must already be authorized in the guest.</p>
     <form onSubmit={list}>
+      <label htmlFor="ssh-source">Identity source</label>
+      <select id="ssh-source" value={source} onChange={event => { invalidate(); setConsent(false); setSource(event.target.value); }}>
+        <option value="application">Encrypted application key</option>
+        {agentSupported && <option value="agent">Configured SSH agent</option>}
+      </select>
       <label htmlFor="ssh-username">SSH username</label>
       <div className="connection-fields">
         <input id="ssh-username" required maxLength={64} pattern="[a-zA-Z0-9_.\-]+" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={username} onChange={event => { invalidate(); setUsername(event.target.value); }} />
       </div>
-      <p><label><input type="checkbox" checked={consent} onChange={event => { invalidate(); setConsent(event.target.checked); }} /> Allow access to my configured SSH agent for this connection.</label></p>
-      <button type="submit" disabled={!consent || busy}>List agent identities</button>
+      {source === "application" && <>
+        <label htmlFor="ssh-key-passphrase">Application key passphrase</label>
+        <input id="ssh-key-passphrase" type="password" minLength={16} maxLength={1024} required autoComplete="off" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={passphrase} onChange={event => setPassphrase(event.target.value)} />
+      </>}
+      <p><label><input type="checkbox" checked={consent} onChange={event => { invalidate(!event.target.checked); setConsent(event.target.checked); }} /> {source === "application" ? "Allow use of my encrypted application SSH identity for this connection." : "Allow access to my configured SSH agent for this connection."}</label></p>
+      <button type="submit" disabled={!consent || busy}>{source === "application" ? "Unlock connection identity" : "List agent identities"}</button>
     </form>
-    {busy && <p role="status">Verifying the host and contacting the SSH agent…</p>}
+    {busy && <p role="status">Verifying the host and preparing the selected SSH identity…</p>}
     {error && <p role="alert" className="error">{error}</p>}
     {selection && <>
       {selection.identities.length === 0 ? <p>The agent has no supported public identities. Load an identity in your agent, then list again.</p> : <fieldset>
@@ -146,7 +167,7 @@ export function SshAuthentication({ host, port }: { host: string; port: number }
       <div className="connection-fields">
         <button type="button" disabled={!fingerprint || busy || seconds === 0} onClick={() => authenticate()}>Check selected identity</button>
         <button type="button" disabled={!fingerprint || busy || seconds === 0} onClick={() => authenticate(true)}>Open terminal</button>
-        <button type="button" onClick={invalidate}>Cancel</button>
+        <button type="button" onClick={() => invalidate()}>Cancel</button>
       </div>
     </>}
     {result && <p role="status">Authenticated as {result.username} on {result.host} · port {result.port} with <span className="operation-id">{result.fingerprint}</span>. Connection closed. No terminal was opened.</p>}

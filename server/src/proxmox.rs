@@ -1,11 +1,23 @@
-//! Concrete, read-only Proxmox API client. No mutation or passthrough methods.
+//! Concrete Proxmox API client with fixed operations; no generic passthrough.
 
 use reqwest::{header, redirect::Policy, Certificate, Client, StatusCode, Url};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::{fmt, time::Duration};
 
+mod clone;
+pub use clone::{CloneObservation, CloneRequest, ResourceObservation, ResourceRequest};
+mod cloud_init;
+pub use cloud_init::{CloudInitObservation, CloudInitRequest, SeedPreflight, SeedUserFormat};
+mod disk;
+pub use disk::{DiskObservation, DiskRequest};
+mod dispatch;
 mod task;
 pub use task::{TaskPollOptions, TaskReference, TaskStatus};
+mod identity;
+mod readiness;
+pub use readiness::{GuestProbe, GuestReadiness, ReadinessRequest};
+mod vm;
+pub use vm::{PowerState, QmpState, VmObservation, VmReference};
 
 const MAX_RESPONSE_BYTES: usize = 2 * 1024 * 1024;
 
@@ -95,6 +107,12 @@ struct Envelope<T> {
 }
 
 impl Proxmox {
+    /// Endpoint-scoped local identity, independent of token rotation; not authentication.
+    pub fn scope_id(&self) -> String {
+        use sha2::{Digest, Sha256};
+        format!("{:x}", Sha256::digest(self.endpoint.as_str().as_bytes()))
+    }
+
     /// Read only documented runtime variables. No implicit dotenv discovery.
     pub fn from_environment() -> Result<Option<Self>, Error> {
         fn optional(name: &str) -> Result<Option<String>, Error> {
@@ -181,6 +199,7 @@ impl Proxmox {
             .https_only(true)
             .no_proxy()
             .redirect(Policy::none())
+            .retry(reqwest::retry::never())
             .connect_timeout(Duration::from_secs(5))
             .timeout(timeout);
         if let Some(pem) = ca_pem {
@@ -258,13 +277,19 @@ impl Proxmox {
             url.query_pairs_mut()
                 .extend_pairs(query.iter().map(|(key, value)| (*key, value)));
         }
-        let mut response = self
+        let response = self
             .client
             .get(url)
             .header(header::AUTHORIZATION, self.authorization.clone())
             .send()
             .await
             .map_err(transport_error)?;
+        Self::decode_response(response).await
+    }
+
+    async fn decode_response<T: DeserializeOwned>(
+        mut response: reqwest::Response,
+    ) -> Result<T, Error> {
         match response.status() {
             StatusCode::UNAUTHORIZED => return Err(Error::Unauthorized),
             StatusCode::FORBIDDEN => return Err(Error::Forbidden),

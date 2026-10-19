@@ -2,7 +2,7 @@
 
 This slice prepares a reviewable plan. It does not clone, configure, start,
 reserve or delete anything in Proxmox. It does not save a definition, enqueue a
-job or persist a plan. A plan is a deterministic description of intended inputs,
+job or persist a plan through these preview endpoints. A plan is a deterministic description of intended inputs,
 not authorization to execute them.
 
 ## Configure the catalog
@@ -63,6 +63,40 @@ cross-node clones are not implemented.
 verified image digest. Actual template metadata, trusted TLS, ACLs and storage
 support must be checked against the selected Proxmox host before execution.
 
+## Opt-in image-default Cloud-Init user
+
+An operator may add this optional declaration to a mapping only after inspecting
+that exact template revision's installed Cloud-Init default-user configuration:
+
+```yaml
+    imageDefaultUser:
+      name: debian
+      templateVersion: debian-13-cloud-20261016
+      passwordLocked: true
+      noAuthorizedKeys: true
+```
+
+The name must equal guestUser and must not be root. The version must equal
+that mapping's templateVersion. Both booleans must be true: the image default
+account has a locked password and no inherited authorized keys. This is an
+operator declaration, not observed image evidence; changing the template requires
+reviewing it again. Unknown/missing fields and mismatches are rejected.
+
+The declaration changes the plan hash and is retained with its source mapping.
+Absent declarations preserve existing serialization/hash inputs and explicit
+ciuser behavior. Opted-in settings remove ciuser together with inherited
+cicustom/cipassword; exact observation requires ciuser to be absent. Generated
+user-data must omit user entirely and still contain users/default and the exact
+requested public keys. Null, scalar and named user entries are rejected in this
+mode. Omission without attestation is rejected. Named-user/scalar classification
+for existing mappings remains unchanged.
+
+This avoids the known scalar-user deprecation without silently choosing a guest
+account from its distribution name. Generated previews do not prove attached
+seed contents, installed image defaults or successful first boot. Strict readiness
+and real-template testing remain mandatory; the production create worker/API
+is not yet wired. See [ADR 0037](decisions/0037-attested-image-default-user.md).
+
 ## API
 
 `GET /api/v1/images` returns the configured catalog. Without one, HTTP 503 with
@@ -88,14 +122,14 @@ Successful HTTP 200 responses include:
 - Public SSH key count, declared packages and snapshot-after-provisioning intent.
 - Ordered conceptual steps: full clone, resources, optional disk expansion,
   Cloud-Init, start, guest readiness, optional packages and optional snapshot.
-- `liveVerified: false`, `vmidReserved: false`, `creationEnabled: false`.
+- `liveVerified: false`, `vmidReserved: false`. `creationEnabled` reflects explicit runtime opt-in, a configured provider and supported mapping/features; it is not approval or live verification. Configured previews include providerScopeId for confirmation.
 - `planHash`: SHA-256 of the compact JSON tuple
   `[definitionHash, selectedImageMapping, targetVmid]`, using the mapping struct's
   field order. YAML comments/formatting do not affect it; declared input changes do.
 
 Public key contents are not repeated in the plan; their configuration is bound
 by `definitionHash`. Steps describe future behavior: package installation,
-snapshots, guest readiness and clone execution are not implemented yet.
+snapshots and guest readiness are not implemented yet. The clone stage has a locally tested executor, without a production enqueue caller.
 
 HTTP 422 errors use fixed safe codes: `invalid_definition`, `image_not_mapped`,
 `invalid_target_vmid`, `disk_shrink_unsupported` or `invalid_plan`. Unknown JSON
@@ -127,7 +161,7 @@ Both a catalog and an explicitly configured provider are required. The operation
 does not save a definition or create an operation record.
 
 The response contains `planHash`, a `checks` array of `{code, status, message}`,
-`creationEnabled: false` and `vmidReserved: false`. Each status is `passed`,
+a runtime `creationEnabled` capability and `vmidReserved: false`. Each status is `passed`,
 `failed` or `unknown`. An unavailable endpoint, missing permission or insufficient
 metadata must not become a successful check. Messages are fixed application text;
 raw provider configuration and responses are not forwarded to the client.
@@ -152,3 +186,161 @@ plan hash; the client must not present that result as verification of an older
 preview. No create or approval action is enabled, even if all observable checks
 pass. Future execution must perform fresh checks and obtain approval of the
 concrete disposable target and operations.
+
+
+## Earlier implementation milestones
+
+The following boundaries record intermediate evidence. The production integration
+is now described in [the confirmed create API](#confirmed-minimum-create-api);
+old statements about missing callers are historical.
+
+### Fixed clone transport preparation
+
+The plan can now construct validated full-clone transport inputs for a generated
+instance ID. Local HTTPS tests cover fixed same-node/full-copy form fields, exact
+instance/definition/plan description, source-bound qmclone task validation and
+independent stopped-target identity observation. This does not change these
+preview/preflight endpoints: no provisioning enqueue route or worker calls the
+clone transport yet. Durable schema-6 intent/stage storage and a standalone clone
+executor are locally tested; no production worker or HTTP enqueue caller is wired. See
+[ADR 0024](decisions/0024-provisioning-clone-boundary.md).
+
+
+## Durable intent storage boundary
+
+Schema 6 adds vm_provision operations, atomic local target association/reservation,
+canonical definition/catalog/plan snapshots and ordered stage rows. Full-plan
+confirmation and global idempotency are checked in storage. Clone dispatch/task
+guards, completion evidence and interrupted/uncertain reconciliation are tested
+locally. Clone and CPU/memory success complete only their own stages, leaving the
+operation incomplete; disk also has a standalone locally tested executor, while
+Cloud-Init and readiness have no executor yet. Existing
+preview/preflight endpoints remain read-only and creationEnabled=false. See
+[ADR 0025](decisions/0025-durable-provisioning-journal.md).
+
+
+## CPU/memory transport boundary
+
+A fixed stopped-clone CPU/memory PUT and independent applied-value GET observation
+now pass local HTTPS tests. They require exact clone identity, configuration
+revision, stopped power and no pending changes. A standalone durable resource-stage caller is now tested with schema-7 revision
+retention and GET-only restart reconciliation. A fixed disk-expansion transport/observer is also locally tested; standalone durable disk execution is also locally tested. Network and Cloud-Init
+configuration remain pending. See
+[ADR 0026](decisions/0026-stopped-clone-resource-configuration.md) and
+[ADR 0027](decisions/0027-durable-resource-stage.md). This does not
+change public creation capability or establish a completed provisioning flow.
+
+
+## Primary disk expansion boundary
+
+The plan constructs fixed expansion inputs for its mapped primary device, exact
+observed volume and current revision. Local HTTPS tests cover absolute size,
+source-size gates, target-bound resize tasks and independent exact configured-size
+observation. Schema-8 disk journal/dispatch/task/outcome and restart guards are locally tested;
+a standalone disk executor now passes local HTTPS tests, including GET-only
+known-task restart and unknown submission exclusion. Provider
+configuration size is not guest filesystem or readiness evidence. See
+[ADR 0028](decisions/0028-fixed-disk-expansion.md).
+
+See [ADR 0029](decisions/0029-durable-disk-stage.md) for the durable disk boundary.
+
+
+## Network and Cloud-Init settings boundary
+
+A fixed single-virtio-NIC/IPv4-DHCP/NoCloud/passwordless-user/public-key transport
+and exact settings observation pass local HTTPS tests. Definition/plan bindings,
+retained volume/revision/network, current disk/resources and target-specific
+Cloud-Init drive are required. Schema-9 durable stage/dispatch/outcome/recovery storage is locally tested; the
+standalone executor and GET-only recovery now pass local HTTPS tests, while the
+known scalar-user first-boot compatibility issue remains open. Settings observation
+explicitly reports guest readiness false. See
+[ADR 0030](decisions/0030-fixed-cloud-init-settings.md).
+
+See [ADR 0031](decisions/0031-durable-cloud-init-stage.md) for retained Cloud-Init dispatch inputs and stage evidence.
+
+
+## Generated seed preview boundary
+
+A fixed read-only user/network dump preflight now validates the supported generated
+shape and stable target revision. It rejects unexpected data and reports the known
+scalar user as incompatible. Hash-only reports still mark guest readiness false.
+This does not inspect an attached ISO or close seed compatibility/start/readiness.
+See [ADR 0032](decisions/0032-generated-seed-preflight.md).
+
+## Seed regeneration and power-start execution boundary
+
+The standalone seed executor now retains its expected/completed reports in the
+schema-10 journal. The standalone start executor requires that proof and repeats
+stopped-target/settings/seed checks before a separately recorded power submission.
+Known target-bound start tasks reconcile with GET only; lost replies never permit
+another POST. Task success plus running power completes start_vm only, explicitly
+not guest readiness or the whole create workflow. These stages now run through the opt-in production worker. Remote controls and
+real infrastructure validation remain pending. See [ADR 0039](decisions/0039-durable-seed-regeneration.md)
+and [ADR 0040](decisions/0040-durable-provisioning-start.md).
+
+The standalone readiness executor now persists a five-minute deadline, probe
+marker and PID in the existing journal. Known PIDs resume via GET; unknown
+submissions are not repeated. Completed pending probes may be refreshed without
+extending the deadline. A minimal workflow finishes only after clean Cloud-Init
+and usable MAC-bound IPv4 evidence; later declared stages keep the operation
+running. This does not prove SSH authentication/reachability. See
+[ADR 0042](decisions/0042-durable-guest-readiness.md). Production enqueue/worker are now integrated; remote creation controls remain pending.
+
+
+## Confirmed minimum create API
+
+Set VMANYWARE_PROVISIONING_ENABLED=true explicitly to permit new creation writes.
+It is independent of VMANYWARE_LIFECYCLE_ENABLED and defaults false. Only exact
+true/false values are accepted; invalid configuration fails before database/listen
+startup. The listener remains loopback; remote TLS/authentication setup is separate.
+Preview/preflight remain read-only. Previews expose the configured providerScopeId;
+creationEnabled indicates capability, not successful preconditions or permission.
+
+Save the exact definition first, then POST /api/v1/provisioning/create with one
+Idempotency-Key and the complete confirmation:
+
+```json
+{
+  "definitionName": "kernel-lab",
+  "definitionHash": "<64 lowercase hexadecimal characters>",
+  "providerScopeId": "<scope from the current preview>",
+  "planHash": "<hash from the current preview>",
+  "targetNode": "pve-test",
+  "targetVmid": 202,
+  "sourceVmid": 9000,
+  "storage": "local-lvm",
+  "bridge": "vmbr0",
+  "confirmed": true
+}
+```
+
+This shape example is not approval of real infrastructure. Hashes bind the exact
+resources and public keys shown in the definition/plan. Initial creation requires
+an empty packages list, snapshotAfterProvisioning=false and an explicit validated
+imageDefaultUser declaration. Unsupported features are rejected with HTTP 422;
+they are never silently omitted. Browser Origin and duplicate request keys are
+rejected. Missing/invalid confirmation returns 400, changed plan/scope or conflicting
+work 409, absent definition 404, disabled capability 403, missing provider/catalog
+or unavailable storage 503. Unknown JSON fields return 422; body limit is 4096 bytes.
+
+The handler makes no provider request. It commits the association, immutable
+snapshots and stage journal before HTTP 202 with an operation Location. Repeating
+the same key and confirmation returns that operation without new work, provided
+current runtime/configuration gates still permit enqueue. Changed inputs cannot
+reuse a key. GET /api/v1/operations/{id} retrieves retained outcomes independently
+of the write capability.
+
+Each sequential worker round handles one queued read, one lifecycle claim and at
+most one provisioning stage, prioritizing later provisioning stages before new
+clones. It executes clone, resources, optional mapped disk expansion, Cloud-Init,
+seed regeneration, power start and strict bounded guest checks. New writes recheck
+capability/catalog/scope; retained known tasks reconcile without another mutation.
+Readiness probes remain fixed read-only commands and can continue after disabling
+VM writes. Unknown mutation submissions never replay. Failures retain the target
+and visible operation; there is no automatic deletion, force-stop or blind retry.
+
+Local evidence covers real Axum enqueue plus the production worker with generated
+HTTPS provider fixtures, with and without disk expansion, restart after clone,
+read-queue progress, terminal guest evidence and no duplicate mutation on enqueue
+retry. This does not prove an actual Proxmox/guest, SSH or native/mobile runtime.
+The remote form still needs native create commands and visible confirmation UI.

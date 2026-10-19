@@ -31,11 +31,25 @@ pub(crate) async fn request(request: Request, next: Next) -> Response {
     {
         Some("/api/v1/health") => "/api/v1/health",
         Some("/api/v1/images") => "/api/v1/images",
+        Some("/api/v1/provisioning/create") => "/api/v1/provisioning/create",
         Some("/api/v1/provisioning/plan") => "/api/v1/provisioning/plan",
         Some("/api/v1/provisioning/preflight") => "/api/v1/provisioning/preflight",
         Some("/api/v1/provider/inventory") => "/api/v1/provider/inventory",
+        Some("/api/v1/provider/nodes/{node}/vms/{vmid}/status") => {
+            "/api/v1/provider/nodes/{node}/vms/{vmid}/status"
+        }
         Some("/api/v1/provider/inventory/refresh") => "/api/v1/provider/inventory/refresh",
         Some("/api/v1/operations/{id}") => "/api/v1/operations/{id}",
+        Some("/api/v1/operations") => "/api/v1/operations",
+        Some("/api/v1/environments") => "/api/v1/environments",
+        Some("/api/v1/environments/{id}") => "/api/v1/environments/{id}",
+        Some("/api/v1/environments/{id}/lifecycle-preflight") => {
+            "/api/v1/environments/{id}/lifecycle-preflight"
+        }
+        Some("/api/v1/environments/{id}/start") => "/api/v1/environments/{id}/start",
+        Some("/api/v1/environments/{id}/shutdown") => "/api/v1/environments/{id}/shutdown",
+        Some("/api/v1/environments/{id}/refresh") => "/api/v1/environments/{id}/refresh",
+        Some("/api/v1/environments/{id}/status") => "/api/v1/environments/{id}/status",
         Some("/api/v1/definitions") => "/api/v1/definitions",
         Some("/api/v1/definitions/validate") => "/api/v1/definitions/validate",
         Some("/api/v1/definitions/{name}") => "/api/v1/definitions/{name}",

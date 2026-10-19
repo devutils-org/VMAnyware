@@ -74,7 +74,7 @@ code, .operation-id { font-family: var(--mono); overflow-wrap: anywhere; }
 .plan-details { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 2fr); gap: .5rem 1rem; }
 .plan-details dt { font-weight: 500; color: var(--fg); }
 .plan-details dd { margin: 0; color: var(--muted); overflow-wrap: anywhere; }
-.ssh-terminal { height: 24rem; min-width: 0; margin-block: 1rem; padding: .5rem; background: #050507; border: 1px solid #ffffff38; border-radius: .5rem; overflow: hidden; }
+.ssh-terminal { height: min(24rem, 55dvh); min-height: 8rem; min-width: 0; margin-block: 1rem; padding: .5rem; background: #050507; border: 1px solid #ffffff38; border-radius: .5rem; overflow: hidden; }
 .ssh-terminal textarea { min-height: 0; resize: none; }
 @media (max-width: 480px) {
   main { padding: 1rem 1rem 2rem; }
@@ -156,3 +156,20 @@ input[type="checkbox"], input[type="radio"] { width: auto; padding: 0; accent-co
 .app-shell:has(#plan-heading:target) nav a[href="#plan-heading"],
 .app-shell:has(#ssh-trust-heading:target) nav a[href="#ssh-trust-heading"],
 .app-shell:has(#runtime-heading:target) nav a[href="#runtime-heading"] { color: var(--cyan); background: #82e9ff08; border-color: #82e9ff25; }
+
+.remote-connection input:not([type="checkbox"]) { display: block; width: 100%; max-width: 40rem; margin: .45rem 0 1rem; }
+
+.remote-create { margin-top: 1.5rem; }
+.remote-create fieldset { border: 1px solid #ffffff38; border-radius: .5rem; padding: 1rem; }
+.remote-create textarea { min-height: 6rem; }
+.remote-create code, .remote-create details p { overflow-wrap: anywhere; }
+
+.remote-recovery { margin-top: 1.5rem; }
+.remote-recovery code, .remote-recovery button { overflow-wrap: anywhere; max-width: 100%; }
+
+.mobile-terminal-controls { position: sticky; bottom: 0; z-index: 2; padding: .5rem; background: #101820; border: 1px solid var(--line); border-radius: .5rem; }
+.mobile-terminal-controls form { display: flex; align-items: end; gap: .5rem; }
+.mobile-terminal-controls label { flex: 1; min-width: 0; }
+.mobile-terminal-controls input { margin: .2rem 0 0; }
+.mobile-terminal-controls button { min-height: 2.4rem; padding: .4rem .65rem; font-size: .8rem; }
+.mobile-terminal-controls .connection-fields { gap: .35rem; margin-top: .4rem; }

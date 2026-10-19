@@ -47,7 +47,7 @@ async fn unsupported_routes_and_methods_return_stable_safe_errors() {
     let cases = [
         (
             Method::GET,
-            "/api/v1/environments?token=do-not-echo",
+            "/api/v1/not-implemented?token=do-not-echo",
             StatusCode::NOT_FOUND,
             "not_found",
             "Route not found.",
@@ -80,4 +80,48 @@ async fn unsupported_routes_and_methods_return_stable_safe_errors() {
             json!({ "error": { "code": code, "message": message } })
         );
     }
+}
+
+#[tokio::test]
+async fn vm_status_validates_targets_before_provider_access_and_never_mutates() {
+    for (node, vmid, expected) in [
+        ("pve-lab", "202", StatusCode::SERVICE_UNAVAILABLE),
+        ("pve-lab", "0202", StatusCode::BAD_REQUEST),
+        ("pve-lab", "+202", StatusCode::BAD_REQUEST),
+        ("pve-lab", "99", StatusCode::BAD_REQUEST),
+        ("pve-lab", "1000000000", StatusCode::BAD_REQUEST),
+        ("pve-lab", "secret-marker", StatusCode::BAD_REQUEST),
+        ("-node", "202", StatusCode::BAD_REQUEST),
+        ("pve%2fsecret-marker", "202", StatusCode::BAD_REQUEST),
+        ("pve%FF", "202", StatusCode::BAD_REQUEST),
+    ] {
+        let uri = format!("/api/v1/provider/nodes/{node}/vms/{vmid}/status");
+        let response = router()
+            .oneshot(Request::builder().uri(uri).body(Body::empty()).unwrap())
+            .await
+            .unwrap();
+        assert_eq!(response.status(), expected);
+        let body = to_bytes(response.into_body(), 1024).await.unwrap();
+        let value: Value = serde_json::from_slice(&body).unwrap();
+        assert_eq!(
+            value["error"]["code"],
+            if expected == StatusCode::BAD_REQUEST {
+                "invalid_vm_target"
+            } else {
+                "provider_not_configured"
+            }
+        );
+        assert!(!String::from_utf8_lossy(&body).contains("secret-marker"));
+    }
+    let response = router()
+        .oneshot(
+            Request::builder()
+                .method("POST")
+                .uri("/api/v1/provider/nodes/pve-lab/vms/202/status")
+                .body(Body::empty())
+                .unwrap(),
+        )
+        .await
+        .unwrap();
+    assert_eq!(response.status(), StatusCode::METHOD_NOT_ALLOWED);
 }

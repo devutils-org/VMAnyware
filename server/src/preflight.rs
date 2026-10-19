@@ -11,6 +11,10 @@ pub struct Report {
     checks: Vec<Check>,
     creation_enabled: bool,
     vmid_reserved: bool,
+    #[serde(skip)]
+    source_revision: Option<String>,
+    #[serde(skip)]
+    source_unlocked: bool,
 }
 
 #[derive(Serialize)]
@@ -51,9 +55,21 @@ pub async fn run(provider: &Proxmox, plan: Plan) -> Report {
     })
     .await;
     let mut checks = Vec::new();
+    let mut source_revision = None;
+    let mut source_unlocked = false;
     match observations {
         Ok((config, storage, networks, vmid)) => {
             let config = config.ok();
+            source_revision = config
+                .as_ref()
+                .and_then(|c| c.get("digest"))
+                .and_then(Value::as_str)
+                .filter(|s| s.len() == 40 && s.bytes().all(|b| b.is_ascii_hexdigit()))
+                .map(str::to_owned);
+            source_unlocked = config
+                .as_ref()
+                .and_then(Value::as_object)
+                .is_some_and(|c| !c.contains_key("lock"));
             checks.push(check(
                 "template",
                 config
@@ -125,8 +141,10 @@ pub async fn run(provider: &Proxmox, plan: Plan) -> Report {
     Report {
         plan_hash: plan.plan_hash,
         checks,
-        creation_enabled: false,
+        creation_enabled: plan.creation_enabled,
         vmid_reserved: false,
+        source_revision,
+        source_unlocked,
     }
 }
 
@@ -168,5 +186,29 @@ mod tests {
         assert!(is_drive("ide2"));
         assert!(!is_drive("description"));
         assert_eq!(flag(&serde_json::json!(2)), None);
+    }
+}
+
+impl Report {
+    /// Clone-only observational gates. Later permissions/image/readiness remain unproven.
+    pub(crate) fn clone_revision(&self, expected_plan: &str) -> Option<&str> {
+        let required = [
+            "template",
+            "source_disk",
+            "cloud_init_drive",
+            "storage",
+            "storage_capacity",
+            "bridge",
+            "target_vmid",
+        ];
+        (self.plan_hash == expected_plan
+            && self.source_unlocked
+            && required.iter().all(|code| {
+                self.checks
+                    .iter()
+                    .any(|check| check.code == *code && check.status == "passed")
+            }))
+        .then_some(self.source_revision.as_deref())
+        .flatten()
     }
 }

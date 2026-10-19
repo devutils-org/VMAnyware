@@ -1,9 +1,9 @@
-//! Authentication-only macOS bridge. Never loads keys or opens SSH channels.
+//! Window-bound identity selection: macOS agent or encrypted app-owned key.
 use super::{host::HostManager, trust::Endpoint};
 use russh::{
     keys::{
         agent::{client::AgentClient, AgentIdentity},
-        HashAlg, PublicKey,
+        HashAlg, PrivateKey, PrivateKeyWithHashAlg, PublicKey,
     },
     Disconnect, Signer,
 };
@@ -54,10 +54,14 @@ pub(super) struct Authenticated {
     pub shutdown: super::host::ProbeSocket,
     pub identity: Authentication,
 }
+enum Source {
+    Agent(PathBuf),
+    Application(Arc<PrivateKey>),
+}
 struct Ticket {
     endpoint: Endpoint,
     username: String,
-    socket: PathBuf,
+    source: Source,
     keys: Vec<PublicKey>,
 }
 struct Operation {
@@ -73,6 +77,7 @@ pub struct AgentManager {
     permits: Arc<tokio::sync::Semaphore>,
     // Tests supply their disposable socket; production resolves env only on click.
     socket: Option<PathBuf>,
+    identity: Option<super::identity::IdentityStore>,
 }
 impl AgentManager {
     pub fn new(hosts: HostManager, socket: Option<PathBuf>) -> Self {
@@ -81,7 +86,12 @@ impl AgentManager {
             owners: Arc::default(),
             permits: Arc::new(tokio::sync::Semaphore::new(8)),
             socket,
+            identity: None,
         }
+    }
+    pub fn with_identity(mut self, identity: super::identity::IdentityStore) -> Self {
+        self.identity = Some(identity);
+        self
     }
     pub fn cancel(&self, owner: &str) {
         if let Ok(mut owners) = self.owners.lock() {
@@ -143,19 +153,7 @@ impl AgentManager {
             .try_acquire()
             .map_err(|_| "Too many SSH agent operations")?;
         let endpoint = Endpoint::new(host, port).map_err(|e| e.to_string())?;
-        // Conservative portable login syntax. No command/URL/options are accepted.
-        if username.is_empty()
-            || username.len() > 64
-            || username.starts_with('-')
-            || !username
-                .bytes()
-                .all(|b| b.is_ascii_alphanumeric() || b"_-.".contains(&b))
-        {
-            return Err(
-                "Enter an SSH username of at most 64 letters, digits, dots, underscores or hyphens"
-                    .into(),
-            );
-        }
+        validate_username(username)?;
         let (socket, keys) = tokio::time::timeout(LIMIT, async {
             let (handle, _shutdown) = self.hosts.connect_trusted(endpoint.clone()).await?;
             ensure_active(&active)?;
@@ -196,8 +194,98 @@ impl AgentManager {
         operation.ticket = Some(Ticket {
             endpoint: endpoint.clone(),
             username: username.into(),
-            socket,
+            source: Source::Agent(socket),
             keys,
+        });
+        Ok(Selection {
+            id,
+            host: endpoint.host().into(),
+            port,
+            username: username.into(),
+            identities,
+            expires_in_seconds: TTL.as_secs(),
+        })
+    }
+    pub async fn list_application(
+        &self,
+        owner: &str,
+        host: &str,
+        port: u16,
+        username: &str,
+        password: zeroize::Zeroizing<String>,
+    ) -> Result<Selection, String> {
+        let (id, active) = self.begin(owner)?;
+        let _permit = self
+            .permits
+            .try_acquire()
+            .map_err(|_| "Too many SSH identity operations")?;
+        let endpoint = Endpoint::new(host, port).map_err(|error| error.to_string())?;
+        validate_username(username)?;
+        let store = self
+            .identity
+            .clone()
+            .ok_or("Application SSH identity unavailable")?;
+        let key = tokio::time::timeout(LIMIT, async {
+            // Complete persisted-trust verification before touching private material.
+            let (handle, _shutdown) = self.hosts.connect_trusted(endpoint.clone()).await?;
+            ensure_active(&active)?;
+            handle
+                .disconnect(Disconnect::ByApplication, "identity selection", "en")
+                .await
+                .map_err(|_| "SSH disconnect failed")?;
+            ensure_active(&active)?;
+            let unlocking = active.clone();
+            let key = tokio::task::spawn_blocking(move || {
+                ensure_active(&unlocking)?;
+                store.signing_key(password)
+            })
+            .await
+            .map_err(|_| "Application SSH identity unavailable")??;
+            ensure_active(&active)?;
+            Ok::<_, String>(Arc::new(key))
+        })
+        .await
+        .map_err(|_| "SSH identity unlock timed out")??;
+        let selected = key.public_key().clone();
+        let identities = vec![Identity {
+            algorithm: selected.algorithm().to_string(),
+            fingerprint: fingerprint(&selected),
+        }];
+        let expires = Instant::now() + TTL;
+        {
+            let mut owners = self.owners.lock().map_err(|_| STALE)?;
+            let operation = owners
+                .get_mut(owner)
+                .filter(|op| op.id == id && op.expires > Instant::now())
+                .ok_or(STALE)?;
+            ensure_active(&active)?;
+            operation.expires = expires;
+            operation.ticket = Some(Ticket {
+                endpoint: endpoint.clone(),
+                username: username.into(),
+                source: Source::Application(key),
+                keys: vec![selected],
+            });
+        }
+        // Public agent selections did not need a timer. Private application keys
+        // must be dropped at expiry even if no later user action occurs.
+        let owners = Arc::downgrade(&self.owners);
+        let owner = owner.to_owned();
+        let expiring_id = id.clone();
+        tokio::spawn(async move {
+            tokio::time::sleep_until(tokio::time::Instant::from_std(expires)).await;
+            if let Some(owners) = owners.upgrade() {
+                if let Ok(mut owners) = owners.lock() {
+                    if owners
+                        .get(&owner)
+                        .is_some_and(|op| op.id == expiring_id && op.expires <= Instant::now())
+                    {
+                        if let Some(expired) = owners.remove(&owner) {
+                            expired.active.store(false, Ordering::SeqCst);
+                        }
+                    }
+                }
+            }
         });
         Ok(Selection {
             id,
@@ -264,26 +352,48 @@ impl AgentManager {
             let (mut handle, _shutdown) =
                 self.hosts.connect_trusted(ticket.endpoint.clone()).await?;
             ensure_active(&active)?;
-            let mut agent = AgentClient::connect_uds(&ticket.socket)
-                .await
-                .map_err(|_| UNAVAILABLE)?
-                .dynamic();
-            let current = identities(&mut agent).await?;
-            if !current
-                .iter()
-                .any(|key| key.key_data() == selected.key_data())
-            {
-                return Err("Selected SSH identity unavailable".into());
-            }
-            let mut signer = SelectedSigner {
-                agent,
-                selected: selected.clone(),
-                active: active.clone(),
+            let result = match ticket.source {
+                Source::Agent(socket) => {
+                    let mut agent = AgentClient::connect_uds(&socket)
+                        .await
+                        .map_err(|_| UNAVAILABLE)?
+                        .dynamic();
+                    let current = identities(&mut agent).await?;
+                    if !current
+                        .iter()
+                        .any(|key| key.key_data() == selected.key_data())
+                    {
+                        return Err("Selected SSH identity unavailable".into());
+                    }
+                    let mut signer = SelectedSigner {
+                        agent,
+                        selected: selected.clone(),
+                        active: active.clone(),
+                    };
+                    handle
+                        .authenticate_publickey_with(
+                            &ticket.username,
+                            selected.clone(),
+                            None,
+                            &mut signer,
+                        )
+                        .await
+                        .map_err(|_| "SSH authentication or agent signing failed")?
+                }
+                Source::Application(key) => {
+                    if key.public_key().key_data() != selected.key_data() {
+                        return Err("Selected SSH identity unavailable".into());
+                    }
+                    ensure_active(&active)?;
+                    handle
+                        .authenticate_publickey(
+                            &ticket.username,
+                            PrivateKeyWithHashAlg::new(key, None),
+                        )
+                        .await
+                        .map_err(|_| "SSH application identity authentication failed")?
+                }
             };
-            let result = handle
-                .authenticate_publickey_with(&ticket.username, selected.clone(), None, &mut signer)
-                .await
-                .map_err(|_| "SSH authentication or agent signing failed")?;
             if !result.success() {
                 return Err("SSH authentication rejected for the selected identity".into());
             }
@@ -301,6 +411,22 @@ impl AgentManager {
         })
         .await
         .map_err(|_| "SSH authentication check timed out")?
+    }
+}
+fn validate_username(username: &str) -> Result<(), String> {
+    if username.is_empty()
+        || username.len() > 64
+        || username.starts_with('-')
+        || !username
+            .bytes()
+            .all(|b| b.is_ascii_alphanumeric() || b"_-.".contains(&b))
+    {
+        Err(
+            "Enter an SSH username of at most 64 letters, digits, dots, underscores or hyphens"
+                .into(),
+        )
+    } else {
+        Ok(())
     }
 }
 fn ensure_active(active: &AtomicBool) -> Result<(), String> {
@@ -367,4 +493,7 @@ impl Signer for SelectedSigner {
     }
 }
 #[cfg(test)]
+#[path = "app_tests.rs"]
+mod app_tests;
+#[cfg(all(test, target_os = "macos"))]
 mod tests;

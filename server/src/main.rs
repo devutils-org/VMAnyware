@@ -1,6 +1,6 @@
 use std::{future::IntoFuture, time::Duration};
 use vmanyware_server::{
-    config::Config, diagnostics, provisioning::Catalog, proxmox::Proxmox, router_with_catalog,
+    config::Config, diagnostics, provisioning::Catalog, proxmox::Proxmox, router_with_execution,
     store::Store,
 };
 
@@ -21,6 +21,24 @@ async fn run() -> Result<(), &'static str> {
         Err(_) => return Err("invalid_port_configuration"),
     };
     let config = Config::from_port(port.as_deref()).map_err(|_| "invalid_port_configuration")?;
+    let lifecycle = match std::env::var("VMANYWARE_LIFECYCLE_ENABLED") {
+        Ok(value) => Some(value),
+        Err(std::env::VarError::NotPresent) => None,
+        Err(_) => return Err("invalid_lifecycle_configuration"),
+    };
+    let config = config
+        .with_lifecycle(lifecycle.as_deref())
+        .map_err(|_| "invalid_lifecycle_configuration")?;
+    let provisioning = match std::env::var("VMANYWARE_PROVISIONING_ENABLED") {
+        Ok(value) => Some(value),
+        Err(std::env::VarError::NotPresent) => None,
+        Err(_) => return Err("invalid_provisioning_configuration"),
+    };
+    let config = config
+        .with_provisioning(provisioning.as_deref())
+        .map_err(|_| "invalid_provisioning_configuration")?;
+    let access = vmanyware_server::auth::AccessToken::from_environment()
+        .map_err(|_| "invalid_access_configuration")?;
     let provider = Proxmox::from_environment().map_err(|_| "invalid_provider_configuration")?;
     let catalog = Catalog::from_environment().map_err(|_| "invalid_template_configuration")?;
     let database = match std::env::var("VMANYWARE_DATABASE") {
@@ -39,17 +57,32 @@ async fn run() -> Result<(), &'static str> {
     store
         .recover_interrupted_operations()
         .map_err(|_| "operation_recovery_failed")?;
-    let mut worker = tokio::spawn(vmanyware_server::worker::run(
+    let mut worker = tokio::spawn(vmanyware_server::worker::run_with_execution(
         store.clone(),
         provider.clone(),
+        catalog.clone(),
+        config.lifecycle_enabled(),
+        config.provisioning_enabled(),
     ));
     let (stopping, stopped_signal) = tokio::sync::oneshot::channel();
-    let server = axum::serve(listener, router_with_catalog(provider, store, catalog))
-        .with_graceful_shutdown(async move {
-            shutdown.wait().await;
-            let _ = stopping.send(());
-        })
-        .into_future();
+    let server = axum::serve(
+        listener,
+        vmanyware_server::auth::protect(
+            router_with_execution(
+                provider,
+                store,
+                catalog,
+                config.lifecycle_enabled(),
+                config.provisioning_enabled(),
+            ),
+            access,
+        ),
+    )
+    .with_graceful_shutdown(async move {
+        shutdown.wait().await;
+        let _ = stopping.send(());
+    })
+    .into_future();
     tokio::pin!(server);
     diagnostics::listening(config.address().port());
     tokio::select! {

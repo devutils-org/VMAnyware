@@ -119,3 +119,14 @@ and host HTTP receiver were removed/stopped; root console logged out. Stopped
 202, disks, snippet and approved storage capability remain. Its freeze=1 and
 missing vmbr1 require deliberate restoration before another start. No snapshot,
 restore or deletion was performed. See [ADR 0017](decisions/0017-cloud-init-user-compatibility.md).
+
+
+## Offline image-default alternative
+
+A later isolated check against actual Cloud-Init 25.1.4 shows that omitting legacy
+user preserves normalized account attributes and SSH key selection when the
+image's default account matches the declared user. This avoids the scalar warning
+in that offline path. It uses upstream Debian reference defaults, not proof of an
+installed template or a new guest boot. Product opt-in/attestation is still pending;
+the earlier real lab result used the corrected snippet. See
+[ADR 0033](decisions/0033-image-default-user-candidate.md).

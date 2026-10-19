@@ -70,16 +70,30 @@ async fn respond(
         return missing_catalog().into_response();
     };
     match catalog.plan(&definition, request.target_vmid) {
-        Ok(plan) if live => match state.provider {
-            Some(provider) => Json(crate::preflight::run(&provider, plan).await).into_response(),
-            None => error(
-                StatusCode::SERVICE_UNAVAILABLE,
-                "provider_not_configured",
-                "Configure the Proxmox provider before checking a plan.",
-            )
-            .into_response(),
-        },
-        Ok(plan) => Json(plan).into_response(),
+        Ok(mut plan) if live => {
+            plan.provider_scope_id = state.provider.as_ref().map(|p| p.scope_id());
+            plan.creation_enabled = state.provisioning_enabled
+                && plan.provider_scope_id.is_some()
+                && plan.minimum_create_issue().is_none();
+            match state.provider {
+                Some(provider) => {
+                    Json(crate::preflight::run(&provider, plan).await).into_response()
+                }
+                None => error(
+                    StatusCode::SERVICE_UNAVAILABLE,
+                    "provider_not_configured",
+                    "Configure the Proxmox provider before checking a plan.",
+                )
+                .into_response(),
+            }
+        }
+        Ok(mut plan) => {
+            plan.provider_scope_id = state.provider.as_ref().map(|p| p.scope_id());
+            plan.creation_enabled = state.provisioning_enabled
+                && plan.provider_scope_id.is_some()
+                && plan.minimum_create_issue().is_none();
+            Json(plan).into_response()
+        }
         Err(issue) => {
             let (code, message) = match issue {
                 provisioning::Error::ImageNotMapped => ("image_not_mapped", "No template is mapped to this image on the control plane."),
@@ -98,4 +112,143 @@ fn missing_catalog() -> (StatusCode, Json<ApiError>) {
         "template_catalog_not_configured",
         "Configure VMANYWARE_TEMPLATES on the control plane before previewing provisioning.",
     )
+}
+
+/// Queue only; no provider request is performed by this handler.
+pub async fn create(
+    State(state): State<AppState>,
+    headers: HeaderMap,
+    body: Result<Json<crate::provisioning_intent::Approval>, JsonRejection>,
+) -> Response {
+    let key = match crate::operations_api::request_key(&headers) {
+        Ok(key) => key,
+        Err(issue) => return issue.into_response(),
+    };
+    if headers.get_all("idempotency-key").iter().count() != 1 {
+        return error(
+            StatusCode::BAD_REQUEST,
+            "invalid_request_key",
+            "Supply exactly one Idempotency-Key.",
+        )
+        .into_response();
+    }
+    if !state.provisioning_enabled {
+        return error(
+            StatusCode::FORBIDDEN,
+            "provisioning_disabled",
+            "Provisioning execution is disabled on this control plane.",
+        )
+        .into_response();
+    }
+    let approval =
+        match body {
+            Ok(Json(approval)) if approval.valid() => approval,
+            Ok(_) => return create_problem(crate::store::ProvisioningError::InvalidApproval),
+            Err(rejection) => return error(
+                rejection.status(),
+                "invalid_provisioning_approval",
+                "Send a bounded explicit confirmation of the complete definition, plan and target.",
+            )
+            .into_response(),
+        };
+    let Some(provider) = state.provider else {
+        return error(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "provider_not_configured",
+            "Configure Proxmox before requesting creation.",
+        )
+        .into_response();
+    };
+    if provider.scope_id() != approval.provider_scope_id {
+        return error(
+            StatusCode::CONFLICT,
+            "provider_scope_changed",
+            "The confirmed provider scope differs from this control plane.",
+        )
+        .into_response();
+    }
+    let Some(catalog) = state.catalog else {
+        return missing_catalog().into_response();
+    };
+    let result = tokio::task::spawn_blocking(move || {
+        let record = state
+            .store
+            .get(&approval.definition_name)
+            .map_err(|_| crate::store::ProvisioningError::Unavailable)?
+            .ok_or(crate::store::ProvisioningError::DefinitionNotFound)?;
+        let definition = Definition::parse(&record.yaml)
+            .map_err(|_| crate::store::ProvisioningError::Unavailable)?;
+        let plan = catalog
+            .plan(&definition, approval.target_vmid)
+            .map_err(|_| crate::store::ProvisioningError::TargetChanged)?;
+        if !approval.matches(&plan) {
+            return Err(CreateIssue::Storage(
+                crate::store::ProvisioningError::TargetChanged,
+            ));
+        }
+        if let Some((code, message)) = plan.minimum_create_issue() {
+            return Err(CreateIssue::Unsupported(code, message));
+        }
+        state
+            .store
+            .enqueue_provisioning(&key, &approval, &catalog)
+            .map_err(CreateIssue::Storage)
+    })
+    .await;
+    match result {
+        Ok(Ok(operation)) => (
+            StatusCode::ACCEPTED,
+            [(
+                header::LOCATION,
+                format!("/api/v1/operations/{}", operation.id),
+            )],
+            Json(operation),
+        )
+            .into_response(),
+        Ok(Err(CreateIssue::Unsupported(code, message))) => {
+            error(StatusCode::UNPROCESSABLE_ENTITY, code, message).into_response()
+        }
+        Ok(Err(CreateIssue::Storage(issue))) => create_problem(issue),
+        Err(_) => create_problem(crate::store::ProvisioningError::Unavailable),
+    }
+}
+enum CreateIssue {
+    Storage(crate::store::ProvisioningError),
+    Unsupported(&'static str, &'static str),
+}
+impl From<crate::store::ProvisioningError> for CreateIssue {
+    fn from(issue: crate::store::ProvisioningError) -> Self {
+        Self::Storage(issue)
+    }
+}
+fn create_problem(issue: crate::store::ProvisioningError) -> Response {
+    use crate::store::ProvisioningError as E;
+    let (status, code, message) = match issue {
+        E::InvalidApproval => (
+            StatusCode::BAD_REQUEST,
+            "invalid_provisioning_approval",
+            "Confirm the exact saved definition, plan, scope and target.",
+        ),
+        E::DefinitionNotFound => (
+            StatusCode::NOT_FOUND,
+            "definition_not_found",
+            "Save the definition before requesting creation.",
+        ),
+        E::TargetChanged => (
+            StatusCode::CONFLICT,
+            "provisioning_target_changed",
+            "The confirmed definition, catalog or target changed; review a fresh plan.",
+        ),
+        E::Conflict => (
+            StatusCode::CONFLICT,
+            "operation_conflict",
+            "This request conflicts with retained work or a previously used request key.",
+        ),
+        _ => (
+            StatusCode::SERVICE_UNAVAILABLE,
+            "storage_unavailable",
+            "Provisioning operation storage is unavailable.",
+        ),
+    };
+    error(status, code, message).into_response()
 }

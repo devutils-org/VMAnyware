@@ -250,6 +250,15 @@ impl Fixture {
         refuse: Option<&'static str>,
         os_shell: bool,
     ) -> Self {
+        Self::with_timeout(allowed, pty, refuse, os_shell, LIMIT).await
+    }
+    pub(crate) async fn with_timeout(
+        allowed: PublicKey,
+        pty: bool,
+        refuse: Option<&'static str>,
+        os_shell: bool,
+        inactivity: Duration,
+    ) -> Self {
         let listener = TcpListener::bind((std::net::Ipv4Addr::LOCALHOST, 0))
             .await
             .unwrap();
@@ -280,7 +289,7 @@ impl Fixture {
                 tokio::select! {
                     accepted = listener.accept() => {
                         let (socket, _) = accepted.unwrap();
-                        let config = Arc::new(server::Config { keys: vec![keys.lock().unwrap().clone()], auth_rejection_time: Duration::ZERO, auth_rejection_time_initial: Some(Duration::ZERO), inactivity_timeout: Some(LIMIT), ..Default::default() });
+                        let config = Arc::new(server::Config { keys: vec![keys.lock().unwrap().clone()], auth_rejection_time: Duration::ZERO, auth_rejection_time_initial: Some(Duration::ZERO), inactivity_timeout: Some(inactivity), ..Default::default() });
                         let handler = handler.clone();
                         let active = active.clone();
                         sessions.spawn(async move {

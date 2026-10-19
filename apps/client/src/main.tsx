@@ -5,6 +5,9 @@ import "./styles.css";
 import sampleDefinition from "../../../examples/kernel-lab.yaml?raw";
 import { SshHostTrust } from "./SshHostTrust";
 import { ProvisioningPreview } from "./ProvisioningPreview";
+import { OperationHistory } from "./OperationHistory";
+import { Instances } from "./Instances";
+import { RemoteConnection } from "./RemoteConnection";
 
 type DefinitionRecord = {
   name: string;
@@ -54,6 +57,7 @@ function App() {
   const [status, setStatus] = useState("Not checked");
   const [checking, setChecking] = useState(false);
   const native = isTauri();
+  const [remoteMode, setRemoteMode] = useState(false);
   const [port, setPort] = useState("8080");
   const [serviceState, setServiceState] = useState<"unchecked" | "checking" | "ready" | "unavailable">("unchecked");
   const [serviceError, setServiceError] = useState("");
@@ -167,9 +171,11 @@ function App() {
         <p className="nav-label">Workspace</p>
         <nav aria-label="Workspace tools">
           <a href="#connection-heading"><span aria-hidden="true">01</span>Connection</a>
+          {!remoteMode && <>
           <a href="#definitions-heading"><span aria-hidden="true">02</span>Definitions</a>
           <a href="#plan-heading"><span aria-hidden="true">03</span>Provisioning</a>
           <a href="#ssh-trust-heading"><span aria-hidden="true">04</span>SSH terminal</a>
+          </>}
           <a href="#runtime-heading"><span aria-hidden="true">05</span>Application</a>
         </nav>
         <div className="sidebar-note"><span className="phase-badge">Phase 0</span><p>A place to build,<br />inspect and start again.</p></div>
@@ -182,17 +188,22 @@ function App() {
           <span className="phase-badge">Phase 0 · Prototype</span>
         </div>
         <h1 id="workspace-title" tabIndex={-1}>Make room for your next idea.</h1>
-        <p>Connect to your local control plane to inspect Proxmox nodes and available templates.</p>
+        <p>Connect to your control plane to inspect Proxmox nodes and available templates.</p>
       </header>
-      <div className="workspace-summary" aria-label="Current workspace observations">
+      {!remoteMode && <div className="workspace-summary" aria-label="Current workspace observations">
         <div className="summary-card"><span className="summary-label">Local service</span><strong className={`service-indicator ${serviceState}`}>{serviceState === "ready" ? "Available" : serviceState === "checking" ? "Checking…" : serviceState === "unavailable" ? "Unavailable" : "Not checked"}</strong><span>Port {port || "—"} · loopback</span></div>
         <div className="summary-card"><span className="summary-label">Proxmox nodes</span><strong>{inventory ? inventory.nodes.length : "—"}</strong><span>{inventory ? `Last inventory · v${inventory.version}` : "Connect to read inventory"}</span></div>
         <div className="summary-card"><span className="summary-label">Visible templates</span><strong>{inventory ? inventory.templates.length : "—"}</strong><span>{inventory ? "Visible to the configured token" : "No inventory loaded"}</span></div>
-      </div>
+      </div>}
       <section aria-labelledby="connection-heading" aria-busy={connecting}>
         <p className="panel-kicker">01 / Connect</p>
         <h2 id="connection-heading" tabIndex={-1}>Control plane</h2>
-        <p>This prototype connects to the service on this computer. Proxmox credentials stay on the server.</p>
+        <label htmlFor="connection-mode">Connection mode</label>{" "}
+        <select id="connection-mode" value={remoteMode ? "remote" : "local"} disabled={connecting || definitionBusy || serviceState === "checking"} onChange={event => { setRemoteMode(event.target.value === "remote"); setServiceState("unchecked"); setInventory(null); setDefinitions([]); setOperation(null); }}>
+          <option value="local">Local service</option><option value="remote">Remote HTTPS server</option>
+        </select>
+        {remoteMode ? <RemoteConnection native={native} /> : <>
+        <p>Connect to the service on this computer. Proxmox credentials stay on the server.</p>
         <form onSubmit={connect}>
           <label htmlFor="port">Local service port</label>
           <div className="connection-fields">
@@ -228,7 +239,11 @@ function App() {
         {connectionError && <p role="alert" className="error">{connectionError}</p>}
         {operation && <p role="status">Inventory refresh: {operation.status} · <span className="operation-id">{operation.id}</span></p>}
         {inventory && <div role="status"><p>Connected · Proxmox {inventory.version}</p></div>}
+        </>}
       </section>
+      {!remoteMode && <>
+      <Instances key={`instances-${port}`} port={port} native={native} />
+      <OperationHistory key={port} port={port} native={native} />
       <div className="definition-workspace">
       <section aria-labelledby="definitions-heading" aria-busy={definitionBusy}>
         <p className="panel-kicker">02 / Define</p>
@@ -270,6 +285,7 @@ function App() {
             </li>)}</ul>}
           <p>Inventory is read-only. Creating environments is not available yet.</p>
         </section>
+      </>}
       </>}
       <section aria-labelledby="runtime-heading">
         <p className="panel-kicker">05 / Application</p>

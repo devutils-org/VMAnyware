@@ -94,3 +94,34 @@ Sources: [Proxmox generator](https://github.com/proxmox/qemu-server/blob/master/
 [Cloud-Init 25.1.4 normalization](https://github.com/canonical/cloud-init/blob/25.1.4/cloudinit/distros/ug_util.py),
 [Cloud-Init user configuration](https://docs.cloud-init.io/en/latest/reference/modules.html#users-and-groups),
 [return codes](https://docs.cloud-init.io/en/latest/explanation/return_codes.html).
+
+## Image-default-user alternative
+
+`default_user.py` prepares an offline candidate without the legacy `user` field,
+requiring supplied image-default account evidence that matches the declared user,
+is password-locked and contains no inherited authorized keys/password. Other seed
+fields remain unchanged. Wrong or absent evidence is rejected. This is not a guest
+probe or an application mode; supplying a dictionary does not attest an actual VM.
+
+`check_default_user.py` runs only this alternative against the same pinned upstream
+25.1.4 code. It renders the upstream Debian reference configuration (not an actual
+Debian image), compares scalar, named and default-user normalization, validates the
+candidate schema, and exercises the actual SSH module's user/key selection. Host
+key handling, credential application and other side-effect entry points are mocked;
+no SSH files are scanned, users created or credentials applied. A deliberately
+modified image default resolves to a different account and is refused by the
+candidate's evidence requirement.
+
+```sh
+PYTHONPATH="$PWD/.lab/cloud-init-compat/cloud-init-25.1.4" \
+  .lab/cloud-init-compat/venv/bin/python -B \
+  experiments/cloud-init-user/check_default_user.py
+```
+
+For a fresh environment, use the earlier source/hash/venv preparation and substitute
+that directory. The new check does not require rerunning the unchanged converter
+suite. It proves the narrow upstream normalization/schema/SSH-selection behavior,
+not installed template defaults, first-boot module completion, DHCP or readiness.
+An application implementation must explicitly bind image-default evidence to its
+catalog/template before omitting ciuser; silently assuming every image uses debian
+would change the requested account. Existing explicit-user behavior is unchanged.

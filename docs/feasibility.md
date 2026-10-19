@@ -15,7 +15,7 @@ been demonstrated. See `STATE.md` for current counts and commands.
 | Diagnostics | Real binary tests for allowed fields and sensitive-input redaction | Operational experience on an installed service |
 | CI | Pinned workflow, local command checks and actionlint | First actual GitHub/Linux run; native/mobile runners |
 | VM provisioning | Actual lab API full clone/configure/start/task-poll/shutdown; fresh 202 Cloud-Init exit 0/done without errors, consumed snippet hash and real Debian resource/SSH checks | Application mutation implementation, least-privilege execution ACLs and DHCP; recipe is pinned to tested versions |
-| Snapshot/restore | Declared intent only | Storage capability evidence, implementation and separately approved restore |
+| Snapshot/restore | Read-only VM 202 snapshot feature/storage checks and concrete stopped-disk plan in x86-snapshot.md | Approved execution, guest A/B/restored-A proof and final cleanup |
 | Desktop SSH/PTY | Real macOS Tauri/IPC/agent/local-shell smoke; separate Linux OpenSSH real-guest trust/auth/resize/Ctrl-C/reconnect; output-pressure fixtures | Native Tauri against a real guest, normal startup and physical keyboard behavior |
 | Mobile | No runtime evidence | SDKs, devices/simulators, SSH crypto/PTY build and lifecycle checks |
 
@@ -41,7 +41,7 @@ and transport configuration. The current service stays on loopback; the remote
 Proxmox connection uses verified HTTPS over LAN/VPN. Do not compensate for
 missing certificates or ACLs by disabling verification or using an admin token.
 
-The next architecture decision should cite actual disposable-host observations
-and the isolated desktop SSH results, then explicitly bound mobile support.
+ADR 0019 explicitly bounds the initial native terminal to macOS based on the
+desktop evidence. Mobile authentication/build/runtime support remains deferred.
 Keep unresolved risks visible rather than treating source code, fixture tests,
 compilation and real infrastructure evidence as interchangeable.

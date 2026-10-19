@@ -11,9 +11,16 @@ Read `STATE.md` first, then the relevant section of `VMAnyware.md` and
 - Keep the workspace small. Add crates, runtime dependencies and abstractions
   only when a working use case needs them. Record consequential choices in
   `docs/decisions/`.
-- Run checks relevant to the change. `make check` is the complete local check;
-  use `make check-rust` or `make check-client` when only one side changes.
-  Use `make check-server` for server-only changes without native client builds.
+- Select tests and checks from the current slice's diff. Run the smallest checks
+  that cover changed behavior and affected callers; do not rerun unrelated suites
+  or previously passing checks without new changes or evidence of risk. In a dirty
+  workspace, distinguish this slice's changes from earlier verified changes.
+  Documentation-only edits need diff/format review, not application tests.
+  Broaden verification only for demonstrated cross-component impact, shared
+  contracts, dependency/build changes or unresolved failures; state the reason.
+  `make check` is the complete local check, not the default for every slice.
+  Use targeted test filters first; `make check-server`, `make check-client` and
+  `make check-rust` are available when the diff warrants their broader scope.
 - Never mark a roadmap item complete without evidence. Distinguish source
   preparation, compilation, application launch and real infrastructure testing.
 - Do not inspect local credential files, commit secrets, disable TLS/SSH host

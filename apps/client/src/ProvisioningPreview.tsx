@@ -19,7 +19,7 @@ type Plan = {
 type Preflight = {
   planHash: string;
   checks: { code: string; status: "passed" | "failed" | "unknown"; message: string }[];
-  creationEnabled: false;
+  creationEnabled: boolean;
   vmidReserved: false;
 };
 
