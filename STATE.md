@@ -8,6 +8,12 @@ ignored local lab records to verify actual identifiers before operations.
 
 ## Latest resume point
 
+2026-10-21: the user widened the scope to a local provider beside Proxmox
+(VMAnyware.md §9). ADR 0062 proposes the seam, direct QEMU (or libvirt) and a
+first slice with its acceptance; it awaits the user's choice of hypervisor and
+first local target. No code, no VM operation.
+
+
 Latest server slice adds read-only snapshot listing for registered instances,
 with fixed retained scope/target, exclusion of Proxmox's live `current` entry,
 explicit incomplete metadata and safe errors. See docs/snapshots.md and the
