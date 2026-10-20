@@ -19,3 +19,9 @@
 # If you keep the line number information, uncomment this to
 # hide the original source file name.
 #-renamesourcefileattribute SourceFile
+
+# The platform TLS verifier is reached through JNI.
+-keep, includedescriptorclasses class org.rustls.platformverifier.** { *; }
+-keepclassmembers class dev.vmanyware.client.MainActivity {
+    native <methods>;
+}

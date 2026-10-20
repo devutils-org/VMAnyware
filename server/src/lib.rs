@@ -2,6 +2,8 @@ pub mod auth;
 pub mod config;
 pub mod definition;
 mod definitions_api;
+pub mod deletion;
+pub mod deletion_executor;
 pub mod diagnostics;
 pub mod instance;
 mod instances_api;
@@ -17,7 +19,13 @@ mod provisioning_api;
 pub mod provisioning_executor;
 pub mod provisioning_intent;
 pub mod proxmox;
+pub mod restore_executor;
+mod restores_api;
 pub mod service_lock;
+pub mod snapshot;
+pub mod snapshot_executor;
+pub mod snapshot_restore;
+mod snapshots_api;
 pub mod store;
 mod vm_api;
 pub mod worker;
@@ -70,6 +78,55 @@ pub fn router_with_execution(
     lifecycle_enabled: bool,
     provisioning_enabled: bool,
 ) -> Router {
+    router_with_snapshots(
+        provider,
+        store,
+        catalog,
+        lifecycle_enabled,
+        provisioning_enabled,
+        false,
+    )
+}
+
+pub fn router_with_snapshots(
+    provider: Option<proxmox::Proxmox>,
+    store: store::Store,
+    catalog: Option<provisioning::Catalog>,
+    lifecycle_enabled: bool,
+    provisioning_enabled: bool,
+    snapshots_enabled: bool,
+) -> Router {
+    router_with_restores(
+        provider,
+        store,
+        catalog,
+        lifecycle_enabled,
+        provisioning_enabled,
+        snapshots_enabled,
+        false,
+    )
+}
+
+pub fn router_with_restores(
+    provider: Option<proxmox::Proxmox>,
+    store: store::Store,
+    catalog: Option<provisioning::Catalog>,
+    lifecycle_enabled: bool,
+    provisioning_enabled: bool,
+    snapshots_enabled: bool,
+    restores_enabled: bool,
+) -> Router {
+    router_with_deletions(provider, store, catalog, lifecycle_enabled, provisioning_enabled, snapshots_enabled, restores_enabled, false)
+}
+
+// Keep existing constructor callers default-off while the production service supplies all flags.
+#[allow(clippy::too_many_arguments)]
+pub fn router_with_deletions(
+    provider: Option<proxmox::Proxmox>, store: store::Store,
+    catalog: Option<provisioning::Catalog>, lifecycle_enabled: bool,
+    provisioning_enabled: bool, snapshots_enabled: bool, restores_enabled: bool,
+    deletions_enabled: bool,
+) -> Router {
     Router::new()
         .route(
             "/api/v1/provisioning/create",
@@ -103,6 +160,10 @@ pub fn router_with_execution(
         )
         .route("/api/v1/environments/{id}", get(instances_api::get))
         .route(
+            "/api/v1/environments/{id}/delete-preflight",
+            get(instances_api::deletion_preflight),
+        )
+        .route(
             "/api/v1/environments/{id}/start",
             post(lifecycle_api::start).layer(DefaultBodyLimit::max(4096)),
         )
@@ -121,6 +182,40 @@ pub fn router_with_execution(
         .route(
             "/api/v1/environments/{id}/status",
             get(instances_api::status),
+        )
+        .route(
+            "/api/v1/environments/{id}/snapshots",
+            get(instances_api::snapshots)
+                .post(snapshots_api::create)
+                .layer(DefaultBodyLimit::max(32 * 1024)),
+        )
+        .route(
+            "/api/v1/environments/{id}/snapshot-preflight",
+            post(instances_api::snapshot_preflight).layer(DefaultBodyLimit::max(32 * 1024)),
+        )
+        .route(
+            "/api/v1/environments/{id}/snapshot-operations",
+            get(snapshots_api::history),
+        )
+        .route(
+            "/api/v1/environments/{id}/snapshot-operations/{operation_id}",
+            get(snapshots_api::recover),
+        )
+        .route(
+            "/api/v1/environments/{id}/restore-operations",
+            get(restores_api::history),
+        )
+        .route(
+            "/api/v1/environments/{id}/restore-operations/{operation_id}",
+            get(restores_api::recover),
+        )
+        .route(
+            "/api/v1/environments/{id}/snapshot-restore-preflight",
+            post(instances_api::snapshot_restore_preflight).layer(DefaultBodyLimit::max(1024)),
+        )
+        .route(
+            "/api/v1/environments/{id}/snapshots/{snapshot_name}/restore",
+            post(restores_api::restore).layer(DefaultBodyLimit::max(4096)),
         )
         .route("/api/v1/operations/{id}", get(operations_api::get))
         .route(
@@ -141,6 +236,9 @@ pub fn router_with_execution(
             catalog,
             lifecycle_enabled,
             provisioning_enabled,
+            snapshots_enabled,
+            restores_enabled,
+            deletions_enabled,
         })
         .layer(axum::middleware::from_fn(diagnostics::request))
 }

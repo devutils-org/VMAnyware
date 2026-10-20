@@ -42,10 +42,11 @@ pub struct ProviderReference {
     pub vmid: u32,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, PartialEq, Eq, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub enum Status {
     Registered,
+    Deleted,
 }
 
 #[derive(Debug, Serialize)]
@@ -89,6 +90,9 @@ impl Summary {
         provider: &crate::proxmox::Proxmox,
     ) -> Result<VmReference, ObservationError> {
         let reference = &self.provider_reference;
+        if self.status != Status::Registered {
+            return Err(ObservationError::InvalidReference);
+        }
         if reference.scope_id != provider.scope_id() {
             return Err(ObservationError::ScopeChanged);
         }

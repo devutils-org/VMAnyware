@@ -1,6 +1,14 @@
 use crate::definition::Definition;
+mod deletion;
 mod instances;
 mod lifecycle;
+mod restore_recovery;
+pub use lifecycle::LifecycleError as DeletionError;
+mod snapshot;
+mod snapshot_recovery;
+mod snapshot_restore;
+pub use lifecycle::LifecycleError as RestoreError;
+pub use lifecycle::LifecycleError as SnapshotError;
 mod provisioning;
 mod provisioning_cloud_init;
 mod provisioning_disk;
@@ -70,11 +78,24 @@ impl Store {
         connection
             .pragma_update(None, "foreign_keys", true)
             .map_err(|_| Error::Unavailable)?;
-        let transaction = connection.transaction().map_err(|_| Error::Unavailable)?;
+        // SQLite requires foreign keys disabled outside the table-rebuild transaction.
+        // No application writes occur until the complete graph has been checked and
+        // enforcement is restored below; failure drops this unopened store.
+        let initial_version: u32 = connection
+            .pragma_query_value(None, "user_version", |row| row.get(0))
+            .map_err(|_| Error::Unavailable)?;
+        if initial_version < 14 {
+            connection
+                .pragma_update(None, "foreign_keys", false)
+                .map_err(|_| Error::Unavailable)?;
+        }
+        let transaction = connection
+            .transaction_with_behavior(rusqlite::TransactionBehavior::Immediate)
+            .map_err(|_| Error::Unavailable)?;
         let version: u32 = transaction
             .pragma_query_value(None, "user_version", |row| row.get(0))
             .map_err(|_| Error::Unavailable)?;
-        if version > 10 {
+        if version > 14 {
             return Err(Error::Unavailable);
         }
         if version < 1 {
@@ -165,7 +186,54 @@ impl Store {
                 .pragma_update(None, "user_version", 10)
                 .map_err(|_| Error::Unavailable)?;
         }
+        if version < 11 {
+            transaction
+                .execute_batch(include_str!("../../migrations/0011_snapshot_creation.sql"))
+                .map_err(|_| Error::Unavailable)?;
+            transaction
+                .pragma_update(None, "user_version", 11)
+                .map_err(|_| Error::Unavailable)?;
+        }
+        if version < 12 {
+            transaction
+                .execute_batch(include_str!("../../migrations/0012_snapshot_restore.sql"))
+                .map_err(|_| Error::Unavailable)?;
+            transaction
+                .pragma_update(None, "user_version", 12)
+                .map_err(|_| Error::Unavailable)?;
+        }
+        if version < 13 {
+            transaction
+                .execute_batch(include_str!("../../migrations/0013_deletion_intent.sql"))
+                .map_err(|_| Error::Unavailable)?;
+            transaction
+                .pragma_update(None, "user_version", 13)
+                .map_err(|_| Error::Unavailable)?;
+        }
+        if version < 14 {
+            transaction
+                .execute_batch(include_str!(
+                    "../../migrations/0014_instance_retirement.sql"
+                ))
+                .map_err(|_| Error::Unavailable)?;
+            transaction
+                .pragma_update(None, "user_version", 14)
+                .map_err(|_| Error::Unavailable)?;
+        }
+        if version < 14 {
+            let foreign_key_problem = transaction
+                .prepare("PRAGMA foreign_key_check")
+                .map_err(|_| Error::Unavailable)?
+                .exists([])
+                .map_err(|_| Error::Unavailable)?;
+            if foreign_key_problem {
+                return Err(Error::Unavailable);
+            }
+        }
         transaction.commit().map_err(|_| Error::Unavailable)?;
+        connection
+            .pragma_update(None, "foreign_keys", true)
+            .map_err(|_| Error::Unavailable)?;
         Ok(Self(Arc::new(Mutex::new(connection))))
     }
 

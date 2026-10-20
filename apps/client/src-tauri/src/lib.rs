@@ -1,3 +1,5 @@
+#[cfg(target_os = "android")]
+mod android_tls;
 mod control_plane;
 mod remote_connection;
 mod ssh;
@@ -73,6 +75,19 @@ pub fn run() {
             remote_connection::create::recover_remote_creation,
             remote_connection::read_remote_images,
             remote_connection::read_remote_environments,
+            remote_connection::snapshots::read_remote_snapshots,
+            remote_connection::snapshot_restore::prepare_remote_snapshot_restore,
+            remote_connection::snapshot_restore::confirm_remote_snapshot_restore,
+            remote_connection::snapshot_restore::read_remote_snapshot_restore_operation,
+            remote_connection::snapshot_restore::clear_remote_snapshot_restore,
+            remote_connection::snapshot_create::prepare_remote_snapshot,
+            remote_connection::snapshot_create::confirm_remote_snapshot,
+            remote_connection::snapshot_create::read_remote_snapshot_operation,
+            remote_connection::snapshot_create::clear_remote_snapshot,
+            remote_connection::restore_recovery::read_remote_restore_history,
+            remote_connection::restore_recovery::recover_remote_restore,
+            remote_connection::snapshot_recovery::read_remote_snapshot_history,
+            remote_connection::snapshot_recovery::recover_remote_snapshot,
             ssh::ssh_host_support,
             ssh::inspect_ssh_host,
             ssh::confirm_ssh_host,

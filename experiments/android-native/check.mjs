@@ -4,11 +4,13 @@ import { promisify } from "node:util";
 import { mkdir, writeFile } from "node:fs/promises";
 import { join, resolve } from "node:path";
 import { randomUUID } from "node:crypto";
+import { createServer as tcpServer } from "node:net";
 const exec = promisify(execFile);
 const adb = process.env.VMANYWARE_ANDROID_ADB;
 const serial = "emulator-5580", port = "5047", app = "dev.vmanyware.client";
 const directory = resolve(process.argv.slice(2).find(arg => !arg.startsWith("--")) || ".lab/android-native");
 if (!adb || !process.argv.includes("--reset-owned-app")) throw new Error("Set VMANYWARE_ANDROID_ADB and opt in with --reset-owned-app; only the owned vmanyware-native-smoke AVD is allowed");
+if (process.argv.includes("--create") && (!process.argv.includes("--remote") || process.argv.includes("--ssh"))) throw new Error("--create requires --remote and already includes its SSH journey; omit --ssh");
 await mkdir(directory, { recursive: true });
 const command = async (...args) => (await exec(adb, ["-P", port, "-s", serial, ...args], { timeout: 15000, maxBuffer: 1024 * 1024 })).stdout.trim();
 const check = (value, message) => { if (!value) throw new Error(message); };
@@ -16,6 +18,33 @@ const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
 check((await command("emu", "avd", "name")).split(/\r?\n/)[0] === "vmanyware-native-smoke", "Wrong AVD; refusing app changes");
 check(await command("shell", "getprop", "ro.kernel.qemu") === "1", "Refusing a physical device");
 check(await command("shell", "getprop", "sys.boot_completed") === "1", "Owned emulator is not booted");
+// Boot completion does not establish a usable Android network. A bounded owned
+// TCP probe gates direct mode independently of application/TLS error messages.
+let networkReport;
+if (process.env.VMANYWARE_ANDROID_HTTPS_DIRECT === "1" || (process.argv.includes("--ssh") && process.env.VMANYWARE_ANDROID_SSH_ADB_TUNNEL !== "1")) {
+  console.log("Android native stage: direct host-alias TCP readiness");
+  check(await command("reverse", "--list") === "", "Direct mode requires no ADB reverse mappings");
+  const marker = `VMANYWARE_OWNED_TCP_${randomUUID()}`, connections = new Set();
+  const probe = tcpServer(connection => {
+    connections.add(connection); connection.on("close", () => connections.delete(connection));
+    connection.end(`${marker}\n`);
+  });
+  const started = Date.now(); let attempts = 0, ready = false;
+  try {
+    await new Promise((resolve, reject) => { probe.once("error", reject); probe.listen(0, "127.0.0.1", resolve); });
+    while (Date.now() - started < 30000) {
+      attempts++;
+      try { ready = await command("shell", "toybox", "nc", "-w", "2", "10.0.2.2", String(probe.address().port)) === marker; } catch { /* Route setup may still be in flight. */ }
+      if (ready) break;
+      await delay(250);
+    }
+    check(ready, "Owned host-alias TCP route did not become usable; no tunnel fallback was selected");
+    networkReport = {target:"10.0.2.2 -> owned loopback listener",attempts,elapsedMs:Date.now()-started,adbReverseMappings:0};
+  } finally {
+    for (const connection of connections) connection.destroy();
+    await new Promise(resolve => probe.close(resolve));
+  }
+}
 let socket, forward, next = 0;
 const waiting = new Map();
 async function detach() {
@@ -117,6 +146,13 @@ try {
   await launch();
   const reopened = await invoke("unlock_app_identity", {passphrase:phrase});
   check(reopened.ok && reopened.value.fingerprint === created.value.fingerprint && reopened.value.publicKey === created.value.publicKey, "Android identity did not survive process restart");
+  let remoteReport;
+  if (process.argv.includes("--remote")) {
+    console.log("Android native stage: authenticated HTTPS journey");
+    const { exerciseRemote } = await import("./remote.mjs");
+    remoteReport = await exerciseRemote({command,check,delay,evaluate,invoke,launch,detach,directory,creation:process.argv.includes("--create"),created:created.value,phrase,
+      nativeView: async () => JSON.parse((await (await fetch(`http://127.0.0.1:${forward}/json/list`)).json()).find(page => page.type === "page").description)});
+  }
   let sshReport;
   if (process.argv.includes("--ssh")) {
     console.log("Android native stage: SSH journey");
@@ -150,7 +186,7 @@ try {
   check(painted, "Android native surface remained blank despite a mounted DOM");
   const screenshot = await exec(adb,["-P",port,"-s",serial,"exec-out","screencap","-p"],{encoding:"buffer",maxBuffer:8*1024*1024,timeout:15000});
   await writeFile(join(directory,"launch.png"),screenshot.stdout);
-  const report = {platform:"android",release:await command("shell","getprop","ro.build.version.release"),api:await command("shell","getprop","ro.build.version.sdk"),abi:await command("shell","getprop","ro.product.cpu.abi"),ssh:sshReport,layout,fingerprint:created.value.fingerprint,checks:["actual native platform/SSH command dispatch", "encrypted identity create/wrong phrase/no replacement", "same identity after process restart", "invalid remote/SSH inputs rejected", "unowned SSH session rejected", "painted native surface, mobile layout and screenshot"],limitations:[sshReport ? "No authenticated remote control plane, VM creation, physical keyboard/device or background lifecycle journey in this smoke" : "No authenticated remote server, VM creation, SSH connection or keyboard/lifecycle journey in this smoke", "Emulator debug build, not physical-device or release evidence"]};
+  const report = {platform:"android",release:await command("shell","getprop","ro.build.version.release"),api:await command("shell","getprop","ro.build.version.sdk"),abi:await command("shell","getprop","ro.product.cpu.abi"),network:networkReport,ssh:sshReport,remote:remoteReport,layout,fingerprint:created.value.fingerprint,checks:["actual native platform/SSH command dispatch", "encrypted identity create/wrong phrase/no replacement", "same identity after process restart", "invalid remote/SSH inputs rejected", "unowned SSH session rejected", "painted native surface, mobile layout and screenshot"],limitations:[remoteReport ? "No real VM creation, direct deployed networking, physical device or full background lifecycle journey" : sshReport ? "No authenticated remote control plane, VM creation, physical keyboard/device or background lifecycle journey in this smoke" : "No authenticated remote server, VM creation, SSH connection or keyboard/lifecycle journey in this smoke", "Emulator debug build, not physical-device or release evidence"]};
   await writeFile(join(directory,"report.json"),JSON.stringify(report,null,2)+"\n");
   console.log(`Android native smoke passed: ${report.checks.join(", ")}`);
 } finally {

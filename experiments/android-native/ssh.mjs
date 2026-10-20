@@ -40,22 +40,29 @@ export async function exerciseSsh({created,phrase,command,check,delay,evaluate,i
     while (!await condition()) { check(Date.now()<deadline, `Android SSH stage timed out: ${label}`); await delay(100); }
   }
   const has = value => evaluate(`document.body.textContent.includes(${JSON.stringify(value)})`);
-  const click = label => evaluate(`(()=>{const button=[...document.querySelectorAll('button')].find(button=>button.textContent===${JSON.stringify(label)});if(!button||button.disabled)throw new Error('Button unavailable');button.click()})()`);
+  const click = label => evaluate(`(()=>{const button=[...document.getElementById('ssh-trust-heading').closest('section').querySelectorAll('button')].find(button=>button.textContent===${JSON.stringify(label)});if(!button||button.disabled)throw new Error('Button unavailable');button.click()})()`);
   async function input(id, value) {
     await evaluate(`(()=>{const input=document.getElementById(${JSON.stringify(id)});Object.getOwnPropertyDescriptor(HTMLInputElement.prototype,'value').set.call(input,${JSON.stringify(value)});input.dispatchEvent(new Event('input',{bubbles:true}))})()`);
     await delay(50);
   }
   const terminalText = () => evaluate("[...document.querySelectorAll('.xterm-rows > div')].map(row=>row.textContent).join('\\n')");
-  async function shellLine(text) {
+  async function shellLine(text, beforeEnter) {
     // Android's input command interprets %s as spaces. The caller only uses
     // fixed disposable shell commands; quote for Android's shell separately.
     await command("shell","input","text",quote(text.replaceAll(" ","%s")));
+    if (beforeEnter) await beforeEnter();
     await command("shell","input","keyevent","KEYCODE_ENTER");
   }
-  let metadata;
+  let metadata, reversePort;
+  const adbTunnel = process.env.VMANYWARE_ANDROID_SSH_ADB_TUNNEL === "1";
   try {
     child.stdin.write(JSON.stringify({publicKey:created.publicKey})+"\n");
     metadata=await next(); check(metadata.ready && metadata.host==="10.0.2.2", "Unexpected SSH fixture target");
+    if (adbTunnel) {
+      reversePort = `tcp:${metadata.port}`;
+      await command("reverse", "--no-rebind", reversePort, reversePort);
+      metadata.host = "127.0.0.1";
+    }
     async function inspect() {
       await input("ssh-host",metadata.host); await input("ssh-port",String(metadata.port));
       await click("Inspect host key");
@@ -103,17 +110,30 @@ export async function exerciseSsh({created,phrase,command,check,delay,evaluate,i
     await wait(async()=> /mInputShown=true|mIsInputViewShown=true/.test(await command("shell","dumpsys","input_method")),"visible Android IME");
     await delay(350);
     check(await evaluate("document.activeElement?.matches('.mobile-terminal-controls input')"),"IME appearance moved focus away from the terminal");
+    check(await evaluate("(()=>{const buttons=[...document.querySelectorAll('.mobile-terminal-controls .connection-fields > button')];return buttons.length===5 && Math.abs(buttons[0].getBoundingClientRect().top-buttons[1].getBoundingClientRect().top)<2 && buttons.every(button=>button.getBoundingClientRect().height>=44)})()"),"Mobile special keys are stacked or below touch-target size");
     await shellLine('echo ANDROID_"SSH_OK"');
     await wait(async()=> (await terminalText()).includes("ANDROID_SSH_OK"),"Android key events through PTY to real shell");
+    let backgroundReport;
+    if (process.env.VMANYWARE_ANDROID_BACKGROUND === "1") {
+      const {exerciseBackground}=await import("./mobile.mjs");
+      backgroundReport=await exerciseBackground({command,check,delay,evaluate,request,terminalText,shellLine});
+    }
     const initial=await request("state");
     check(initial.authAttempts===2 && initial.channels===1 && initial.inputBytes>0,"Terminal did not use one authenticated channel");
     await command("shell","input","keyevent","KEYCODE_BACK");
     await command("shell","settings","put","system","accelerometer_rotation","0");
     await command("shell","settings","put","system","user_rotation","1");
     await wait(async()=> (await request("state")).sizes.some(size=>!initial.sizes.some(old=>old[0]===size[0] && old[1]===size[1])),"rotation-driven native PTY resize");
-    const rotatedSize = (await request("state")).sizes.at(-1);
     await evaluate("document.querySelector('.mobile-terminal-controls input').focus()");
-    await shellLine("stty size");
+    let resizeCount = -1, stableSince = Date.now(), rotatedSize;
+    await shellLine("stty size", async()=> {
+      await wait(async()=> {
+      const current = await request("state");
+      if (current.sizes.length !== resizeCount) { resizeCount = current.sizes.length; stableSince = Date.now(); }
+      rotatedSize = current.sizes.at(-1);
+      return rotatedSize && Date.now() - stableSince >= 750;
+      }, "rotation and keyboard resize settled");
+    });
     await wait(async()=> (await terminalText()).includes(`${rotatedSize[1]} ${rotatedSize[0]}`),"actual OS PTY size after rotation");
     await command("shell","settings","put","system","user_rotation","0");
     await delay(500);
@@ -131,6 +151,11 @@ export async function exerciseSsh({created,phrase,command,check,delay,evaluate,i
     await delay(250);
     const capture=await exec(process.env.VMANYWARE_ANDROID_ADB,["-P","5047","-s","emulator-5580","exec-out","screencap","-p"],{encoding:"buffer",maxBuffer:8*1024*1024,timeout:15000});
     await writeFile(join(directory,"ssh-terminal.png"),capture.stdout);
+    let keyboardReport;
+    if (process.env.VMANYWARE_ANDROID_SOFTWARE_KEYS === "1") {
+      const {exerciseKeyboard}=await import("./mobile.mjs");
+      keyboardReport=await exerciseKeyboard({command,check,delay,evaluate,request,terminalText});
+    }
     await click("Disconnect");
     await wait(async()=> {const value=await request("state");return value.connections===0 && value.shellsClosed;},"explicit disconnect socket/shell cleanup");
     await open();
@@ -144,7 +169,7 @@ export async function exerciseSsh({created,phrase,command,check,delay,evaluate,i
     const changed=await invoke("list_app_ssh_identity",{host:metadata.host,port:metadata.port,username:"fixture",passphrase:phrase});
     check(!changed.ok && changed.error.includes("host verification"),"Changed host allowed native identity selection");
     state=await request("state");check(state.authAttempts===before.authAttempts && state.authAttempts===3,"Changed host attempted another authentication");
-    const report={platform:"android",target:"generated localhost SSH fixture via emulator host alias",authAttempts:state.authAttempts,channels:state.channels,ptys:state.ptys,sizes:state.sizes,inputBytes:state.inputBytes,connections:state.connections,shellsClosed:state.shellsClosed,checks:["independent fingerprint confirmation and fresh host verification", "wrong passphrase and untrusted/changed host refusal", "authentication-only check without channels", "Android IME input field -> Tauri -> real OS shell", "rotation-driven PTY resize and actual stty size", "foreground Ctrl-C and exit status 130", "disconnect/reconnect and process-death cleanup", "persisted trust after process restart"],limitations:["Generated host fixture, not a real guest or control-plane create journey", "ADB key-event injection is not full software-IME/composition or physical-device/iOS proof"]};
+    const report={platform:"android",keyboard:keyboardReport,background:backgroundReport,target:adbTunnel ? "generated localhost SSH fixture via explicit owned ADB reverse tunnel" : "generated localhost SSH fixture via emulator host alias",authAttempts:state.authAttempts,channels:state.channels,ptys:state.ptys,sizes:state.sizes,inputBytes:state.inputBytes,connections:state.connections,shellsClosed:state.shellsClosed,checks:["independent fingerprint confirmation and fresh host verification", "wrong passphrase and untrusted/changed host refusal", "authentication-only check without channels", "Android IME input field -> Tauri -> real OS shell", "rotation-driven PTY resize and actual stty size", "foreground Ctrl-C and exit status 130", "disconnect/reconnect and process-death cleanup", "persisted trust after process restart"],limitations:[...(adbTunnel ? ["ADB tunnel bypasses emulator host-alias networking; direct remote reachability is unproven"] : []), "Generated host fixture, not a real guest or control-plane create journey", "ADB key-event injection is not full software-IME/composition or physical-device/iOS proof"]};
     await writeFile(join(directory,"ssh-report.json"),JSON.stringify(report,null,2)+"\n");
     console.log(`Android SSH/PTY passed: ${report.checks.join(", ")}`);
     return report;
@@ -154,6 +179,7 @@ export async function exerciseSsh({created,phrase,command,check,delay,evaluate,i
     try {
       console.error("Owned terminal diagnostics:", JSON.stringify({
         terminal:await terminalText(),
+        status:await evaluate("document.getElementById('ssh-trust-heading')?.closest('section')?.innerText?.slice(0,3000) || 'Host inspection section unavailable'"),
         focus:await evaluate("({tag:document.activeElement?.tagName,id:document.activeElement?.id,className:document.activeElement?.className,viewport:[innerWidth,innerHeight,visualViewport?.height]})"),
         fixture:await request("state")
       }));
@@ -166,6 +192,7 @@ export async function exerciseSsh({created,phrase,command,check,delay,evaluate,i
       await Promise.race([exited,new Promise(resolve=>{timer=setTimeout(()=>{try{process.kill(-child.pid,"SIGKILL");}catch{}resolve();},3000);})]);
       clearTimeout(timer);
     }
+    if (reversePort) await command("reverse", "--remove", reversePort).catch(()=>{});
     // Restore only the dedicated emulator's rotation/input fixture configuration.
     await command("shell","settings","put","system","user_rotation","0").catch(()=>{});
     await command("shell","settings","put","secure","show_ime_with_hard_keyboard","0").catch(()=>{});

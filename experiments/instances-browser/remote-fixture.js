@@ -2,6 +2,7 @@
 (() => {
   const token = "fixture-only-access-token-0123456789abcdef";
   const calls = [];
+  const publicCa = "-----BEGIN CERTIFICATE-----\npublic-browser-fixture\n-----END CERTIFICATE-----";
   const appPublicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
   const fixturePassphrase = "disposable identity phrase 42";
   let unlockReads = 0;
@@ -9,10 +10,22 @@
   let reads = 0, releaseImages, rejectEnvironments;
   let submittedKey, createAttempts = 0, createReads = 0, releaseCreate;
   let historyReads = 0, recoveryReads = 0, releaseRecovery;
+  let trustedSsh = false;
   window.isTauri = true;
   window.__TAURI_INTERNALS__ = { invoke: async (command, args = {}) => {
     calls.push({ command, args });
-    if (command === "ssh_host_support") return false;
+    if (command === "ssh_host_support") return true;
+    if (command === "ssh_agent_support") return false;
+    if (command === "cancel_ssh_host") return;
+    if (command === "inspect_ssh_host") {
+      check(args.host === "192.0.2.42" && args.port === 22, "Handoff changed the ready target");
+      return {host:args.host,port:22,algorithm:"ssh-ed25519",fingerprint:"SHA256:handoff-fixture",status:trustedSsh ? "trusted" : "unknown",challengeId:trustedSsh ? null : "handoff-challenge",expiresInSeconds:trustedSsh ? 0 : 120};
+    }
+    if (command === "confirm_ssh_host") {
+      check(args.challengeId === "handoff-challenge" && args.fingerprint === "SHA256:handoff-fixture", "Wrong handoff trust confirmation");
+      trustedSsh = true;
+      return {host:"192.0.2.42",port:22,fingerprint:args.fingerprint};
+    }
     if (command === "identity_support") return true;
     if (command === "create_app_identity" || command === "unlock_app_identity") {
       check(args.passphrase === fixturePassphrase, "Wrong fixture passphrase");
@@ -27,7 +40,7 @@
       if (reads === 1) return [];
       if (reads === 4) return new Promise((resolve, reject) => { if (image) releaseImages = resolve; else rejectEnvironments = reject; });
       if (image && reads === 3) throw "Catalog unavailable";
-      return image ? [{image:"remote-debian",node:"fixture-node",templateVmid:9000,templateVersion:"v1",sourceDiskGiB:8,guestUser:"debian"}] : [{id:"a".repeat(32),definitionName:"remote-lab",providerReference:{node:"fixture-node",vmid:202},status:"registered"}];
+      return image ? [{image:"remote-debian",node:"fixture-node",templateVmid:9000,templateVersion:"v1",sourceDiskGiB:8,guestUser:"debian"}] : [{id:"a".repeat(32),definitionName:"remote-lab",providerReference:{node:"fixture-node",vmid:202},status:"registered"},{id:"9".repeat(32),definitionName:"retired-remote-lab",providerReference:{node:"fixture-node",vmid:203},status:"deleted"}];
     }
     if (command === "prepare_remote_create") {
       check(args.connectionId === 1, "Wrong creation connection");
@@ -46,7 +59,8 @@
     }
     if (command === "read_remote_create") {
       check(args.connectionId === 1 && args.requestKey === submittedKey, "Wrong operation read scope");
-      if (++createReads === 2) return new Promise(resolve => { releaseCreate = resolve; });
+      if (++createReads === 1) return {id:"d".repeat(32),kind:"vm_provision",status:"failed",result:null};
+      if (createReads === 3) return new Promise(resolve => { releaseCreate = resolve; });
       return {id:"d".repeat(32),kind:"vm_provision",status:"succeeded",result:{guestReady:true,guest:{ipv4:"192.0.2.42"}}};
     }
     if (command === "read_remote_creations") {
@@ -79,16 +93,19 @@
     check(!document.getElementById("port"), "Local port visible in remote mode");
     check(!button("Load registered instances"), "Local VM controls visible in remote mode");
     input("remote-endpoint", "https://fixture.example.test"); input("remote-token", token);
-    await wait(() => document.getElementById("remote-token").value === token);
+    input("remote-ca", publicCa);
+    await wait(() => document.getElementById("remote-token").value === token && document.getElementById("remote-ca").value === publicCa);
     document.querySelector(".remote-connection form").requestSubmit();
     await wait(() => complete);
     check(document.getElementById("remote-token").value === "", "Token remained in the field during connection");
+    check(calls.find(call=>call.command==="connect_remote").args.caPem===publicCa,"Explicit connection CA was not forwarded");
     check(!JSON.stringify(Object.entries(localStorage)).includes(token), "Token persisted in localStorage");
     complete({ connectionId: 1, endpoint: "https://fixture.example.test/" });
     await wait(() => text().includes("Connected to https://fixture.example.test/"));
     check(document.getElementById("remote-endpoint").disabled, "Connected address remained editable");
+    check(document.getElementById("remote-ca").disabled, "Connected CA remained editable");
     await wait(() => document.getElementById("identity-passphrase"));
-    document.querySelector(".app-identity").open = true;
+    document.querySelector("details.app-identity").open = true;
     input("identity-passphrase", fixturePassphrase); input("identity-confirmation", "different phrase for fixture");
     await new Promise(resolve => setTimeout(resolve, 20));
     check(button("Create encrypted SSH identity").disabled, "Mismatched passphrases allowed creation");
@@ -121,20 +138,44 @@
     check(text().includes(submittedKey), "Request key lost after submission error");
     button("Retry same confirmed request").click();
     await wait(() => text().includes("Creation: queued") && !button("Refresh creation status").disabled);
+    check(!button("Prepare SSH connection") && !document.querySelector('.remote-ssh-target'), "Queued creation offered SSH handoff");
+    button("Refresh creation status").click();
+    await wait(() => text().includes("Creation: failed") && !button("Refresh creation status").disabled);
+    check(!button("Prepare SSH connection") && !document.querySelector('.remote-ssh-target'), "Failed creation offered SSH handoff");
     button("Refresh creation status").click();
     await wait(() => text().includes("Guest initialized at 192.0.2.42"));
     check(text().includes("SSH access and host identity still need verification"), "Guest readiness was confused with SSH proof");
+    check(!document.querySelector('.remote-ssh-target'), "Readiness automatically selected an SSH endpoint");
+    button("Prepare SSH connection").click();
+    await wait(() => document.getElementById("ssh-host")?.value === "192.0.2.42");
+    check(document.getElementById("ssh-port").value === "22" && text().includes("debian@192.0.2.42"), "Ready target/user were not shown for review");
+    check(!calls.some(call=>call.command==="inspect_ssh_host") && !document.getElementById("ssh-username"), "Handoff automatically inspected or enabled authentication");
+    await wait(() => !button("Inspect host key").disabled); button("Inspect host key").click();
+    await wait(() => button("Trust this host key"));
+    check(button("Trust this host key").disabled && !document.getElementById("ssh-username"), "Unverified host allowed authentication");
+    document.getElementById("ssh-trust-heading").closest("section").querySelector('input[type="checkbox"]').click();
+    await wait(() => !button("Trust this host key").disabled);button("Trust this host key").click();
+    await wait(() => text().includes("Saved host-key trust"));button("Inspect host key").click();
+    await wait(() => document.getElementById("ssh-username")?.value === "debian");
+    const inspections = calls.filter(call=>call.command==="inspect_ssh_host").length;
+    button("Prepare SSH connection").click();
+    await wait(() => !document.getElementById("ssh-username"));
+    check(calls.filter(call=>call.command==="inspect_ssh_host").length===inspections, "Reselecting target inspected automatically");
+
     button("Refresh creation status").click(); await wait(() => releaseCreate);
     button("Load remote workspace").click();
     await wait(() => text().includes("No templates configured") && text().includes("No environments registered"));
     button("Load remote workspace").click();
     await wait(() => text().includes("remote-debian") && text().includes("remote-lab"));
+    check(text().includes("retired-remote-lab") && text().includes("deleted · definition and history retained"), "Remote deleted identity missing");
+    check(!button("Prepare snapshot for VM 203"), "Deleted remote identity exposed snapshot controls");
     check(text().includes("8 GiB") && text().includes("live state not checked"), "Remote details or registration qualification missing");
     button("Load remote workspace").click();
     await wait(() => text().includes("Catalog unavailable") && button("Load remote workspace"));
     check(text().includes("remote-lab") && !text().includes("remote-debian"), "Partial failure lost successful results or retained failed results");
     button("Load remote workspace").click(); await wait(() => releaseImages && rejectEnvironments);
     button("Disconnect").click(); await wait(() => !text().includes("Connected to https://fixture.example.test/"));
+    check(!document.querySelector(".remote-ssh-target"), "Disconnect retained an SSH target");
     releaseImages([{image:"STALE_REMOTE_IMAGE"}]); rejectEnvironments("STALE_REMOTE_FAILURE");
     releaseCreate({id:"d".repeat(32),status:"succeeded",result:{guestReady:true,guest:{ipv4:"STALE_REMOTE_CREATE"}}});
     await new Promise(resolve => setTimeout(resolve, 50));
@@ -162,6 +203,12 @@
     await wait(() => text().includes("Recovered creation: succeeded"));
     check(text().includes("recovered-lab") && text().includes("recovered-node") && text().includes("VM 202"), "Recovered target association missing");
     check(text().includes("This is saved evidence; current power and SSH access still need verification"), "Historical proof was presented as current state");
+    button("Prepare SSH connection").click();
+    await wait(() => document.getElementById("ssh-host")?.value === "192.0.2.42");
+    await wait(() => !button("Inspect host key").disabled);button("Inspect host key").click();
+    await wait(() => document.getElementById("ssh-username"));
+    check(document.getElementById("ssh-username").value === "", "Recovery guessed or restored a guest username");
+
     check(calls.filter(call => call.command === "confirm_remote_create").length === 2, "Recovery submitted another creation");
     button("Refresh recovered creation").click(); await wait(() => releaseRecovery);
     mode("local"); await wait(() => document.getElementById("port"));
@@ -169,6 +216,6 @@
     await new Promise(resolve => setTimeout(resolve, 50));
     check(!text().includes("STALE_RECOVERY"), "Recovery result leaked across connection modes");
     check(calls.filter(call => call.command === "connect_remote").length === 3, "Unexpected connection replay");
-    return { ok: true, checks: ["remote form", "local controls isolated", "token cleared/no storage", "connect/disconnect", "remote lists/empty states", "partial failure", "create confirmation/same-key retry/status", "read-only creation recovery after remount", "application identity create/unlock/public-key flow", "stale workspace/create/recovery/connect responses suppressed"] };
+    return { ok: true, checks: ["remote form", "local controls isolated", "token cleared/no storage", "connect/disconnect", "remote lists/empty states", "partial failure", "create confirmation/same-key retry/status", "read-only creation recovery after remount", "explicit ready-target SSH handoff with host-trust gate and account prefill", "reselection/disconnect clears SSH state", "application identity create/unlock/public-key flow", "stale workspace/create/recovery/connect responses suppressed"] };
   })().catch(error => ({ ok: false, error: error.message })).then(report => fetch("/__instance_fixture/result", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(report) }));
 })();

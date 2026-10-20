@@ -91,10 +91,10 @@ export function Instances({ port, native }: { port: string; native: boolean }) {
       <strong>{instance.definitionName}</strong> · {instance.providerReference.node} / VM {instance.providerReference.vmid}
       <p>Definition revision {instance.definitionRevision} · {instance.status}</p>
       <p className="operation-id">{instance.id}</p>
-      <button disabled={!native || !mounted || busy} onClick={() => observe(instance)}>Observe VM {instance.providerReference.vmid}</button>
+      {instance.status === "deleted" ? <p>Deleted · definition and history retained.</p> : <><button disabled={!native || !mounted || busy} onClick={() => observe(instance)}>Observe VM {instance.providerReference.vmid}</button>
       <button disabled={!native || !mounted || busy} onClick={() => checkLifecycle(instance)}>Check lifecycle for VM {instance.providerReference.vmid}</button>
       <LifecycleActions key={`${instance.id}.${instance.definitionHash}`} port={Number(port)} instance={instance}
-        report={preflight?.instanceId === instance.id ? preflight : null} disabled={!native || !mounted || busy} invalidate={() => setPreflight(null)} />
+        report={preflight?.instanceId === instance.id ? preflight : null} disabled={!native || !mounted || busy} invalidate={() => setPreflight(null)} /></>}
     </li>)}</ul>}
     {operation && <p role="status">Instance observation: {operation.status} · <span className="operation-id">{operation.id}</span></p>}
     {observation && <div role="status">

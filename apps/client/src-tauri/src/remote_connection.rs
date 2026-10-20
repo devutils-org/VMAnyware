@@ -1,5 +1,16 @@
 //! In-memory HTTPS connection; no token persistence or generic request passthrough.
+#[path = "remote_connection/create.rs"]
 pub(crate) mod create;
+#[path = "remote_connection/restore_recovery.rs"]
+pub(crate) mod restore_recovery;
+#[path = "remote_connection/snapshot_create.rs"]
+pub(crate) mod snapshot_create;
+#[path = "remote_connection/snapshot_recovery.rs"]
+pub(crate) mod snapshot_recovery;
+#[path = "remote_connection/snapshot_restore.rs"]
+pub(crate) mod snapshot_restore;
+#[path = "remote_connection/snapshots.rs"]
+pub(crate) mod snapshots;
 use reqwest::{
     header::{HeaderValue, AUTHORIZATION},
     redirect::Policy,
@@ -8,6 +19,23 @@ use reqwest::{
 use serde::{Deserialize, Serialize};
 use std::{sync::Mutex, time::Duration};
 const INVALID:&str="Enter an HTTPS server address without credentials, path, query or fragment, and a valid access token.";
+fn connection_ca(pem: Option<&str>) -> Result<Option<reqwest::Certificate>, String> {
+    let Some(pem) = pem.map(str::trim).filter(|pem| !pem.is_empty()) else {
+        return Ok(None);
+    };
+    let invalid = "Enter one trusted public CA certificate in PEM format (maximum 16 KiB).";
+    if pem.len() > 16 * 1024
+        || !pem.starts_with("-----BEGIN CERTIFICATE-----")
+        || !pem.ends_with("-----END CERTIFICATE-----")
+        || pem.matches("-----BEGIN ").count() != 1
+        || pem.contains("PRIVATE KEY")
+    {
+        return Err(invalid.into());
+    }
+    reqwest::Certificate::from_pem(pem.as_bytes())
+        .map(Some)
+        .map_err(|_| invalid.into())
+}
 #[derive(Clone)]
 struct Profile {
     endpoint: Url,
@@ -46,7 +74,10 @@ impl Profile {
             .retry(reqwest::retry::never())
             .timeout(Duration::from_secs(15));
         if let Some(ca) = ca {
-            builder = builder.add_root_certificate(ca);
+            // Android cannot merge an extra root into its platform verifier.
+            // An explicit private CA scopes this profile to that root only;
+            // WebPKI still verifies certificate signatures, dates and hostname.
+            builder = builder.tls_certs_only([ca]);
         }
         let client = builder
             .build()
@@ -57,8 +88,8 @@ impl Profile {
             client,
         })
     }
-    async fn get<T: serde::de::DeserializeOwned>(&self, path: ReadPath) -> Result<T, String> {
-        let url = self.endpoint.join(path.path()).map_err(|_| INVALID)?;
+    async fn get<T: serde::de::DeserializeOwned>(&self, path: ReadPath<'_>) -> Result<T, String> {
+        let url = self.endpoint.join(&path.path()).map_err(|_| INVALID)?;
         let mut response = self
             .client
             .get(url)
@@ -77,6 +108,7 @@ impl Profile {
                 ReadPath::Images => {
                     "Cannot load templates. Check the server catalog and access configuration."
                 }
+                ReadPath::Snapshots(_) => "Cannot load snapshots. Check target, provider permissions and server availability.",
                 ReadPath::Environments => {
                     "Cannot load environments. Check server availability and access."
                 }
@@ -119,22 +151,25 @@ impl Profile {
     }
 }
 #[derive(Clone, Copy)]
-enum ReadPath {
+enum ReadPath<'a> {
     Health,
     Images,
     Environments,
+    Snapshots(&'a str),
 }
-impl ReadPath {
-    fn path(self) -> &'static str {
+impl ReadPath<'_> {
+    fn path(self) -> String {
         match self {
-            Self::Health => "api/v1/health",
-            Self::Images => "api/v1/images",
-            Self::Environments => "api/v1/environments",
+            Self::Health => "api/v1/health".into(),
+            Self::Images => "api/v1/images".into(),
+            Self::Environments => "api/v1/environments".into(),
+            Self::Snapshots(id) => format!("api/v1/environments/{id}/snapshots"),
         }
     }
     fn limit(self) -> usize {
         match self {
             Self::Health => 1024,
+            Self::Snapshots(_) => 2 * 1024 * 1024,
             _ => 256 * 1024,
         }
     }
@@ -169,6 +204,7 @@ pub struct RemoteEnvironment {
 #[serde(rename_all = "snake_case")]
 enum RemoteEnvironmentStatus {
     Registered,
+    Deleted,
 }
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -196,6 +232,8 @@ struct ConnectionState {
     generation: u64,
     profile: Option<Profile>,
     prepared: Option<create::Prepared>,
+    snapshot_creation: snapshot_create::CreationState,
+    snapshot_restore: snapshot_restore::RestoreState,
 }
 #[derive(Default)]
 pub struct RemoteConnection(Mutex<ConnectionState>);
@@ -273,6 +311,8 @@ impl RemoteConnection {
             .ok_or("Connection state unavailable.")?;
         state.profile = None;
         state.prepared = None;
+        state.snapshot_creation = snapshot_create::CreationState::default();
+        state.snapshot_restore = snapshot_restore::RestoreState::default();
         Ok(state.generation)
     }
     fn complete(&self, generation: u64, profile: Profile) -> Result<ConnectionStatus, String> {
@@ -293,9 +333,10 @@ pub async fn connect_remote(
     state: tauri::State<'_, RemoteConnection>,
     endpoint: String,
     token: String,
+    ca_pem: Option<String>,
 ) -> Result<ConnectionStatus, String> {
     let generation = state.begin()?;
-    let profile = Profile::new(&endpoint, &token, None)?;
+    let profile = Profile::new(&endpoint, &token, connection_ca(ca_pem.as_deref())?)?;
     drop(token);
     profile.check().await?;
     state.complete(generation, profile)
@@ -418,6 +459,30 @@ mod tests {
         });
         (endpoint, ca, task)
     }
+    #[test]
+    fn connection_ca_requires_one_bounded_public_certificate() {
+        assert!(connection_ca(None).unwrap().is_none());
+        assert!(connection_ca(Some("  ")).unwrap().is_none());
+        let certificate = rcgen::generate_simple_self_signed(vec!["localhost".into()])
+            .unwrap()
+            .cert
+            .pem();
+        assert!(connection_ca(Some(&certificate)).unwrap().is_some());
+        for invalid in [
+            "not a certificate".to_owned(),
+            "-----BEGIN PRIVATE KEY-----\nfixture\n-----END PRIVATE KEY-----".to_owned(),
+            format!("{certificate}{certificate}"),
+            format!(
+                "-----BEGIN CERTIFICATE-----{}-----END CERTIFICATE-----",
+                "A".repeat(16 * 1024)
+            ),
+        ] {
+            let error = connection_ca(Some(&invalid)).unwrap_err();
+            assert!(!error.contains(&invalid));
+            assert!(error.contains("public CA"));
+        }
+    }
+
     #[tokio::test]
     async fn verified_https_sends_token_only_to_fixed_health_path_and_keeps_it_out_of_status() {
         let (endpoint, ca, task) = fixture(
@@ -518,6 +583,11 @@ mod tests {
         for (images, body, path) in [
             (true, catalog_body(), "/api/v1/images"),
             (false, environments_body(), "/api/v1/environments"),
+            (
+                false,
+                environments_body().replace("registered", "deleted"),
+                "/api/v1/environments",
+            ),
         ] {
             let (endpoint, ca, task) = fixture("200 OK", &body, AUTH).await;
             let manager = RemoteConnection::default();

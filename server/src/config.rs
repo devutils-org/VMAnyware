@@ -6,6 +6,9 @@ pub struct Config {
     port: u16,
     lifecycle_enabled: bool,
     provisioning_enabled: bool,
+    snapshots_enabled: bool,
+    restores_enabled: bool,
+    deletions_enabled: bool,
 }
 
 impl Config {
@@ -22,6 +25,9 @@ impl Config {
             port,
             lifecycle_enabled: false,
             provisioning_enabled: false,
+            snapshots_enabled: false,
+            restores_enabled: false,
+            deletions_enabled: false,
         })
     }
 
@@ -43,6 +49,42 @@ impl Config {
         };
         Ok(self)
     }
+    pub fn with_snapshots(mut self, value: Option<&str>) -> Result<Self, InvalidSnapshots> {
+        self.snapshots_enabled = match value {
+            None | Some("false") => false,
+            Some("true") => true,
+            _ => return Err(InvalidSnapshots),
+        };
+        Ok(self)
+    }
+    pub fn snapshots_enabled(self) -> bool {
+        self.snapshots_enabled
+    }
+
+    pub fn with_restores(mut self, value: Option<&str>) -> Result<Self, InvalidRestores> {
+        self.restores_enabled = match value {
+            None | Some("false") => false,
+            Some("true") => true,
+            _ => return Err(InvalidRestores),
+        };
+        Ok(self)
+    }
+    pub fn restores_enabled(self) -> bool {
+        self.restores_enabled
+    }
+
+    pub fn with_deletions(mut self, value: Option<&str>) -> Result<Self, InvalidDeletions> {
+        self.deletions_enabled = match value {
+            None | Some("false") => false,
+            Some("true") => true,
+            _ => return Err(InvalidDeletions),
+        };
+        Ok(self)
+    }
+    pub fn deletions_enabled(self) -> bool {
+        self.deletions_enabled
+    }
+
     pub fn provisioning_enabled(self) -> bool {
         self.provisioning_enabled
     }
@@ -85,9 +127,123 @@ impl fmt::Display for InvalidProvisioning {
 }
 impl std::error::Error for InvalidProvisioning {}
 
+#[derive(Debug)]
+pub struct InvalidSnapshots;
+impl fmt::Display for InvalidSnapshots {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("VMANYWARE_SNAPSHOTS_ENABLED must be true or false")
+    }
+}
+impl std::error::Error for InvalidSnapshots {}
+
+#[derive(Debug)]
+pub struct InvalidRestores;
+impl fmt::Display for InvalidRestores {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("VMANYWARE_RESTORES_ENABLED must be true or false")
+    }
+}
+impl std::error::Error for InvalidRestores {}
+
+#[derive(Debug)]
+pub struct InvalidDeletions;
+impl fmt::Display for InvalidDeletions {
+    fn fmt(&self, f: &mut fmt::Formatter<'_>) -> fmt::Result {
+        f.write_str("VMANYWARE_DELETIONS_ENABLED must be true or false")
+    }
+}
+impl std::error::Error for InvalidDeletions {}
+
 #[cfg(test)]
 mod tests {
     use super::Config;
+
+    #[test]
+    fn deletions_require_independent_exact_opt_in_without_echoing_input() {
+        let config = Config::from_port(None)
+            .unwrap()
+            .with_lifecycle(Some("true"))
+            .unwrap()
+            .with_provisioning(Some("true"))
+            .unwrap()
+            .with_snapshots(Some("true"))
+            .unwrap()
+            .with_restores(Some("true"))
+            .unwrap();
+        assert!(!config.deletions_enabled());
+        for (value, enabled) in [(None, false), (Some("false"), false), (Some("true"), true)] {
+            assert_eq!(
+                config.with_deletions(value).unwrap().deletions_enabled(),
+                enabled
+            );
+        }
+        let only = Config::from_port(None)
+            .unwrap()
+            .with_deletions(Some("true"))
+            .unwrap();
+        assert!(
+            !only.lifecycle_enabled()
+                && !only.provisioning_enabled()
+                && !only.snapshots_enabled()
+                && !only.restores_enabled()
+        );
+        for value in ["", "1", "TRUE", " true", "false\n", "private-input"] {
+            assert_eq!(
+                config.with_deletions(Some(value)).unwrap_err().to_string(),
+                "VMANYWARE_DELETIONS_ENABLED must be true or false"
+            );
+        }
+    }
+    #[test]
+    fn restores_require_independent_exact_opt_in_without_echoing_input() {
+        let config = Config::from_port(None)
+            .unwrap()
+            .with_lifecycle(Some("true"))
+            .unwrap()
+            .with_provisioning(Some("true"))
+            .unwrap()
+            .with_snapshots(Some("true"))
+            .unwrap();
+        assert!(!config.restores_enabled());
+        for (value, enabled) in [(None, false), (Some("false"), false), (Some("true"), true)] {
+            assert_eq!(
+                config.with_restores(value).unwrap().restores_enabled(),
+                enabled
+            );
+        }
+        let restore_only = Config::from_port(None)
+            .unwrap()
+            .with_restores(Some("true"))
+            .unwrap();
+        assert!(
+            !restore_only.snapshots_enabled()
+                && !restore_only.lifecycle_enabled()
+                && !restore_only.provisioning_enabled()
+        );
+        for value in ["", "1", "TRUE", " true", "false\n", "private-input"] {
+            assert_eq!(
+                config.with_restores(Some(value)).unwrap_err().to_string(),
+                "VMANYWARE_RESTORES_ENABLED must be true or false"
+            );
+        }
+    }
+
+    #[test]
+    fn snapshots_require_independent_exact_opt_in_without_echoing_input() {
+        let config = Config::from_port(None).unwrap();
+        assert!(!config.snapshots_enabled());
+        for (value, enabled) in [(None, false), (Some("false"), false), (Some("true"), true)] {
+            let result = config.with_snapshots(value).unwrap();
+            assert_eq!(result.snapshots_enabled(), enabled);
+            assert!(!result.provisioning_enabled() && !result.lifecycle_enabled());
+        }
+        for value in ["", "1", "TRUE", " true", "private-input"] {
+            assert_eq!(
+                config.with_snapshots(Some(value)).unwrap_err().to_string(),
+                "VMANYWARE_SNAPSHOTS_ENABLED must be true or false"
+            );
+        }
+    }
 
     #[test]
     fn default_and_custom_ports_always_bind_loopback() {

@@ -80,6 +80,53 @@
     await unlock(); await choose(); button("Open terminal").click();
     await wait(() => document.querySelector(".ssh-terminal .xterm-helper-textarea"));
     check(document.getElementById("ssh-key-passphrase").value === "", "Terminal retained passphrase field");
+    if (window.__androidInputFixture) {
+      await wait(() => document.querySelector(".mobile-terminal-controls input"));
+      const field = document.querySelector(".mobile-terminal-controls input");
+      check(field.type === "password", "Mobile input could reveal remotely hidden text");
+      let offset = calls.length;
+      const bytes = () => calls.slice(offset).filter(call => call.command === "write_ssh_session").flatMap(call => call.args.bytes);
+      const expected = value => [...new TextEncoder().encode(value)];
+      async function edit(value) {
+        Object.getOwnPropertyDescriptor(HTMLInputElement.prototype, "value").set.call(field, value);
+        field.dispatchEvent(new Event("input", {bubbles:true}));
+        await new Promise(resolve => setTimeout(resolve, 30));
+      }
+      await edit("echo test");
+      await wait(() => bytes().length >= 9);
+      check(JSON.stringify(bytes()) === JSON.stringify(expected("echo test")), "Mobile typing duplicated or lost bytes");
+      await edit("echo text");
+      await wait(() => bytes().length >= 13);
+      check(JSON.stringify(bytes()) === JSON.stringify(expected("echo test\x7f\x7fxt")), "Mobile replacement corrupted remote line");
+      button("Enter").click(); await wait(() => field.value === "");
+      await wait(() => bytes().at(-1) === 13);
+      offset = calls.length;
+      field.dispatchEvent(new CompositionEvent("compositionstart", {bubbles:true}));
+      await edit("e"); await edit("é");
+      check(bytes().length === 0, "Partial composition reached SSH");
+      field.dispatchEvent(new CompositionEvent("compositionend", {bubbles:true,data:"é"}));
+      await wait(() => bytes().length === 2);
+      check(JSON.stringify(bytes()) === JSON.stringify(expected("é")), "Composition did not commit once");
+      await edit("é");
+      check(bytes().length === 2, "Final input event duplicated the composition");
+      await edit("🙂");
+      await wait(() => bytes().length === 7);
+      check(JSON.stringify(bytes()) === JSON.stringify(expected("é\x7f🙂")), "Unicode replacement used code units as remote characters");
+      await edit("");
+      await wait(() => bytes().length === 8);
+      check(bytes().at(-1) === 127, "Deleting a surrogate pair sent multiple backspaces");
+      button("Tab").click(); await wait(() => field.value === "");
+      await wait(() => bytes().at(-1) === 9);
+      offset = calls.length;
+      await edit("x"); button("Backspace").click();
+      await wait(() => field.value === "");
+      await wait(() => bytes().at(-1) === 127);
+      check(JSON.stringify(bytes()) === JSON.stringify([120,127]), "Special key retained the previous input segment");
+      offset = calls.length;
+      await edit("next"); button("Esc").click();
+      await wait(() => bytes().at(-1) === 27);
+      check(JSON.stringify(bytes()) === JSON.stringify(expected("next\x1b")), "Input after special key erased the previous segment");
+    }
     button("Send Ctrl-C").click();
     await wait(() => calls.some(call => call.command === "write_ssh_session" && call.args.bytes[0] === 3));
     button("Disconnect").click(); await wait(() => text().includes("Disconnected"));
@@ -94,6 +141,6 @@
     check(!document.querySelector(".ssh-terminal"), "Late session restored the terminal");
     check(count("list_ssh_identities") === 0, "Application path accessed an agent");
     check(!JSON.stringify(Object.entries(localStorage)).includes(passphrase), "Passphrase persisted");
-    await fetch("/__instance_fixture/result", {method:"POST",body:JSON.stringify({ok:true,checks:["application SSH consent/unlock/clear secret", "changed-host refusal", "explicit identity/authentication/terminal", "terminal Ctrl-C/disconnect", "stale unlock/start cleanup", "no agent or browser secret storage"]})});
+    await fetch("/__instance_fixture/result", {method:"POST",body:JSON.stringify({ok:true,checks:["application SSH consent/unlock/clear secret", "changed-host refusal", "explicit identity/authentication/terminal", "terminal Ctrl-C/disconnect", "stale unlock/start cleanup", "no agent or browser secret storage", ...(window.__androidInputFixture ? ["Android input bytes/replacement/Unicode", "composition commits once", "Enter/Tab/Esc/Backspace segment reset"] : [])]})});
   })().catch(async error => fetch("/__instance_fixture/result", {method:"POST",body:JSON.stringify({ok:false,error:`${error.message || error}\n${error.stack || ""}\nCommands: ${calls.map(call => call.command).join(",")}`})}));
 })();

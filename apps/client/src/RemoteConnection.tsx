@@ -1,14 +1,19 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { RemoteCreate } from "./RemoteCreate";
+import { RemoteSnapshotRestore } from "./RemoteSnapshotRestore";
+import { RemoteSnapshotCreate } from "./RemoteSnapshotCreate";
+import { RemoteSnapshots } from "./RemoteSnapshots";
 import { RemoteRecovery } from "./RemoteRecovery";
+import { SshHostTrust } from "./SshHostTrust";
 
 type Image = { image: string; node: string; templateVmid: number; templateVersion: string; sourceDiskGiB: number; guestUser: string };
-type Environment = { id: string; definitionName: string; providerReference: { node: string; vmid: number }; status: "registered" };
+type Environment = { id: string; definitionName: string; providerReference: { scopeId: string; node: string; vmid: number }; status: "registered" | "deleted" };
 type Connection = { connectionId: number; endpoint: string };
 export function RemoteConnection({ native }: { native: boolean }) {
   const [endpoint, setEndpoint] = useState("https://");
   const [token, setToken] = useState("");
+  const [caPem, setCaPem] = useState("");
   const [connection, setConnection] = useState<Connection | null>(null);
   const [busy, setBusy] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -17,7 +22,19 @@ export function RemoteConnection({ native }: { native: boolean }) {
   const [imageError, setImageError] = useState("");
   const [environmentError, setEnvironmentError] = useState("");
   const [error, setError] = useState("");
-  const generation = useRef(0);
+  const [snapshotTarget, setSnapshotTarget] = useState<Environment | null>(null);
+  const [restoreTarget, setRestoreTarget] = useState<{environment: Environment; snapshotName: string} | null>(null);
+  const [snapshotLocked, setSnapshotLocked] = useState(false);
+  const generation = useRef(0), sshGeneration = useRef(0);
+  const [sshTarget, setSshTarget] = useState<{ host: string; username: string; generation: number } | null>(null);
+  function selectSshTarget(host: string, username: string) {
+    setSshTarget({ host, username, generation: ++sshGeneration.current });
+  }
+  useEffect(() => {
+    if (!sshTarget) return;
+    const heading = document.getElementById("ssh-trust-heading");
+    heading?.scrollIntoView({ block: "start" }); heading?.focus({ preventScroll: true });
+  }, [sshTarget]);
   useEffect(() => () => {
     generation.current++;
     if (native) void invoke("disconnect_remote").catch(() => {});
@@ -25,17 +42,18 @@ export function RemoteConnection({ native }: { native: boolean }) {
   async function connect(event: FormEvent) {
     event.preventDefault();
     const current = ++generation.current;
+    setSshTarget(null); setSnapshotTarget(null); setRestoreTarget(null); setSnapshotLocked(false);
     const suppliedToken = token;
     setToken(""); setConnection(null); setImages(null); setEnvironments(null); setImageError(""); setEnvironmentError(""); setBusy(true); setError("");
     try {
-      const result = await invoke<Connection>("connect_remote", { endpoint, token: suppliedToken });
+      const result = await invoke<Connection>("connect_remote", { endpoint, token: suppliedToken, caPem: caPem.trim() || null });
       if (generation.current === current) setConnection(result);
     } catch (failure) {
       if (generation.current === current) setError(typeof failure === "string" ? failure : "Cannot connect to this server.");
     } finally { if (generation.current === current) setBusy(false); }
   }
   async function disconnect() {
-    generation.current++; setImages(null); setEnvironments(null); setLoading(false); setBusy(true); setError("");
+    generation.current++; setSshTarget(null); setSnapshotTarget(null); setRestoreTarget(null); setSnapshotLocked(false); setCaPem(""); setImages(null); setEnvironments(null); setLoading(false); setBusy(true); setError("");
     try { await invoke("disconnect_remote"); setConnection(null); }
     catch { setError("Cannot clear the connection. Close the app to forget it."); }
     finally { setBusy(false); }
@@ -62,6 +80,12 @@ export function RemoteConnection({ native }: { native: boolean }) {
       <input id="remote-endpoint" type="url" inputMode="url" autoCapitalize="none" autoCorrect="off" required disabled={busy || connection !== null} value={endpoint} onChange={event => setEndpoint(event.target.value)} placeholder="https://vm.example.com" />
       <label htmlFor="remote-token">Control-plane access token</label>
       <input id="remote-token" type="password" autoComplete="off" autoCapitalize="none" autoCorrect="off" spellCheck={false} minLength={32} maxLength={256} required disabled={busy || connection !== null} value={token} onChange={event => setToken(event.target.value)} />
+      <details>
+        <summary>Private certificate authority (optional)</summary>
+        <label htmlFor="remote-ca">Trusted public CA certificate (PEM)</label>
+        <textarea id="remote-ca" value={caPem} onChange={event => setCaPem(event.target.value)} maxLength={16384} disabled={busy || connection !== null} autoCapitalize="none" autoCorrect="off" spellCheck={false} />
+        <p>Use a public CA certificate obtained from your server administrator through a trusted channel. Never paste a private key. This connection will trust only that CA. Device certificates are unchanged.</p>
+      </details>
       <p>The token is not saved. Enter it again after closing or disconnecting.</p>
       <div className="connection-fields">
         <button type="submit" disabled={!native || busy || connection !== null}>{busy ? "Checking…" : "Connect securely"}</button>
@@ -76,9 +100,15 @@ export function RemoteConnection({ native }: { native: boolean }) {
       {images !== null && (images.length === 0 ? <p>No templates configured on this server.</p> : <ul>{images.map(image => <li key={image.image}><strong>{image.image}</strong> · {image.node} · template {image.templateVmid} · {image.sourceDiskGiB} GiB · {image.templateVersion}</li>)}</ul>)}
       <h3>Registered environments</h3>
       {environmentError && <p role="alert" className="error">{environmentError}</p>}
-      {environments !== null && (environments.length === 0 ? <p>No environments registered on this server.</p> : <ul>{environments.map(environment => <li key={environment.id}><strong>{environment.definitionName}</strong> · {environment.providerReference.node} · VM {environment.providerReference.vmid} · live state not checked</li>)}</ul>)}
-      <RemoteRecovery key={`recovery-${connection.connectionId}`} connectionId={connection.connectionId} endpoint={connection.endpoint} disabled={busy} />
-      <RemoteCreate key={connection.connectionId} connectionId={connection.connectionId} endpoint={connection.endpoint} disabled={busy} />
+      {environments !== null && (environments.length === 0 ? <p>No environments registered on this server.</p> : <ul>{environments.map(environment => <li key={environment.id}><strong>{environment.definitionName}</strong> · {environment.providerReference.node} · VM {environment.providerReference.vmid} · {environment.status === "deleted" ? "deleted · definition and history retained" : "live state not checked"}{environment.status === "registered" && <><button type="button" disabled={busy || loading || snapshotLocked} onClick={() => {setRestoreTarget(null); setSnapshotTarget(environment);}}>Prepare snapshot for VM {environment.providerReference.vmid}</button><RemoteSnapshots key={`${connection.connectionId}.${environment.id}.${environment.providerReference.scopeId}.${environment.providerReference.node}.${environment.providerReference.vmid}`} connectionId={connection.connectionId} environment={environment} disabled={busy || loading} restoreDisabled={snapshotLocked} onRestore={snapshotName => {setSnapshotTarget(null); setRestoreTarget({environment,snapshotName});}} /></>}</li>)}</ul>)}
+      {restoreTarget && <RemoteSnapshotRestore key={`${connection.connectionId}.${restoreTarget.environment.id}.${restoreTarget.snapshotName}`} connectionId={connection.connectionId} environment={restoreTarget.environment} snapshotName={restoreTarget.snapshotName} disabled={busy || loading} onLock={setSnapshotLocked} />}
+      {snapshotTarget && <RemoteSnapshotCreate key={`${connection.connectionId}.${snapshotTarget.id}`} connectionId={connection.connectionId} environment={snapshotTarget} disabled={busy || loading} onLock={setSnapshotLocked} />}
+      <RemoteRecovery key={`recovery-${connection.connectionId}`} connectionId={connection.connectionId} endpoint={connection.endpoint} disabled={busy} onSshTarget={selectSshTarget} />
+      <RemoteCreate key={connection.connectionId} connectionId={connection.connectionId} endpoint={connection.endpoint} disabled={busy} onSshTarget={selectSshTarget} />
+      {sshTarget && <div className="remote-ssh-target">
+        <p>SSH target: {sshTarget.username ? `${sshTarget.username}@` : ""}{sshTarget.host} · port 22. Inspect and independently verify its host key before unlocking an identity.</p>
+        <SshHostTrust key={sshTarget.generation} native={native} initialHost={sshTarget.host} initialUsername={sshTarget.username} />
+      </div>}
     </>}
     {error && <p role="alert" className="error">{error}</p>}
     {!native && <p>Open the native application to connect.</p>}

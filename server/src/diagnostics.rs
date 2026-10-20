@@ -46,9 +46,34 @@ pub(crate) async fn request(request: Request, next: Next) -> Response {
         Some("/api/v1/environments/{id}/lifecycle-preflight") => {
             "/api/v1/environments/{id}/lifecycle-preflight"
         }
+        Some("/api/v1/environments/{id}/delete-preflight") => {
+            "/api/v1/environments/{id}/delete-preflight"
+        }
         Some("/api/v1/environments/{id}/start") => "/api/v1/environments/{id}/start",
         Some("/api/v1/environments/{id}/shutdown") => "/api/v1/environments/{id}/shutdown",
         Some("/api/v1/environments/{id}/refresh") => "/api/v1/environments/{id}/refresh",
+        Some("/api/v1/environments/{id}/restore-operations") => {
+            "/api/v1/environments/{id}/restore-operations"
+        }
+        Some("/api/v1/environments/{id}/restore-operations/{operation_id}") => {
+            "/api/v1/environments/{id}/restore-operations/{operation_id}"
+        }
+        Some("/api/v1/environments/{id}/snapshot-operations") => {
+            "/api/v1/environments/{id}/snapshot-operations"
+        }
+        Some("/api/v1/environments/{id}/snapshot-operations/{operation_id}") => {
+            "/api/v1/environments/{id}/snapshot-operations/{operation_id}"
+        }
+        Some("/api/v1/environments/{id}/snapshots/{snapshot_name}/restore") => {
+            "/api/v1/environments/{id}/snapshots/{snapshot_name}/restore"
+        }
+        Some("/api/v1/environments/{id}/snapshot-restore-preflight") => {
+            "/api/v1/environments/{id}/snapshot-restore-preflight"
+        }
+        Some("/api/v1/environments/{id}/snapshot-preflight") => {
+            "/api/v1/environments/{id}/snapshot-preflight"
+        }
+        Some("/api/v1/environments/{id}/snapshots") => "/api/v1/environments/{id}/snapshots",
         Some("/api/v1/environments/{id}/status") => "/api/v1/environments/{id}/status",
         Some("/api/v1/definitions") => "/api/v1/definitions",
         Some("/api/v1/definitions/validate") => "/api/v1/definitions/validate",

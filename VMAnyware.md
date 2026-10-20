@@ -347,7 +347,7 @@ Tasks:
 - [ ] Implement provisioning/readiness polling with timeout and failure handling. (Durable stage/task recovery, fixed five-minute guest deadline and strict Cloud-Init/IP checks pass local storage/HTTPS tests. A minimal workflow completes only after guest proof; real infrastructure acceptance remains open.)
 - [ ] Persist definition, definition hash, provider reference and operation state. (Local registration now retains canonical YAML/hash/revision and endpoint-scoped node/VMID in schema 3; instance observation operations are persisted; durable start/shutdown intent/provider-task linkage now passes local restart tests; provisioning intent/definition/catalog/plan/stage linkage is now locally tested; provisioning execution/readiness remain pending.)
 - [ ] Implement environment list/detail views in the API. (Registered associations have bounded list/detail reads and scoped read-only observations; ownership reconciliation, lifecycle state and provisioning remain pending.)
-- [ ] Implement deletion of an instance while retaining its definition.
+- [ ] Implement deletion of an instance while retaining its definition. (Read-only retained-target/volume scope and permission-backed HA/replication review pass nine targeted generated-HTTPS/API checks. Fixed provider-effect/candidate/preservation scope now passes ten targeted checks and remains execution-disabled. Full-scope data-loss approval and schema-13 no-replay journal now pass storage/migration checks; independent GET-only VM/volume absence observation passes three HTTPS tests; schema-14 atomic retirement and retained deleted identities now pass local task/absence/storage/client checks. Standalone fixed DELETE/revalidating no-replay executor and GET-only recovery now pass eight HTTPS checks; runtime/API/client integration and real deletion remain open. ADRs 0058–0061.)
 - [ ] Implement recreation from the retained definition.
 - [ ] Ensure partial failures are reported and recoverable; do not silently leave unmanaged VMs.
 
@@ -366,9 +366,9 @@ Tasks:
 
 Tasks:
 
-- [ ] List snapshots for an environment instance.
-- [ ] Create a snapshot with a validated, unique name and optional description.
-- [ ] Restore a selected snapshot with an explicit destructive-action confirmation.
+- [ ] List snapshots for an environment instance. (Scoped server/API listing passes generated-HTTPS tests; remote React/Firefox list flow and frontend build pass. Actual native compilation and three HTTPS command tests also pass with an isolated dependency prefix; actual isolated native WebView/IPC/authenticated-server/generated-provider listing also passes; real-provider evidence remains open. See docs/snapshots.md.)
+- [ ] Create a snapshot with a validated, unique name and optional description. (Preflight, durable executor, confirmed HTTP and actual isolated native UI creation pass against generated HTTPS infrastructure. Read-only scoped server recovery also passes HTTP/SQLite tests; native recovery GET commands also pass HTTPS tests; client read-only history/saved-ID flow passes focused Firefox checks; actual app/server restart recovery of a succeeded operation also passes with provider configuration removed and writes off. Real-provider acceptance remains open. ADRs 0054/0055; docs/snapshots.md.)
+- [ ] Restore a selected snapshot with an explicit destructive-action confirmation. (Read-only stopped-VM/disk-only restore preflight passes generated-HTTPS/API tests; explicit data-loss approval and durable no-replay journal now pass SQLite tests. Fixed one-shot rollback and opt-in executor now pass generated-HTTPS tests; actual server capability tests also pass. Confirmed idempotent HTTP enqueue, capability reporting and generated-provider queue-to-result checks now pass. Native retained restore prepare/confirm/read/ack commands now compile and pass 14 focused HTTPS tests. Explicit client VM/snapshot review, independent data-loss consent and retained status now build and pass focused Firefox simulated-IPC checks. Actual isolated native restore now passes against generated infrastructure, including same-key retry after a deliberately lost HTTP reply and exactly one provider rollback POST. Scoped read-only saved restore history/detail now pass 11 HTTP/SQLite tests without provider access or write flags. Native fixed GET recovery commands now compile and pass nine focused HTTPS tests without preparing consent. Explicit client saved-history/manual-ID/read-only refresh now builds and passes focused Firefox checks. Actual native app/server restart recovery now passes with provider configuration removed, all write flags off, GET-only reads and unchanged succeeded journal. Real guest-state recovery and platform/release gates remain open. ADRs 0056/0057.)
 - [ ] Track snapshot and restore tasks as operations.
 - [ ] Handle unsupported storage/snapshot conditions with clear errors.
 - [ ] Document snapshot consistency and storage requirements.
@@ -388,13 +388,13 @@ Tasks:
 
 Tasks:
 
-- [ ] Implement control-plane connection setup and secure credential handling.
+- [ ] Implement control-plane connection setup and secure credential handling. (Actual Android x86_64 native verified HTTPS, private CA, bearer refusal and read-only recovery pass against an owned production service through direct emulator host-alias networking. Direct deployment, other platforms and full credential-storage acceptance remain open.)
 - [ ] Implement environment catalog and detail screens.
-- [ ] Implement create-environment form and configuration validation.
+- [ ] Implement create-environment form and configuration validation. (Actual Android definition/plan/explicit confirmation/API/production worker/readiness and SSH handoff pass with a generated HTTPS provider; direct emulator HTTPS/SSH transport also passes, with no real VM/deployment proof. ADRs 0052–0053.)
 - [ ] Implement operation progress, errors and retry affordances.
 - [ ] Implement start/stop/recreate/delete actions with confirmation where needed. (Start/graceful shutdown confirmation/resume pass simulated-IPC browser tests; native commands compile/pass HTTP tests. Isolated Linux WebKit/Tauri/Axum/generated-HTTPS start/shutdown also passes; normal packaged startup/real provider, recreate and delete remain open.)
 - [ ] Implement snapshot list/create/restore flows.
-- [ ] Implement SSH connection management and known-host verification. (Application-key Unix source passes Linux localhost authentication/strict trust/PTY and real-shell tests, with separate browser UI evidence. New native GUI/IPC, mobile and real guest gates remain open.)
+- [ ] Implement SSH connection management and known-host verification. (Application-key source passes Linux localhost tests and actual Android native strict trust/PTY/OS-shell checks. The integrated native creation fixture uses an explicit synthetic-guest endpoint override through the direct emulator host alias; deployed networking, full IME, real guest and other-platform gates remain open.)
 - [ ] Implement a usable terminal experience on desktop.
 - [ ] Implement a mobile terminal layout, software keyboard handling, special keys and reconnection.
 - [ ] Test the same core journey on macOS, Linux, Windows, iOS and Android.

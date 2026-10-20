@@ -26,7 +26,7 @@
     if (command === "ssh_host_support") return false;
     if (command === "list_instances") {
       if (pauseList) return new Promise((_, reject) => { lateListReject = reject; });
-      return ++lists === 1 ? [] : [instance];
+      return ++lists === 1 ? [] : [instance, {...instance, id:"9".repeat(32), definitionName:"retired-definition", status:"deleted", providerReference:{...instance.providerReference,vmid:203}}];
     }
     if (command === "check_instance_lifecycle") {
       if (delayLifecycle) return new Promise(resolve => { lateLifecycle = resolve; });
@@ -107,6 +107,8 @@
     checks.push("explicit empty list");
     await click("Load registered instances");
     await wait(() => button("Observe VM 202"));
+    check(text().includes("retired-definition") && text().includes("Deleted · definition and history retained."), "Deleted association was not retained in the list");
+    check(!button("Observe VM 203") && !button("Check lifecycle for VM 203") && !button("Review start VM 203"), "Deleted identity exposed active VM controls");
     check(!calls.some(call => call.command === "check_instance_lifecycle"), "Lifecycle check ran automatically");
     await click("Check lifecycle for VM 202");
     await wait(() => text().includes("Lifecycle preconditions for VM 202"));

@@ -344,3 +344,19 @@ HTTPS provider fixtures, with and without disk expansion, restart after clone,
 read-queue progress, terminal guest evidence and no duplicate mutation on enqueue
 retry. This does not prove an actual Proxmox/guest, SSH or native/mobile runtime.
 The remote form still needs native create commands and visible confirmation UI.
+
+### Continue from readiness to SSH
+
+For a succeeded, guest-ready remote creation, choose **Prepare SSH connection**.
+The app displays its recorded IPv4 address and the account from the retained
+creation plan, then opens the normal SSH host-inspection screen at port 22.
+Independently compare the host fingerprint before trusting an unknown key; a
+fresh inspection, explicit identity consent/unlock and terminal action are still
+required. Guest readiness never grants SSH trust automatically.
+
+The same action on a recovered successful operation uses its recorded address.
+Enter the guest account yourself after host inspection because recovery does not
+retain a verified username. Historical readiness is not current reachability.
+Queued/failed operations have no readiness handoff. Selecting a target again or
+disconnecting clears the previous SSH flow; no account, credential or automatic
+connection is restored from browser storage. ADR 0051 records verification limits.

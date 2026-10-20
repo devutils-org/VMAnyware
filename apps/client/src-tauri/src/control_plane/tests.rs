@@ -640,3 +640,28 @@ fn native_lifecycle_rejects_invalid_confirmation_before_transport_and_owns_error
         task.join().unwrap();
     }
 }
+
+#[test]
+fn retained_instance_list_reads_deleted_and_registered_associations() {
+    let entries = ["registered", "deleted"].map(|status| serde_json::json!({
+        "id":if status=="deleted"{"b".repeat(32)}else{"a".repeat(32)},
+        "definitionName":"retained-definition", "definitionHash":"c".repeat(64),
+        "definitionRevision":1,"createdAt":"2026-10-20T12:00:00Z",
+        "providerReference":{"provider":"proxmox","scopeId":"d".repeat(64),"node":"fixture-node","vmid":202},"status":status
+    }));
+    let (port, task) = response(
+        "GET",
+        "/api/v1/environments",
+        "200 OK",
+        &serde_json::to_string(&entries).unwrap(),
+    );
+    let retained = tauri::async_runtime::block_on(super::list_instances(port)).unwrap();
+    let decoded = serde_json::to_value(retained).unwrap();
+    assert_eq!(decoded[0]["status"], "registered");
+    assert_eq!(decoded[1]["status"], "deleted");
+    assert_eq!(decoded[1]["definitionName"], "retained-definition");
+    assert!(task
+        .join()
+        .unwrap()
+        .starts_with("GET /api/v1/environments "));
+}

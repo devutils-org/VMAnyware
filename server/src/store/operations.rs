@@ -74,9 +74,11 @@ impl Store {
             return Ok(operation);
         }
         let exists = transaction
-            .query_row("SELECT 1 FROM instances WHERE id=?1", [instance_id], |_| {
-                Ok(())
-            })
+            .query_row(
+                "SELECT 1 FROM instances WHERE id=?1 AND status='registered'",
+                [instance_id],
+                |_| Ok(()),
+            )
             .optional()
             .map_err(|_| Problem::Unavailable)?
             .is_some();

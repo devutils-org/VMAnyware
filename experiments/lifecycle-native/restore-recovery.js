@@ -1,0 +1,29 @@
+// Second owned app process: real native/server saved reads with writes/provider disabled.
+(() => {
+  const wait=async(predicate,stage)=>{const end=Date.now()+15000;while(!predicate()){if(Date.now()>end)throw Error('Native snapshot recovery wait expired: '+stage+'; alerts='+[...document.querySelectorAll('[role="alert"]')].map(node=>node.textContent).join(' | '));await new Promise(resolve=>setTimeout(resolve,20));}};
+  const text=()=>document.body.textContent;
+  const button=label=>[...document.querySelectorAll('button')].find(node=>node.textContent===label);
+  const click=async label=>{await wait(()=>button(label)&&!button(label).disabled,label);button(label).click();};
+  const check=(ok,message)=>{if(!ok)throw Error(message);};
+  function input(node,value){Object.getOwnPropertyDescriptor(node.tagName==='TEXTAREA'?HTMLTextAreaElement.prototype:HTMLInputElement.prototype,'value').set.call(node,value);node.dispatchEvent(new Event('input',{bubbles:true}));}
+  (async()=>{
+    await wait(()=>document.getElementById('connection-mode'),'mount');const mode=document.getElementById('connection-mode');mode.value='remote';mode.dispatchEvent(new Event('change',{bubbles:true}));
+    await wait(()=>document.getElementById('remote-token'),'remote mount');check(document.getElementById('remote-token').value==='','Previous token was restored');
+    input(document.getElementById('remote-endpoint'),window.__snapshotFixture.endpoint);input(document.getElementById('remote-token'),window.__snapshotFixture.token);input(document.getElementById('remote-ca'),window.__snapshotFixture.ca);
+    await new Promise(resolve=>setTimeout(resolve,50));document.querySelector('.remote-connection form').requestSubmit();
+    await click('Load remote workspace');await wait(()=>document.querySelector('.restore-recovery'),'recovery panel');
+    check(!document.querySelector('.remote-snapshot-restore'),'Previous restore form/intent was restored');
+    const panel=document.querySelector('.restore-recovery');check(panel.querySelector('input').value==='','Previous operation ID was restored implicitly');
+    await click('Find restore operations for VM 202');await click('Inspect restore operation '+window.__snapshotFixture.operationId);
+    await wait(()=>text().includes('Saved restore operation: succeeded'),'history recovery');
+    check(text().includes('Saved restore request: native-before-work · pve-test · VM 202'),'Saved request/target missing');
+    check(text().includes('Current VM state, snapshot existence and recovered guest contents have not been checked'),'Historical completion was presented as current state');
+    check(text().includes('The recorded provider task, selected snapshot fingerprint and stopped target matched'),'Historical task/disk-only evidence missing');
+    check(!panel.querySelector('input[type="checkbox"]')&&!text().includes('Confirm destructive restore'),'Recovery exposed a submission control');
+    input(panel.querySelector('input'),window.__snapshotFixture.operationId);await new Promise(resolve=>setTimeout(resolve,50));panel.querySelector('form').requestSubmit();
+    await wait(()=>text().includes('Saved restore operation: succeeded')&&panel.getAttribute('aria-busy')==='false','saved-ID recovery');
+    await click('Refresh saved restore operation');await wait(()=>panel.getAttribute('aria-busy')==='false','saved operation refresh');
+    await click('Disconnect');await wait(()=>!text().includes('Connected to'),'disconnect');
+    await window.__TAURI_INTERNALS__.invoke('smoke_report',{ok:true,failure:null});
+  })().catch(error=>window.__TAURI_INTERNALS__.invoke('smoke_report',{ok:false,failure:error.message}));
+})();

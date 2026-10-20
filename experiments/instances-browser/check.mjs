@@ -23,7 +23,11 @@ try {
     ["network.captive-portal-service.enabled", false], ["network.connectivity-service.enabled", false],
     ["extensions.update.enabled", false], ["browser.region.network.url", ""],
   ].map(([key, value]) => `user_pref(${JSON.stringify(key)}, ${JSON.stringify(value)});`).join("\n"));
-  const fixture = await readFile(new URL(process.argv.includes("--app-ssh") ? "./app-ssh-fixture.js" : process.argv.includes("--remote-connection") ? "./remote-fixture.js" : "./fixture.js", import.meta.url), "utf8");
+  let fixture = await readFile(new URL(process.argv.includes("--restore-recovery") ? "./restore-recovery-fixture.js" : process.argv.includes("--snapshot-restore") ? "./snapshot-restore-fixture.js" : process.argv.includes("--snapshot-recovery") ? "./snapshot-recovery-fixture.js" : process.argv.includes("--snapshot-create") ? "./snapshot-create-fixture.js" : process.argv.includes("--snapshots") ? "./snapshots-fixture.js" : process.argv.includes("--app-ssh") ? "./app-ssh-fixture.js" : process.argv.includes("--remote-connection") ? "./remote-fixture.js" : "./fixture.js", import.meta.url), "utf8");
+  if (process.argv.includes("--android-input")) {
+    if (!process.argv.includes("--app-ssh")) throw new Error("--android-input requires --app-ssh");
+    fixture = `Object.defineProperty(navigator, "userAgent", {value: "Android input fixture"});\nwindow.__androidInputFixture = true;\n${fixture}`;
+  }
   let resolveResult, rejectResult;
   const result = new Promise((resolve, reject) => { resolveResult = resolve; rejectResult = reject; });
   server = await createServer({

@@ -1,10 +1,99 @@
 # VMAnyware — current state
 
-Updated: 2026-10-19. Historical evidence and decisions are in Git and docs.
+Updated: 2026-10-20. Historical evidence and decisions are in Git and docs.
 
 Naming note: historical lab resource identifiers below are normalized to the
 current VMAnyware name. External resources were not renamed; use VMIDs and
 ignored local lab records to verify actual identifiers before operations.
+
+## Latest resume point
+
+Latest server slice adds read-only snapshot listing for registered instances,
+with fixed retained scope/target, exclusion of Proxmox's live `current` entry,
+explicit incomplete metadata and safe errors. See docs/snapshots.md and the
+verification entry below. The remote client now displays snapshot metadata with
+explicit reads, target binding and empty/error/incomplete states; frontend build
+and focused Firefox simulated-IPC checks pass. The actual native crate now
+compiles and all three snapshot HTTPS tests pass using the recreated, signed
+package prefix `.lab/native-deps`; four affected shared-read tests also pass.
+Actual native WebView -> production Rust HTTPS -> authenticated Axum -> generated
+HTTPS provider snapshot listing also passes (details below). Read-only snapshot
+creation preflight now validates bounded inputs, capability, uniqueness, incomplete
+work and retained target stability, with five targeted tests passing. Snapshot
+HTTP submission now requires independent runtime opt-in and full confirmed
+target/request with one idempotency key. Schema 11 includes the durable confirmed
+snapshot intent, mutation exclusion, dispatch/task guards and restart semantics. Storage tests
+pass, including affected lifecycle/provisioning migrations. Fixed one-shot
+transport, revalidating executor, task/metadata completion and GET-only recovery
+now pass generated-HTTPS tests. The server services this queue with the independent
+VMANYWARE_SNAPSHOTS_ENABLED opt-in, default false. Confirmed HTTP enqueue,
+capability reporting and generated-provider queue-to-result checks now pass.
+Native retained prepare/confirm/read/ack commands now compile and pass ten
+focused HTTPS tests, including unknown-response same-key retry and disconnect.
+The remote client now has a single retained snapshot review/consent/status form;
+frontend build and focused Firefox simulated-IPC checks pass. Actual isolated
+Linux WebView -> production native commands -> authenticated server -> generated
+HTTPS provider snapshot creation now passes, with one POST and journal/result
+verification. Read-only per-instance server operation history/detail recovery now
+passes seven targeted HTTP/SQLite tests without provider access or write flags.
+Native fixed GET history/detail commands now compile and pass seven targeted
+HTTPS tests without preparing a new intent. The client history/saved-ID UI now
+builds and passes focused Firefox checks, including a fresh connection and stale
+reply suppression. The real native fixture now creates once, restarts both app
+and server, and recovers the unchanged succeeded operation through GET only with
+provider configuration removed and writes disabled. Read-only disk-only restore
+preflight now passes six targeted HTTPS/API tests; it binds selected metadata and
+canonical saved configuration, requires stopped power and keeps execution off.
+Schema 12 now adds explicit data-loss approval and durable no-replay restore
+storage, with matching rollback-task and stopped-target evidence guards.
+Fixed one-shot rollback transport and the revalidating executor now pass seven
+generated-HTTPS tests. A separate VMANYWARE_RESTORES_ENABLED flag, default false,
+is wired into the actual server worker; process tests pass. Confirmed restore HTTP
+enqueue now binds both path identities and data-loss approval, reports independent
+capability and passes API/generated-provider/actual-process checks. Native retained
+destructive restore commands now compile and pass 14 HTTPS tests,
+including both consent flags, unknown same-key retry and GET-only known-operation
+tracking. Explicit client restore selection, destructive review, dual consent and
+status now build and pass focused Firefox checks; affected creation/list checks
+also pass. Actual isolated native restore now passes with a deliberately lost
+HTTP response, identical API retry, one provider rollback POST and independent
+journal/fingerprint/stopped-target checks. Scoped read-only restore history/detail
+now pass 11 HTTP/SQLite tests without provider/write capabilities. Native fixed
+GET saved-restore recovery now compiles and passes nine HTTPS tests without
+preparing consent. Explicit client saved-restore history/manual-ID/refresh now
+builds and passes focused Firefox checks. Actual native app/server restart
+recovery now passes with provider removed, all writes off, GET-only traffic and
+unchanged operation. Read-only deletion target/protection/volume review now passes
+five HTTPS/API tests. Permission-backed HA/replication reads now pass four new
+and five affected checks. Fixed provider effects, recorded fleecing and candidate/
+preserved volume scope now pass ten targeted checks. Read prerequisites can pass,
+execution stays off. Full-scope deletion consent and schema-13 durable no-replay
+journal now pass eight new and 67 affected checks. Independent deletion
+absence observation passes three targeted HTTPS tests. Schema-14 atomic retirement
+now requires an opaque matching task/absence proof; retained deleted identities
+and client list compatibility pass local checks. Standalone fixed DELETE and
+no-replay executor now pass eight generated-HTTPS checks, including GET-only
+partial-cleanup recovery. Next: separate default-off deletion runtime capability
+and fair worker/process checks, then HTTP/native/UI integration.
+Snapshot creation/restore and real infrastructure testing remain open.
+
+Android SDK/emulator were stored under `/tmp/vmanyware-android-resume`, which is
+absent on 2026-10-20. Native Android work requires recreating that owned toolchain;
+do not rerun tests or claim fresh mobile evidence from the historical reports.
+The initial Gboard key-grid visibility and Unicode/composition gates remain open.
+
+Current Android x86_64 APK passes the actual native confirmed-create/API/worker/
+generated-HTTPS-provider journey, explicit ready-target handoff and same-key
+SSH/OS-shell checks through direct emulator host-alias networking, with zero ADB
+reverse mappings (ADR 0053). Earlier tunnel-only limitations are superseded for
+this owned emulator. The provider/guest remain synthetic, not a real VM.
+Brief Android HOME/background/resume now also passes on the same SSH session
+without input or authentication replay (details below). Actual Gboard ASCII
+letter/space, backspace and send taps also pass after rotation/control-key checks.
+The initial Gboard key-grid visibility issue and Unicode/composition remain
+unverified. Keep real VM writes gated by concrete
+target/action approval. Full roadmap, other platforms, lifecycle/snapshots/
+recreate/delete, deployment and release acceptance remain open.
 
 ## Licensing
 
@@ -36,7 +125,10 @@ A platform preference question is pending (Android/iPhone/both). Platform-indepe
 backend work can continue. The macOS agent remains platform-specific; application-key
 SSH now passes Linux native protocol/real-shell fixtures. Android ARM64/x86_64 debug
 APKs build; Android 15 x86_64 native bridge/key persistence/launch now pass. Mobile
-SSH/keyboard/lifecycle and secure deployed non-loopback access remain unproven.
+SSH/ADB-injected keyboard/rotation/reconnect now pass via an owned ADB tunnel.
+Native authenticated HTTPS and read-only recovery now pass against the actual
+local service through a verified-TLS ADB tunnel. Direct networking, complete
+create-to-SSH, full software IME/lifecycle and deployed access remain unproven.
 Do not infer that the desktop agent backend works on mobile or expose unauthenticated
 remote control-plane writes. ADR 0034 records this priority correction.
 
@@ -46,7 +138,7 @@ remote control-plane writes. ADR 0034 records this priority correction.
   diff and affected callers. Do not repeat unrelated/already-passing suites without
   a concrete reason. See AGENTS.md; documentation-only edits need review only.
 - Registered instance associations, scoped synchronous/queued observations and
-  explicit client monitoring are implemented; schema version is 10.
+  explicit client monitoring are implemented; schema version is 14.
 - Latest slice: confirmed minimum create API and production worker pass complete
   generated-HTTPS journeys with/without resize, restart and idempotent replay.
   Remote native create commands, visible confirmation and status now pass local
@@ -54,7 +146,10 @@ remote control-plane writes. ADR 0034 records this priority correction.
   browser checks. Encrypted app identity/public-key insertion now passes Linux
   native and browser checks. Application-key SSH authentication/PTY now passes
   real local shell and browser checks. Android debug APKs and actual emulator
-  bridge/key/restart/painted-launch checks now pass; Android SSH/PTY is next.
+  bridge/key/restart/painted-launch checks pass; current APK SSH/PTY/input/rotation
+  and reconnect pass through an explicit owned ADB reverse tunnel. Direct remote
+  network/create integration and full software IME remain next. Native HTTPS
+  connection/read-only recovery now pass with a connection-scoped private CA.
   Prior Rust/HTTPS/journal evidence is
   recorded below. These are targeted runs, not a new full suite. Earlier baseline: 107 server tests; frontend build + 23 Node tests;
   Linux Firefox simulated-IPC walkthrough and real server/TLS/worker/restart flow.
@@ -2435,3 +2530,1611 @@ production/mobile library guarantee is implied.
 - No real VM, production infrastructure or personal credential mutation occurred.
 - Next single task: rebuild the Android APK and validate the new keyboard adapter
   through the owned emulator SSH fixture, including Enter, resize and Ctrl-C.
+
+
+## Android input transport-boundary regression — 2026-10-19
+
+- Scope/acceptance: check the prepared Android input adapter's exact outbound
+  bytes, composition and special-key segment boundaries before native validation.
+  The previously recorded Android SDK/JDK/emulator prefix is absent on this host;
+  no current emulator/build process or native runtime evidence is assumed.
+- Added opt-in `--app-ssh --android-input` mode to the existing owned Firefox
+  fixture. It mounts the actual React mobile component via a fixture-only user
+  agent, with simulated native IPC and no production behavior changes/dependencies.
+- Verification: `node experiments/instances-browser/check.mjs --app-ssh
+  --android-input` passes exact typing/replacement bytes, composition held until
+  commit without a duplicate final input, Unicode codepoint deletion, Enter,
+  Tab/Esc/Backspace segment reset, Ctrl-C/disconnect and stale selection/session
+  cleanup. The first run exposed an incorrect expected byte-count in the new
+  test; corrected that assertion and the expanded final run passes.
+- No application code changed in this slice; no unrelated suites or prior build
+  checks repeated. Native WebView/IME/SSH, viewport behavior and the complete
+  mobile journey remain unverified. No infrastructure or credential mutation.
+- Next single task: restore an isolated Android toolchain, rebuild the x86_64
+  debug APK and execute the owned native SSH/keyboard harness. The roadmap remains
+  active; this browser check does not close Phase 0F or Phase 5 mobile acceptance.
+
+
+## Android toolchain restored; APK rebuild in progress — 2026-10-19
+
+- Previous goal turn made progress: browser input assertions and documented
+  evidence were added; native acceptance remains open.
+- Restoring the owned toolchain under /tmp/vmanyware-android-resume. JDK 21.0.2
+  and Linux command-line tools 16111833 were downloaded from their official
+  HTTPS repositories and verified against the published SHA256 / repository SHA1.
+  No system Java/SDK configuration or personal credential file was changed.
+- SDK installation completed successfully in exec session 35502, logging to
+  sdk-install.log in that prefix. Packages are
+  platform-tools, API 36, build-tools 36.0.0, NDK 28.2.13676358, emulator and
+  API 35 google_apis x86_64. Package activation completed; no installer restart is needed.
+- env.sh in that prefix sets the owned Java/SDK/AVD/Gradle paths. The newest
+  command-line package delegates SDK installation to Android CLI; installed
+  packages are staged under sdk/.sdk before activation. Tool output reports CLI
+  1.0.16625370. KVM is present and accessible.
+- Rebuilt the current frontend successfully for APK embedding; this is preparation,
+  not Android runtime evidence. No application/backend suite repeated.
+- Added the native SSH harness invocation/guards to its README and ADR 0049 for
+  the prepared streaming input decision and its remaining editing/runtime limits.
+- Created only vmanyware-native-smoke with Pixel 6/API 35 and a 2 GiB data
+  partition. Owned emulator is live in exec session 92711, serial emulator-5580,
+  ADB port 5047, JWT-protected gRPC 8558; sys.boot_completed returned 1.
+- Current x86_64 rebuild is live in exec session 12748, logging to apk-build.log
+  in that prefix. Rust Android compilation passed; Gradle distribution download
+  finished and APK assembly is pending. Revalidate the exact handle/log before
+  waiting; do not restart because output pauses.
+- Next: finish this APK build, install it only on the guarded owned emulator,
+  then run the native SSH/keyboard harness with the existing
+  target/debug/examples/android_ssh_fixture executable. No real provider/VM or
+  personal credential mutation. Native acceptance remains open.
+
+
+## Current Android APK: native SSH/input/PTY — 2026-10-19
+
+- Scope/acceptance: rebuild the prepared mobile input adapter and execute actual
+  native SSH, shell input, resize, interrupt, reconnect and cleanup against the
+  owned generated localhost fixture. This slice advances the mobile journey,
+  not the complete roadmap or the real-VM gate.
+- Restored isolated JDK/SDK/NDK/AVD/Gradle tooling at
+  /tmp/vmanyware-android-resume; env.sh retains its paths. SDK install session
+  35502 and APK build sessions 12748/26699 completed successfully. Frontend and
+  x86_64 Rust compile plus Gradle debug APK assembly pass on the current source.
+- An independent owned TCP listener probe returned `Network is unreachable`
+  from the emulator toward 10.0.2.2. Two host-alias native attempts consequently
+  failed before authentication. Added explicit opt-in
+  VMANYWARE_ANDROID_SSH_ADB_TUNNEL=1: no-rebind mapping only for the owned
+  ephemeral SSH port, report labels the tunnel, and finally removes that mapping.
+  Direct emulator networking remains unresolved; no trust verification bypass.
+- Initial tunneled native run passed. Actual screenshot review exposed vertically
+  stacked special controls from a generic narrow-screen rule. One scoped CSS
+  override now wraps those controls with 44px minimum targets. Rebuilt/reinstalled
+  the updated APK. Strengthened the native layout assertion accordingly.
+- Repeated resize checks exposed a fixture race: ADB typing reveals the keyboard
+  after the earlier size sample. The harness now waits for size stability after
+  typing and before submitting `stty size`. Final run (exec 3496) passes native
+  trust/changed-key refusal, wrong phrase, auth-only/no channel, real shell input,
+  rotation and actual stty dimensions, Ctrl-C/status130, reconnect, process-death
+  shell/socket cleanup and persisted host trust. Three auth attempts/two PTYs;
+  final connections zero, all shells closed. The terminal screenshot was reviewed.
+- Evidence: ignored .lab/android-ssh/{report.json,ssh-report.json,artifacts.json,
+  launch.png,ssh-terminal.png}. artifacts.json records current APK SHA256/size.
+  Logs are under the owned prefix (frontend-build.log, apk-build.log,
+  native-ssh.log). Native harness syntax and diff whitespace checks pass. No
+  unrelated server/Rust/browser suite rerun. ADR 0049 records input decisions.
+- Owned emulator session 92711 is stopped; dedicated ADB server and owned Gradle
+  daemon stopped. Harness reverse mapping list was empty after cleanup. SDK/AVD
+  caches remain for reuse; no personal credentials or real VM/provider touched.
+- Limits: ADB injection with a visible software keyboard is not full IME,
+  accessibility, physical ARM64, suspend/resume, iOS or release proof. The latest
+  x86_64 APK is built/run; no new ARM64 build/run is claimed. Direct network and
+  the authenticated create/readiness-to-SSH journey remain open.
+- Next single slice: actual Android authenticated HTTPS control-plane connection
+  and read-only recovery against an owned local service, then integrate confirmed
+  creation/readiness to SSH. Resolve/report the emulator network boundary rather
+  than treating the ADB tunnel as deployment evidence. Real VM writes still need
+  explicit concrete-target approval; the overall roadmap stays active.
+
+
+## Android authenticated HTTPS and read-only recovery — 2026-10-19
+
+- Scope/acceptance: actual Android native secure connection, issuer/hostname/token
+  refusal and read-only retained-operation recovery after restart against an owned
+  local production service. Earlier keyboard/browser changes in the dirty tree
+  retain their previously recorded checks; this slice does not repeat them.
+- Found missing Android integration for reqwest 0.13's platform TLS verifier.
+  Added Android-only JNI/verifier dependencies already present transitively in
+  Cargo.lock, synchronous application-context initialization before Tauri startup,
+  Cargo-matched Kotlin artifact resolution and ProGuard retention. Current APK
+  launches successfully through this initialization; no TLS fallback/bypass.
+- Added optional single public PEM CA input (16 KiB maximum), validated natively
+  and scoped to the current profile. Android cannot merge extra platform roots:
+  the first CA run exposed a client-builder failure, corrected by using only the
+  supplied CA with normal WebPKI signature/validity/hostname verification. No
+  device certificate/credential store changed. Public CA clears on disconnect;
+  tokens still clear on submission and no connection persists across restart.
+- New opt-in --remote Android harness launches the actual production server
+  executable, a generated HTTPS proxy and a disposable SQLite database with one
+  seeded failed creation/target. Child environment has no provider configuration;
+  the proxy rejects non-GETs. This is recovery evidence, not VM creation evidence.
+  TLS private keys/tokens stay in the owned fixture and are never printed; the
+  generated directory is removed after stopping the owned service.
+- Verification: current frontend production build and x86_64 Rust/Gradle APK
+  build pass. Final actual Android run (exec 60023) passes invalid/private/
+  bundled/oversize CA refusal, unknown issuer and hostname mismatch before HTTP,
+  actual server token rejection, authenticated connection, environment/history
+  reads, actionable missing-catalog error, force-stop/relaunch without request
+  replay or restored credentials/profile, explicit reconnect/read-only recovery,
+  and disconnect/CA clearing. All 11 recorded requests are GETs. Native recovery
+  screenshot reviewed. Early fixture attempts also exposed a missing remote-mode
+  selection and a screenshot-before-scroll race, both corrected.
+- Targeted Firefox --remote-connection scenario passes (exec 77791), including
+  forwarding/locking the optional CA and existing affected create/recovery callers.
+  New harness JavaScript syntax, changed Rust formatting and diff whitespace pass.
+  Attempted new Linux parser unit test could not compile: WebKitGTK 4.1/pkg-config
+  prerequisite is absent on this host. It is not reported as a passing unit run;
+  corresponding validation cases passed through real Android native IPC instead.
+  No full server/workspace or unrelated keyboard suite rerun.
+- Evidence: .lab/android-remote/{report.json,remote-report.json,artifacts.json,
+  remote-recovery.png,launch.png}; artifacts.json hashes the current APK. Logs
+  under /tmp/vmanyware-android-resume: remote-frontend-build.log,
+  remote-apk-build.log, native-remote.log, remote-browser.log and ca-test.log.
+  ADR 0050 records the security/runtime choice. Android SSH evidence above is for
+  its earlier APK; no new SSH run is claimed for this TLS-only source change.
+- Owned service, TLS sockets, generated keys/DB and both ADB reverse mappings are
+  cleaned up; the mapping list is empty. Emulator session 79401 and owned Gradle
+  daemon are stopped; the dedicated ADB server is stopped. Retained
+  toolchain/env.sh allow reuse.
+- Limits: explicit ADB tunnel remains necessary; direct emulator/deployed network,
+  actual OS/public-root positive verification, complete create/readiness-to-SSH,
+  physical devices, iOS, full IME/lifecycle and release remain unproven. No real
+  Proxmox/VM or personal credential operation occurred. Full roadmap stays active.
+- Next single slice: integrate confirmed creation/readiness with this native
+  Android HTTPS connection against the owned generated provider fixture, then
+  connect the resulting ready target to the app's SSH flow. Real VM mutations
+  remain gated by explicit approval of a concrete disposable target/operation.
+
+
+## Ready creation/recovery to explicit SSH target — 2026-10-19
+
+- Previous goal turn made progress: native HTTPS verification, optional private CA
+  and actual read-only recovery evidence were added. Full roadmap remains open.
+- Scope/acceptance: connect the existing ready-result UI to the existing SSH
+  inspection/authentication flow in remote mode, preserving explicit trust and
+  clearing old state on reselection/disconnect. Inspection of current source showed
+  that remote mode hid the local terminal and had no handoff action.
+- Fresh succeeded/guestReady creation now offers Prepare SSH connection, carrying
+  exact recorded IPv4 and native plan guestUser. Recovery offers the same explicit
+  action with address only; account remains blank because its contract lacks a
+  verified username. Queued/failed results offer no handoff. No automatic network
+  request, trust, unlock or login occurs on readiness or target selection.
+- Remote connection owns the selected target in memory. Selecting/remounting its
+  host-trust flow clears old challenge/authentication/terminal state; disconnect,
+  connection replacement and leaving remote mode remove it. Heading focus/scroll
+  moves to the selected target. Existing local/default-account callers are intact.
+- Verification: production frontend build passes (exec 37739); expanded targeted
+  Firefox --remote-connection fixture passes (final exec 52378): queued/failed
+  guards, no automatic inspection, exact address/account, independent unknown-host
+  consent followed by fresh inspection, reselection/disconnect reset, recovery
+  username left empty, and affected stale create/recovery behavior. Separate
+  --app-ssh fixture passes for default-account callers, explicit identity,
+  changed-host refusal and stale terminal cleanup. The broader browser scope is
+  warranted by changing shared host/authentication component props. No server,
+  Rust, unrelated Node/controller or Android suite repeated for this TS-only diff.
+- Logs: /tmp/vmanyware-android-resume/handoff-build.log, handoff-browser.log,
+  handoff-ssh-regression.log. Diff whitespace review passes. ADR 0051 and the
+  provisioning/browser documentation record behavior and proof boundaries.
+- Earlier dirty TLS/Android input files retain their separately recorded evidence.
+  This slice does not rebuild/run an APK or establish native handoff, real VM
+  creation, full software IME or direct remote-network support. Toolchain remains
+  retained; no new emulator/service process, credentials or VM mutation started.
+- Next single slice: exercise confirmed creation and readiness on actual Android
+  against the production service plus an owned generated provider fixture, then
+  use this explicit handoff to enter the native SSH flow. Treat browser IPC results
+  as component proof only; retain the approved disposable real-VM gate and the
+  rest of the original roadmap.
+
+
+## Android native confirmed creation to SSH fixture — 2026-10-19
+
+- Previous goal turn made progress: explicit ready-target/account handoff was
+  implemented and browser-verified. This slice supplies native integration evidence.
+- Scope/acceptance: actual packaged Android confirmed creation through the
+  production service/worker against an owned generated HTTPS provider, followed
+  by explicit handoff and same-key native SSH/PTY; no real infrastructure changes.
+- Added opt-in --remote --create mode with a loopback, in-memory Proxmox protocol
+  peer. Service starts from an empty disposable DB and clean fixture-only
+  environment, with generated token/CA/catalog and execution enabled only there.
+  Proxy accepts GET plus exact plan/definition/create POST paths in creation mode;
+  normal remote mode remains GET-only. No production API/worker code changed.
+- Rebuilt x86_64 debug APK with the already verified current frontend handoff
+  assets (build exec 11552 passes). Native UI unlocks its existing Android key,
+  inserts the exact public key, previews without creation, requires explicit
+  consent and submits one create request. Production worker reaches guestReady
+  through clone/resources/Cloud-Init/seed/start and strict guest-proof validation.
+- Final native run exec 26350 passes: three API POSTs (plan, definition, create),
+  exactly one clone/seed/start/fixed cloud-init-status execution and two config
+  writes; 2 CPUs/2048 MiB/no ballooning and the same Android public key verified
+  at the provider boundary. Exact 192.0.2.42/debian handoff review appears only
+  after readiness and an explicit action. No automatic host inspection/auth.
+- SSH then explicitly overrides that synthetic guest address with the owned ADB
+  tunnel endpoint. The same key passes native strict host trust, wrong phrase,
+  auth-only/no channel, real OS-shell input, rotation/stty, Ctrl-C/status130,
+  disconnect/reconnect, process-death cleanup and changed-key refusal. Three auth
+  attempts/two PTYs, final connections zero/all shells closed. Provider/API
+  mutation counts remain unchanged across SSH and application restart.
+- Early runs exposed fixture-only selector/route issues: header class mistaken
+  for the key details panel; missing current=1 config query; and generic terminal
+  Disconnect hitting the enclosing server button. Corrected selectors/fixture
+  route and scoped shared SSH buttons to their trust section. Existing targeted
+  remote Firefox scenario passes after its matching key-panel selector correction
+  (exec 7834). No unrelated browser/server/Rust suites rerun.
+- Native harness JS syntax/diff whitespace review passes. Evidence is ignored
+  .lab/android-create/{create-report.json,ssh-report.json,report.json,
+  artifacts.json,ssh-terminal.png,launch.png}; APK hash/size are recorded.
+  Screenshot reviewed: terminal output and wrapped controls visible above keyboard.
+  Logs: /tmp/vmanyware-android-resume/create-apk-build.log, native-create.log,
+  create-browser-selector.log. ADR 0052 records boundaries. Earlier dirty source
+  slices retain their separate evidence; no general roadmap completion claimed.
+- Owned provider/service/SSH fixture, generated TLS/DB directory and reverse
+  mappings cleaned up; reverse list is empty and no owned server/SSH process
+  remains. Emulator session 2706, dedicated ADB server and owned Gradle daemon are stopped;
+  retained SDK/AVD/env.sh support reuse.
+- Limits: synthetic provider/guest readiness, explicit SSH endpoint override and
+  ADB injection are not real VM provisioning, direct networking or full software
+  IME proof. No physical-device, iOS or release claim. No real provider, personal
+  key, production infrastructure or user credential store was touched.
+- Next single slice: resolve the owned emulator host-alias/direct-network boundary
+  and repeat the native HTTPS/SSH transport checks without ADB reverse mappings.
+  Then complete the remaining mobile usability/lifecycle and explicitly approved
+  real disposable VM gate while retaining the full original roadmap scope.
+
+
+## Direct emulator HTTPS/SSH transport — 2026-10-19
+
+- Previous goal turn made progress: actual native creation/API/worker/provider
+  integration and same-key SSH passed through an explicit tunnel. This slice
+  removes that transport limitation without changing production application code.
+- Scope/acceptance: diagnose the owned host-alias boundary and validate native
+  verified HTTPS and strict SSH/PTY without data-plane ADB mappings. The route
+  now shows a validated default Wi-Fi network; a correctly bounded owned TCP
+  marker probe reaches 127.0.0.1 through 10.0.2.2. No route/firewall/emulator
+  feature/device trust mutation was needed. The exact cause of older transient
+  network-unreachable failures is unproven; do not claim a permanent defect/fix.
+- Added explicit VMANYWARE_ANDROID_HTTPS_DIRECT=1 to the opt-in harness, using
+  host alias 10.0.2.2 and a matching SAN while preserving the separate wrong-host
+  certificate test. SSH already defaults to the host alias without its tunnel
+  opt-in. Creation mode now supports that direct transport and labels both paths
+  accurately. No automatic fallback or TLS/SSH-verification bypass.
+- Direct-mode startup now checks an empty reverse list and performs a bounded
+  owned TCP readiness probe independently of sys.boot_completed. Combined direct
+  creation checks an empty reverse list again at completion. ADB/CDP only drives
+  and observes UI; API/SSH bytes use normal emulator TCP.
+- Verification: first direct native journey passes (exec 3336), then stop/restart
+  the exact owned emulator for a cold-boot repeat with the new readiness gate.
+  Final exec 23770 passes current-APK TLS issuer/hostname/token refusal,
+  confirmed creation through actual service/worker and generated provider,
+  resource/key checks, exact ready-target handoff, direct host-alias SSH trust/
+  real-shell input/rotation/stty/interrupt/reconnect/process-death/changed-key
+  checks and no creation replay. Probe: one attempt, 439 ms, zero reverse mappings.
+  HTTPS report is direct; SSH target is host alias; final SSH connections zero.
+- APK unchanged from the previously verified handoff build; no frontend/Rust/APK
+  rebuild or unrelated suite rerun for harness-only changes. Changed JS syntax
+  and diff whitespace checks pass. Evidence: .lab/android-direct/{report.json,
+  create-report.json,ssh-report.json,artifacts.json,ssh-terminal.png,launch.png};
+  hashes are recorded. Logs under /tmp/vmanyware-android-resume:
+  native-direct.log, direct-emulator.log; diagnostic connectivity.txt/wifi.txt
+  capture only the owned AVD. ADR 0053 records boundaries and upstream reference.
+- Owned service/provider/SSH sockets and generated TLS/DB data cleaned up;
+  reverse mapping list remains empty. Emulator exec 20471 and its dedicated ADB
+  server are stopped; toolchain remains reusable. No real provider/VM, personal
+  key, host firewall, device trust/credential store or production service changed.
+- Limits: synthetic guest endpoint is still explicitly replaced by the host alias
+  and ephemeral SSH port. Direct emulator networking is not deployed/LAN/VPN or
+  physical-device evidence. Real VM, full software IME/background lifecycle,
+  OS/public-root positive verification, iOS/other platforms and release remain
+  open. This evidence supersedes only the emulator host-alias blocker.
+- Next single slice: actual software-keyboard taps and composition plus native
+  background/resume terminal behavior, then the remaining mobile/platform and
+  explicit disposable real-VM gate. Preserve the full roadmap, including pending
+  snapshot/recreate/delete and deployment/release requirements.
+
+## Android brief background/resume — 2026-10-19
+
+Scope: verify HOME/background/return on the current Android native SSH terminal
+without implicit reconnect or input replay. The optional
+`VMANYWARE_ANDROID_BACKGROUND=1` native SSH fixture now observes the real WebView
+visibility transition, waits two seconds while hidden, and compares server-side
+authentication attempts, channel count and received input bytes before/after.
+Explicit return resumes the same shell and produces fresh `RESUME_OK` output.
+
+Earlier diagnostic runs passed this scenario, but a separate initial software
+keyboard check proved insufficient: Android/Gboard reports the input view shown
+while screenshots and native window geometry show only the bottom navigation
+strip, with no letter grid. Later terminal screenshots do show the full grid;
+the trigger is not isolated. Removed the exploratory capture-only check rather
+than count it as successful software-key input. No product behavior was changed.
+
+Limitations: two-second foreground/background transition only; no screen lock,
+Doze, long suspension, process eviction or background-service guarantee. Text
+commands still use ADB injection; software-key taps/composition remain open.
+Next task: isolate initial Gboard letter-grid visibility and verify actual taps
+with exact server-side byte/output assertions. Keep real VM operations gated.
+
+Verification: final cleaned-up `--ssh` run with the background flag passed on
+Android 15/API 35 x86_64, WebView 124, via direct 10.0.2.2 transport. Evidence:
+`.lab/android-background/ssh-report.json` and terminal screenshot. JavaScript
+syntax checks and `git diff --check` passed. No APK rebuild or unrelated suites
+were needed for this harness/documentation-only slice.
+
+## Android actual software-key taps — 2026-10-19
+
+Scope: prove taps on displayed Gboard keys reach the real SSH shell, including
+editing and sending, without interpreting the IME shown flag as sufficient proof.
+Added an opt-in `VMANYWARE_ANDROID_SOFTWARE_KEYS=1` stage to the owned native SSH
+fixture. It is confined to the reviewed Pixel 6 1080×2400 English QWERTY layout
+and checks the Gboard window/touch region before tapping. Every letter/space and
+backspace is checked against the actual controlled input. `echo imeox`, Gboard
+backspace, `k`, and Gboard send must yield exactly 13 additional received SSH
+bytes, a cleared input and real shell output `imeok`, without new channels or
+authentication. The existing screenshot captures the full keyboard before taps.
+
+The first run passed with the brief background/resume scenario also enabled.
+This proves actual ASCII software-key input on this owned emulator after the
+rotation/control-key sequence; it does not fix/prove initial-focus keyboard
+visibility, Unicode/composition, other IMEs, iOS or physical devices. No product
+code or APK change was needed. Next task: isolate the initial Gboard key-grid
+visibility issue before extending the real-key composition scenario.
+
+Verification: final run with the stricter Gboard-window guard and both keyboard/
+background flags passed on Android 15/API 35 x86_64 and WebView 124, using direct
+10.0.2.2 transport. Evidence: `.lab/android-software-keys/ssh-report.json` and
+`ssh-terminal.png`. JavaScript syntax checks and `git diff --check` passed;
+no unrelated suites or application rebuild were run. Emulator/owned ADB server
+were stopped after verification.
+
+## Scoped snapshot listing — 2026-10-20
+
+Previous goal turn made progress: actual Gboard taps yielded exact SSH bytes and
+shell output. This turn revalidated the workspace and found the prior temporary
+Android SDK/emulator prefix absent, with no live process to wait for. No mobile
+product fix or fresh native evidence is claimed. Continued with an independent
+roadmap slice instead of recreating a large toolchain for another diagnostic.
+
+Implemented read-only `GET /api/v1/environments/{id}/snapshots`, fixed to the
+registered instance's provider scope/node/VMID. Added the fixed Proxmox read,
+normalized sorted metadata, synthetic-current exclusion, duplicate/invalid-data
+refusal, preserved incomplete provider state, safe permission/timeout errors and
+static diagnostic route naming. No dependencies, schema migrations, operation
+records or VM writes were added. Contract and limits: docs/snapshots.md.
+
+Verification: `cargo test -p vmanyware-server --lib snapshot_list -- --nocapture`
+passes all four targeted tests (85 unrelated tests filtered out). They exercise
+the actual Axum route and verified generated-HTTPS provider. An initial timeout
+case failed because it used the normal client timeout; corrected the fixture to
+use an explicit 200 ms deadline, then reran the four tests successfully. Formatting
+and diff review cover this slice's Rust/docs changes; prior dirty Android/client
+changes were retained without rerunning their earlier checks. No real Proxmox
+request was made. Roadmap listing stays unchecked pending client/provider proof.
+Next task: add the explicit read-only snapshot list to the client, including
+empty/error/incomplete states and the distinction from independent backups.
+
+## Remote snapshot-list UI — 2026-10-20
+
+Previous goal turn made progress: scoped server snapshot listing and four targeted
+HTTPS/API tests passed. This slice adds the remote native read command and actual
+React list under each registered environment. Reads remain explicit and bound to
+the active connection/canonical instance ID; replies are discarded after native
+disconnect and UI unmount. UI binding additionally checks instance/scope/node/VMID.
+Displays empty/provider-error/unknown/incomplete states and parent metadata,
+escapes descriptions, and distinguishes snapshots from independent backups.
+No creation, restore, new dependencies, schema changes or real VM requests.
+
+Verification: `npm --prefix apps/client run build` passed. The focused
+`node experiments/instances-browser/check.mjs --snapshots` passed with simulated
+IPC: explicit read, exact selected target, mismatched target rejection,
+empty/error distinction, metadata, escaped description, pending-read disconnect
+and no mutation. The first browser attempt clicked the workspace button before
+it became enabled; fixed that fixture synchronization, then the scenario passed.
+Three native generated-HTTPS tests are added for fixed authenticated path,
+malformed/authentication/path rejection and in-flight disconnect suppression.
+`cargo test -p vmanyware-client --lib remote_snapshot_read -- --nocapture` stops in
+webkit2gtk-sys because WebKitGTK 4.1 pkg-config metadata is absent; the new native
+module/tests have not compiled or run here. Rust formatting, JS syntax and diff
+checks pass. Prior dirty Android/server/client slices were preserved; no unrelated
+suites were rerun. No new APK/native launch or real-provider evidence is claimed.
+Next task: restore an owned native WebKitGTK build prefix and run the filtered
+snapshot HTTPS tests, then validate the actual native list-to-server flow.
+
+## Native snapshot command validation — 2026-10-20
+
+Previous turn made progress: remote snapshot React UI and focused browser checks
+passed, while native compilation stopped at a missing system library. Revalidated
+that boundary, then recreated the seven-package WebKitGTK 4.1 library prefix in
+ignored `.lab/native-deps`, using verified HTTPS, system public-keyring signature
+verification and extraction without installation hooks. Keyring integrity: 17
+files, zero alterations. Exact package versions/URLs/hashes/signature output and
+setup helper remain in that owned directory. No system packages or personal
+credential files were changed. See docs/native-linux-prefix.md for reuse.
+
+Verification: actual `vmanyware-client` crate compilation passed, followed by all
+three `remote_snapshot_read` tests (51 unrelated tests filtered out), proving the
+fixed authenticated HTTPS path, unknown/incomplete metadata, invalid data/auth/
+path rejection and in-flight disconnect suppression. Because the prior snapshot
+slice modified shared ReadPath code, also ran the three `remote_workspace` tests
+and the one fixed-health-path/token test; all four passed. No source correction
+was needed. Native snapshot log: `.lab/native-deps/snapshot-native-tests.log`.
+Documentation diff review and `git diff --check` passed; no frontend/server suites
+were rerun. Earlier blocked-test notes are historical, superseded for this prefix.
+
+Limitations: generated HTTPS peer, no WebView-driven snapshot IPC/server journey,
+real provider, VM operation, packaged startup or mobile rebuild in this slice.
+The prefix contains libraries only, not the previous Xvfb additions. Next task:
+validate the real native WebView -> production command -> actual server snapshot
+list with disposable generated infrastructure, then proceed to snapshot creation.
+
+## Native snapshot-list vertical journey — 2026-10-20
+
+Previous goal turn made progress by restoring a verified native library prefix
+and passing the three snapshot plus four shared-read tests. This slice adds an
+optional `--snapshots` mode to the existing isolated native fixture and a focused
+real-UI driver, without changing normal application startup or injecting mock IPC.
+The fixture registers production remote commands and connection state, uses an
+actual authenticated server behind a verified generated HTTPS proxy, and reads
+only a generated HTTPS provider. Lifecycle execution is disabled. The verified
+owned prefix now also contains Xvfb/xauth/libxmu; all ten package signatures and
+archive details are retained in `.lab/native-deps/packages.json`.
+
+Acceptance met: explicit native reads show empty, incomplete and denied states,
+retained target, unknown metadata, escaped description and backup wording; error
+clears prior results and explicit disconnect succeeds. Runner asserts exactly
+three fixed provider snapshot reads, zero provider writes and unchanged local
+association. TLS, sandbox and X11 cookie checks were not disabled. Evidence:
+`.lab/native-deps/snapshot-ui-check.log` ends with the full real-native journey pass.
+
+Verification: built the affected example with `tauri/custom-protocol` and actual
+server binary; native scenario passed. The initial imported production module
+needed explicit child paths, now fixed for both create/snapshots; all three
+filtered native snapshot tests passed again after that change. A plain initial
+example build waited for Vite and expired without reaching the server; the
+embedded-asset build corrected the invocation. JS/Python syntax, targeted Rust
+formatting and `git diff --check` pass. No unrelated suite/frontend rebuild was
+run. Owned display/process groups, proxy/provider and generated temporary data
+were cleaned up by the runner. Minimal-session portal/accessibility warnings
+remain; they did not prevent the asserted journey.
+
+Limitations: isolated Linux/generated infrastructure only, not installed startup,
+real Proxmox, mobile rebuild, snapshot creation or restoration. Roadmap list item
+stays unchecked until real-provider evidence exists. Next task: implement bounded
+validated snapshot creation and durable task/operation tracking, with explicit
+target/action confirmation; keep real VM operations behind concrete approval.
+
+## Snapshot creation prerequisites — 2026-10-20
+
+Previous goal turn made progress: real native snapshot-list journey passed. This
+slice prepares creation with `POST /api/v1/environments/{id}/snapshot-preflight`,
+not a provider write. Validates exact 2–40 character Proxmox-compatible names,
+reserved current, bounded UTF-8 descriptions and no unknown request options.
+The fixed disk-only path reads actual provider feature support, existing snapshot
+names/incomplete states, retained scope/target and lifecycle identity guards, then
+rechecks pending/configuration identity. Complete reads are bounded to 20 seconds.
+The report binds request/instance/scope/node/VMID/definition/digest and always says
+`executionEnabled: false`. No reservation, approval, operation or VM write occurs.
+ADR 0054 records disk-only semantics and the durable no-replay requirements for
+the next slice. No dependencies, schema migration or client changes were added.
+
+Verification: four filtered `snapshot_preflight` tests passed, then the added
+actual HTTP bound-report test passed separately (five distinct tests total).
+The HTTP test was repeated only after adjusting the body limit to 32 KiB and
+adding a valid 4 KiB description whose escaped JSON exceeds 8 KiB; it passed.
+Coverage includes request grammar/bounds, retained scope, fixed GET-only target,
+provider support/malformed flags, duplicates, incomplete snapshot work, final
+configuration changes, complete report and no operation record. Rust compilation,
+targeted formatting and diff checks pass. Existing lifecycle/list/native/browser
+suites were not rerun: their behavior was not modified. Generated HTTPS/local
+SQLite only; no real provider, guest consistency or write permission was tested.
+
+Creation itself remains incomplete: durable approval/expiry/hash, conflict guard,
+no-replay dispatch marker, task persistence/reconciliation and client confirmation
+must exist before exposing the mutation. Next task: add the confirmed snapshot
+creation operation to the durable journal and worker, with crash/lost-reply tests;
+real VM operations still require concrete target/action approval.
+
+## Durable snapshot creation storage — 2026-10-20
+
+Previous goal turn made progress: creation preflight and five targeted tests
+passed. This slice adds schema 11/shared `vm_snapshot_create` operation storage,
+full confirmed target/request hashing, retained same-key identity/age, common
+mutation exclusion, incomplete-provisioning blocking, claim/expiry/exact-approval
+guards, irreversible dispatch marker, qmsnapshot task binding, guarded completion
+and existing exclusive-startup recovery semantics. Unknown submissions remain
+uncertain and cannot be claimed; known tasks retain their marker for read-only
+reconciliation/backoff. No provider POST, runtime worker, enqueue API or client
+creation control is exposed; preflight stays disabled. ADR 0055 records choices.
+
+Migration rebuilds the shared operations table, retaining provisioning children,
+indexes and guards. It temporarily disables foreign keys on the unopened migration
+connection, checks the graph inside the transaction and restores enforcement
+before exposing the store. Invalid graphs roll back including schema version.
+Normal schema-11 opens do not rescan the entire foreign-key graph. Existing tests'
+expected latest schema versions were updated from 10 to 11; historical migrations
+were retained unchanged. No dependencies or real infrastructure changes.
+
+Verification: 53 existing affected storage tests passed (10 instance, 9 lifecycle,
+34 provisioning-intent). Seven of the initial eight new integration tests passed;
+the corruption fixture initially failed to inject an orphan because foreign keys
+were enabled, so explicitly disabled them only in that owned fixture, then both
+migration tests passed. Added concurrency, corruption/claim-rollback and actual
+store-connection foreign-key enforcement checks; these passed. The expiry test
+was repeated after adding proof that same-key retry cannot renew age. Total:
+11 distinct new tests passed across filtered runs (10 integration, 1 unit), plus
+53 existing affected tests. Targeted Rust formatting and diff checks passed.
+No unrelated provider/native/browser suite was rerun; the broader storage coverage
+was justified by rebuilding their shared table. SQLite/owned fixtures only; no
+claim of provider dispatch, successful snapshot or restore is made.
+
+Next task: implement fixed snapshot transport and runtime executor with explicit
+capability, repeated preflight, dispatch-marker-before-POST ordering, retained task
+polling and GET-only restart reconciliation; verify generated HTTPS crash/lost-
+reply scenarios before exposing confirmed HTTP enqueue/client controls.
+
+## Snapshot transport/executor and production queue — 2026-10-20
+
+Previous goal turn made progress: schema-11 journal and affected storage tests
+passed. This slice connects a fixed one-shot disk-only snapshot POST transport to
+the durable executor. It rechecks exact target/preflight/digest, commits dispatch
+before POST, persists only a matching qmsnapshot/node/VMID task before polling,
+then requires successful task plus independently verified retained marker and
+exact complete disk-only snapshot metadata. Snapshot creation changes digest;
+completion verifies marker/template/lock rather than the old digest. Unknown
+submission remains uncertain/unclaimed; known-task reopen/recovery is GET-only
+and works with new dispatch disabled. Added safe snapshot-specific failure codes.
+
+The main binary now validates independent VMANYWARE_SNAPSHOTS_ENABLED (absent/
+false by default, exact true opt-in), and the sequential worker services one
+snapshot claim after existing queues. Existing public worker entry points retain
+default-disabled snapshot behavior. Confirmed HTTP enqueue/client submission are
+not wired, and preflight still reports execution disabled. No write permission,
+real VM operation, dependency or schema change was added in this slice.
+
+Verification: six generated-HTTPS executor/transport tests passed, then the added
+production-round test passed separately (seven executor tests total). They cover
+encoded Unicode/ampersand/plus/newline, one fixed POST, pre-dispatch guards,
+unknown/wrong task replies without replay after reopen, retained-task GET-only
+reconciliation even when disabled, task failure and foreign/RAM metadata refusal.
+The independent flag unit test and two actual-binary configuration/queue tests
+passed (10 distinct new tests total). The binary tests use owned SQLite and no
+provider: default-disabled fails without a marker; true reaches provider-not-
+configured without a marker. Invalid flag stops before database creation and
+never echoes its input. Actual native/UI/client/server-provider process journey
+for creation is not claimed. Targeted Rust formatting and diff checks pass;
+previously passing storage/native/browser suites were not rerun without changes.
+
+Next task: add runtime-capability reporting and a confirmed idempotent snapshot
+HTTP enqueue route bound to the whole reviewed target/request, with disabled,
+stale, conflicting and same-key retry coverage; then add the client confirmation
+and validate the real native creation journey against generated infrastructure.
+
+## Confirmed snapshot HTTP submission — 2026-10-20
+
+Previous goal turn made progress: one-shot transport, executor, opt-in runtime
+queue and 10 targeted tests passed. This slice adds confirmed
+`POST /api/v1/environments/{id}/snapshots`, capability-aware router/main wiring and
+preflight runtime reporting. Existing router constructors default snapshots off.
+Approval must match route ID, saved definition/scope/node/VMID and exact validated
+snapshot request, with explicit consent and exactly one bounded idempotency key.
+Configured bearer protection and origin refusal apply. Disabled/invalid/unconfigured/
+changed/conflicting requests do not enqueue. Identical retries preserve operation
+identity/age; accepted requests return 202/Location and never contact the provider.
+Fresh preflight/digest checking stays in the worker; HTTP acceptance is not success.
+
+Verification: seven new targeted HTTP tests passed across the initial run and
+one corrected assertion rerun. They cover queue/read/retry identity, independent
+flag, target/consent/unknown options, duplicate/missing keys, origin/size/auth guards,
+active mutation conflicts and concurrent retries. Two new filtered HTTPS/API tests
+also passed: actual enqueue -> production queue -> generated provider -> result
+(success vs stale digest with zero POST), and capability independent of failed
+prerequisites. Total nine distinct new tests passed. Two initial test assertions
+assumed the wrong existing contract (unknown-field JSON rejection is 422, and
+operation.failure is a string); corrected only those assertions and reran the
+failed cases. No implementation failure was masked. Rust compilation, targeted
+formatting and diff review pass. No schema/dependency/client changes or real VM
+requests; unrelated suites were not rerun. docs/snapshots.md now describes the
+current coherent contract rather than accumulating superseded pending statements.
+
+Next task: native retained snapshot creation intent/preflight/confirm/status and
+client review/consent, with same-key lost-reply resume and stale result suppression;
+then exercise actual native creation through generated infrastructure. Real
+provider snapshots, restore and complete roadmap acceptance remain open.
+
+## Native snapshot creation intent — 2026-10-20
+
+Previous goal turn made progress: confirmed HTTP enqueue and nine API/HTTPS tests
+passed. This slice adds production native prepare/confirm/read/clear commands.
+Preparation GETs the exact saved instance then POSTs read-only preflight, binding
+all retained target/request fields, disk-only mode and the complete known check
+set. Native revision checks reject superseded prepares before follow-up or state
+replacement. Server check messages/unknown metadata are dropped. Confirmation
+requires an eligible retained review, explicit consent and its existing key;
+renderer cannot replace approval fields. It retains submitted/inflight/operation
+identity, blocks duplicate concurrent POSTs, allows unchanged unknown-response
+retry only, then GET-only status once an ID is known. Completion requires matching
+recognized task-backed disk-only evidence. Explicit clear is limited to an
+unsubmitted review or a verified terminal result; uncertain work stays retained.
+Connection reset clears this memory, not the server operation.
+
+Verification: eight new filtered `remote_snapshot_create` tests passed. Added a
+security response test (authentication marker/status/JSON/256-KiB limit) and an
+actual socket-abort test; both passed (ten distinct new tests total). The success
+validator and happy HTTPS flow were repeated after requiring the provider-task
+known flag, with a negative flag variant added and verified. Exact POST body/key
+retention, scope/target/request/check mismatches, failed/disabled prerequisites,
+invalid input, in-flight disconnect and stale preparation are covered. Actual
+Tauri crate/command registration compile using `.lab/native-deps`; targeted Rust
+formatting/diff checks pass. A test-only HTTPS sequence helper's visibility was
+widened for reuse; its implementation is unchanged. No frontend/server suites,
+APK builds or unrelated native tests were rerun without a behavior change.
+
+Limitations: native commands + generated HTTPS only, no creation form, actual
+creation WebView IPC/server journey, persisted native intent or restart recovery.
+The existing snapshot list UI/real native listing evidence is unchanged. No new
+dependency, server schema or real VM mutation. Next task: add the remote snapshot
+review/consent/status form, same-key retry and explicit acknowledgement; then add
+read-only server operation recovery for reconnect/restart and verify the complete
+native creation journey against generated infrastructure.
+
+## Remote snapshot creation form — 2026-10-20
+
+Previous goal turn made progress: retained native snapshot commands compiled and
+ten HTTPS tests passed. This slice adds the actual remote React creation form,
+selected explicitly from an environment row. A single workspace review/operation
+matches the native one-intent contract. It shows target, exact name/description,
+known prerequisites and disk-only/backup/consistency limits. Review is bound to
+the selected environment/request; consent is unchecked by default and unavailable
+for disabled/failed prerequisites. Inputs/target stay locked until unsubmitted
+cancel or verified terminal acknowledgement. Unknown submission exposes identical
+same-key retry only; known operations expose explicit GET status refresh. Uncertain
+work cannot be acknowledged/replaced. Completion checks reviewed task-backed
+metadata before showing success. Disconnect resets selection and suppresses late
+responses; it never claims server work was cancelled.
+
+Verification: `npm --prefix apps/client run build` passed TypeScript and Vite.
+`node experiments/instances-browser/check.mjs --snapshot-create` passed the focused
+real Firefox/React walkthrough under simulated IPC: no automatic work on target
+selection, disabled/failed/mismatched review refusal, escaped description, consent,
+input/target exclusion, same-key retry, queued/running/uncertain/success read states,
+terminal acknowledgement and stale preparation after disconnect. JS syntax and
+diff review passed. No Rust/native/server tests were rerun: those sources were not
+changed. No new dependency, real VM operation or credential change was made.
+
+Limitations: this is frontend/browser evidence; no native creation window, APK
+rebuild or real-provider creation has been tested. Intent/operation recovery after
+closing/reconnecting is not implemented; operation ID is shown for preservation.
+Next task: exercise the actual native WebView -> retained commands -> authenticated
+server -> generated HTTPS provider creation path, then add explicit read-only
+server operation recovery for reconnect/restart. Restore and real-provider gates
+remain open; the full roadmap is still active.
+
+## Actual native snapshot creation journey — 2026-10-20
+
+Previous goal turn made progress: the React creation form/build and focused
+Firefox scenario passed. This slice adds a distinct --snapshot-create mode to
+the existing isolated native fixture and registers production creation commands
+in the example. The owned server alone opts into snapshots. A verified generated
+HTTPS proxy forwards the real preflight/confirmed request, token and idempotency
+key to the actual server; its worker contacts only the generated HTTPS provider.
+The example embeds the current frontend assets and invokes real native commands.
+No application/product source change was needed for this integration proof.
+
+Acceptance met: review/cancel, fresh unchecked review/consent, one confirmed
+submission, explicit operation GET refresh, task-backed metadata success,
+independent list, acknowledgement and disconnect. The provider accepts exactly
+one fixed target/name/description/vmstate=0 POST. Unicode/ampersand/plus/newline
+content is checked. The runner requires five snapshot reads, at least one task
+poll, unchanged instance association and exactly one succeeded durable operation
+with providerTaskKnown, successful task status and complete disk-only metadata.
+
+Verification: targeted native example build with tauri/custom-protocol and actual
+server binary build passed. First native scenario passed; repeated only after
+adding independent task-poll and server-journal assertions, then passed again.
+Evidence: .lab/native-deps/snapshot-create-ui-check.log. Targeted Rust formatting,
+JS/Python syntax and git diff checks pass. Frontend/native/server unit suites were
+not repeated without source changes. Fixture listeners, process groups and
+generated temporary state were cleaned up. TLS, WebKit sandbox and X11 cookie
+checks stayed enabled; minimal-session portal/accessibility warnings remain.
+
+Limits: isolated Linux/generated provider only, not a real VM, Android rebuild,
+physical device, normal packaged startup, application consistency or restore.
+Next task: explicit read-only snapshot-operation recovery from the server after
+reconnect/restart, without resubmitting the snapshot or inventing current VM state.
+Full roadmap and real-provider snapshot/restore acceptance remain open.
+
+## Scoped server snapshot recovery — 2026-10-20
+
+Previous goal turn made progress: actual native snapshot creation passed with one
+provider POST and independent task/journal evidence. This slice adds GET-only
+per-instance operation history/detail recovery. It filters instance/kind before
+reading another journal, returns recorded target and original request without
+approval/grant/task-secret fields, checks retained approval/task identity, and
+normalizes successful evidence against exact saved target/request/disk-only
+metadata. Unexpected success fields are discarded. Reads are consistent SQLite
+transactions; no provider, capability, prepared client intent, claim or enqueue
+is needed. History filters before its newest-100 limit and omits large request/
+result fields. Bearer protection remains common to all API routes.
+
+Verification: six new HTTP/SQLite tests passed. Added a saved-success check after
+introducing typed result normalization; it also passed (seven distinct new tests).
+Coverage: database reopen with provider/capability absent, unchanged queued/
+running/uncertain operations, scope/kind/ID isolation, old target visible despite
+another target's large history, ordering/bounds, corrupted approval rejection
+without cross-target disclosure, valid success/unknown-field removal, mismatched
+success refusal and authentication. Targeted Rust formatting and git diff checks
+pass. Added Deserialize only for existing normalized evidence types; no prior
+write behavior, schema, dependency, frontend or native command changed. Existing
+passing write/native/browser suites were not rerun without related changes.
+
+Limits: API/journal recovery only. This does not contact a real provider or prove
+current snapshot existence/restore, launch/restart the production server process,
+or add client recovery controls. Next task: native fixed GET history/recovery
+commands and an explicit client history/saved-ID flow that works after connection
+reset, binds the selected instance, ignores stale replies and never submits the
+saved snapshot again.
+
+## Native saved snapshot recovery — 2026-10-20
+
+Previous goal turn made progress: seven scoped server recovery tests passed.
+This slice registers native read_remote_snapshot_history/recover_remote_snapshot
+commands. Both use canonical instance/operation IDs, fixed GET paths and the
+retained verified HTTPS/token profile with response/authentication bounds. History
+checks target binding, 100-entry bound, uniqueness, names and status/failure/task
+consistency. Saved detail validates requested identities, recorded target/request,
+submission marker and exact task-backed complete disk-only success evidence.
+Unknown fields are dropped and raw read failures are replaced by static messages.
+Old connection replies are discarded after disconnect or reconnect. Reads do not
+create/replace a prepared approval or retain new submission/retry state.
+
+Refactored the existing creation operation validator/name grammar into shared
+internal helpers for this working read use case. Creation still validates its
+own retained Review; recovery supplies recorded target/request directly, without
+inventing a preflight. No dependency, server schema or frontend change.
+
+Verification: seven filtered remote_snapshot_recovery tests pass against generated
+verified HTTPS: fixed authenticated GETs without intent, historical states,
+identity/target/metadata mismatch refusal, bounded/unique history, disconnect and
+reconnect suppression, unknown-field removal, private error handling and invalid
+IDs before network access. Actual Tauri crate/command registration compiles with
+.lab/native-deps. The initial test build exposed a local helper-name shadowing
+error, corrected before execution. Re-ran only the two affected existing creation
+validator/happy-path tests after sharing validation; both pass. Targeted Rust
+formatting and git diff checks pass. No server/browser/Android or unrelated native
+suite was rerun without changes.
+
+Limits: native command/HTTPS evidence only. Recovery is not yet exposed in the
+React UI and no fresh recovery WebView/process-restart journey is claimed. No
+real provider contact, mutation, credential change or persisted client state.
+Next task: per-instance read-only history and saved-operation-ID UI, with explicit
+saved/current-state wording, stale result suppression and no submission controls;
+then verify it through the actual native fixture after reconnect/restart.
+
+## Snapshot recovery UI — 2026-10-20
+
+Previous goal turn made progress: native GET-only recovery compiled and seven
+HTTPS plus two affected creation tests passed. This slice adds a per-instance
+React recovery panel below snapshot listing: explicit history, row inspect,
+saved-operation-ID lookup and read-only refresh. Selected target/request identity
+is checked before display; successful records need matching task-backed disk-only
+evidence. The panel distinguishes recorded completion from current snapshot
+existence/restore and handles unknown submission/failure without mutation controls.
+ID editing invalidates pending results; disconnect/unmount ignores late replies.
+A new connection starts empty but can read server records without prepared consent.
+No client state persistence, approval restoration, write or automatic read occurs.
+
+Verification: npm --prefix apps/client run build passed TypeScript/Vite.
+node experiments/instances-browser/check.mjs --snapshot-recovery passed the focused
+Firefox/React simulated-IPC scenario: explicit history/empty/error states, row/
+saved-ID reads, saved/current wording, escaped description, unknown/failed states,
+wrong-target refusal, stale edited-ID detail and disconnected history-error
+suppression, fresh-connection recovery and zero creation commands. JS syntax and
+git diff checks passed. Rust/server/native/Android suites were not repeated because
+those sources did not change. No new dependency or real VM operation was used.
+
+Limits: browser UI plus earlier native HTTPS/server evidence, not a completed
+native recovery WebView/process restart journey. Next task: extend the owned native
+fixture to reconnect/restart the app after snapshot creation, recover the saved
+operation/history through real commands/server and prove no additional provider
+POST; then continue snapshot restore with explicit destructive confirmation and
+durable task tracking. Real-provider gates and the full roadmap remain open.
+
+## Actual native snapshot recovery after app/server restart — 2026-10-20
+
+Previous goal turn made progress: client read-only recovery built and passed the
+focused Firefox scenario. This slice adds a --snapshot-recovery combined mode to
+the owned native fixture and registers production recovery commands in the example.
+It creates once through the real native UI, closes that application, saves the
+operation, stops the actual server cleanly, then launches new server/app processes
+on the same database. The new server explicitly disables snapshots and removes
+all generated Proxmox configuration. New native connection uses the supplied
+fixture HTTPS/token/CA; old token/operation ID/creation form are not restored.
+
+Acceptance met: history lookup, copied saved-ID read and refresh show the correct
+recorded target/request/task metadata and historical/current distinction, without
+submission controls. Recovery proxy traffic is GET-only; provider read/POST counts
+stay unchanged and the full succeeded operation equals its pre-restart value.
+The creation phase still proves exactly one disk-only POST, independent task
+polling and one succeeded journal entry. All infrastructure/certificates/tokens
+are generated and disposable; no personal credentials or real VM are accessed.
+
+Verification: targeted embedded-asset native example and actual server binary
+builds passed. The combined native scenario passed on its first run; log:
+.lab/native-deps/snapshot-recovery-ui-check.log. JS/Python syntax, targeted Rust
+formatting and git diff checks pass. No product source, dependencies or schema
+changed; unrelated frontend/unit/Android checks were not rerun. Owned display,
+server/app process groups, proxy/provider and temporary data were cleaned up.
+TLS, sandbox and X11 cookie verification stay enabled; minimal-session portal/
+accessibility warnings remain without preventing the assertions.
+
+Limits: succeeded saved operation after clean app/server restart only, in the
+isolated Linux fixture. A live provider crash, physical/mobile/installed runtime,
+current snapshot existence and actual restore are not proven here. Next task:
+read-only restore preconditions and explicit destructive approval bound to the
+selected complete disk-only snapshot and retained target, followed by durable
+no-replay rollback task tracking and generated-provider/native restore checks.
+Real-provider snapshot/restore and the full roadmap remain open.
+
+## Read-only restore preconditions — 2026-10-20
+
+Previous goal turn made progress: actual native app/server restart recovery
+passed with GET-only traffic and unchanged journal. This slice adds bounded
+snapshot-restore-preflight API/domain/provider reads. It binds the exact named
+snapshot, live target digest and canonical SHA-256 of API-visible saved config,
+checks stopped power before/after, metadata/config stability, marker/template/
+lock/pending guards, complete disk-only snapshot work and provider snapshot feature
+for the selected config. No dedicated snapshot revision digest is exposed by the
+upstream config API, so hash canonical JSON locally and never forward the raw
+configuration. Added recursive ordering and domain/name separation. ADR 0056
+records limits, including RAM snapshots that may auto-start during rollback.
+
+The report is explicitly destructive, startsVm=false and executionEnabled=false,
+even with creation/lifecycle flags enabled. There is no rollback/power transport,
+operation or approval in this slice. Shared identity flag decoding and snapshot
+name grammar were extracted without changing existing contracts; current VM
+digest still requires the provider's 40-character format. No schema/dependency/
+client change or real provider operation was made.
+
+Verification: six filtered snapshot_restore_preflight tests passed against owned
+generated HTTPS/API fixtures, including fixed 12-GET positive sequence, stable
+canonical fingerprint, 16 blocked conditions plus malformed RAM data, exact
+retained target, independent disabled execution, invalid/scope/permission failures
+and raw-data suppression. The initial new test build had a temporary borrow in
+fixture setup; binding the scope string fixed it before running. Because identity/
+name helpers are shared, reran five affected lifecycle_preflight tests and the
+existing name/input-validation test; all six passed. Targeted formatting and
+git diff checks pass. Unrelated storage/native/browser/Android suites were not run.
+
+Next task: full destructive restore approval (including data-loss acknowledgement,
+live digest and selected-config fingerprint), shared mutation exclusion and durable
+no-replay rollback task storage. Then fixed rollback transport/executor, explicit
+client confirmation and generated/native restore verification. Stopped/disk-only
+preflight does not prove storage rollback, write permissions, application
+consistency or recovered guest contents; real infrastructure acceptance stays open.
+
+
+## Durable destructive restore journal — 2026-10-20
+
+Previous goal turn made progress: six restore-preflight HTTPS/API tests and six
+shared identity/name checks passed. This slice adds mandatory confirmation plus
+explicit data-loss acknowledgement bound to the full target, current digest,
+selected snapshot name and canonical saved-config hash. Unknown/start fields are
+rejected. Restore has its own input-hash domain and operation kind. Same-key
+retries keep the original identity/age; dispatch needs exact fresh approval and
+an irreversible marker. Only qmrollback tasks with matching node/VMID can be
+retained. Unknown submissions never reclaim; known-task recovery cannot dispatch
+again. Storage success needs task success, matching snapshot/hash and a stopped
+observation of the exact target; this does not prove guest contents.
+
+Schema 12 adds restore to shared mutation exclusion and the incomplete-provisioning
+trigger. Migration retains old snapshot/lifecycle/provisioning rows and child
+journals, checks the reference graph atomically and restores FK enforcement before
+returning a store. The slice adds no dependency, client control, provider transport or runtime
+write opt-in. ADR 0057 records contract and limits.
+
+Verification: eleven distinct new restore-storage tests passed, including consent,
+idempotency/expiry, concurrent connections, target/snapshot creation exclusion,
+crash windows, corrupt-input rollback, task identity, completion guards, actual
+schema-11 snapshot/child-journal preservation and atomic migration refusal. The
+corruption fixture initially failed to inject its orphan because its connection
+correctly enforced foreign keys; explicitly disabled enforcement on that owned
+fixture connection before injecting corruption, then the migration refusal test
+passed. The eight initial tests passed first; reran only changed/new filters after
+adding migration and stronger completion cases.
+
+Because the operation-table schema and active-mutation constraints affect existing
+callers, reran 9 lifecycle-storage, 34 provisioning-intent and 10 snapshot-storage
+tests; all 53 passed. The affected v2 instance migration and store FK-enforcement
+checks also passed. Latest-schema assertions changed from 11 to 12; historical
+migration files remain unchanged. Targeted Rust formatting and diff checks pass.
+No application/native/browser/Android or real-provider suites were repeated.
+
+Next task: fixed one-shot disk-only rollback transport and an opt-in executor that
+revalidates the reviewed target/snapshot before dispatch, retains the task before
+polling and reconciles known tasks through GET only. Then HTTP/client explicit
+confirmation and generated/native checks. Restore preflight remains disabled;
+no actual rollback, guest-content recovery or real-infrastructure acceptance is
+claimed. Full roadmap remains open.
+
+
+## Opt-in durable rollback executor — 2026-10-20
+
+Previous goal turn made progress: restore approval/storage, mutation exclusion and
+schema-12 migration passed 11 new and 55 affected existing checks. This slice
+connects fixed one-shot rollback transport and the durable restore executor to the
+sequential production worker. It revalidates all stopped/disk-only target/snapshot
+checks plus the confirmed live digest and saved-config hash before committing the
+marker. POST has only start=0 at the fixed retained snapshot path. The matching
+qmrollback task is persisted before polling. Task success then requires fresh full
+preflight, original saved hash and stopped owned target; the pre-write live digest
+is not required after rollback because rollback changes configuration. The final
+power observation is included in the report/result. No raw saved config escapes.
+
+VMANYWARE_RESTORES_ENABLED is a separate exact true/false flag, default false.
+Existing creation/lifecycle/provisioning opt-ins do not grant restore. Invalid
+configuration stops startup before database creation. Known tasks reconcile GET
+only with all write flags off; lost/invalid submission responses stay uncertain
+and never reclaim. No restore HTTP submission or client controls exist yet;
+HTTP preflight stays execution-disabled until that submission route is added.
+Updated ADR 0057 and snapshots documentation, preserving the open roadmap gates.
+
+Verification: seven new filtered restore_execution tests passed against generated
+verified HTTPS. Positive worker journey has exactly 26 requests: 12 preflight
+GETs, one fixed POST, one task GET and 12 postcheck GETs. Covers 17 pre-dispatch
+conditions, four lost/wrong node/VMID/kind response cases across reopen, 13-GET
+known-task restart with writes off, 14 failed task/poll/postcheck conditions,
+invalid names and default queue behavior. The final transport filter separately
+checks 401/403/302/500/malformed responses, private error suppression and one POST
+without redirects/retries. No prior passing executor filters were repeated after
+adding this independent test.
+
+One new exact opt-in unit test and two new actual-server process tests passed.
+The two affected existing snapshot process tests and one existing restore
+preflight positive test also passed. Targeted formatting and diff review pass.
+No dependency/schema/storage implementation changed in this slice; earlier dirty
+changes and unrelated native/browser/Android/storage suites were not repeated.
+Owned fixtures/processes were cleaned up. No real VM, credentials or production
+infrastructure were accessed or changed.
+
+Next task: confirmed restore HTTP submission bound to path/target/snapshot and
+one idempotency key, independent capability reporting and scoped safe responses;
+then native retained review/data-loss confirmation/status and actual generated
+native restore journey. Provider completion here does not prove restored guest
+contents, write permissions on real storage or phase-0D/phase-4 acceptance. Real
+modify/restore/readback and the rest of the roadmap remain open.
+
+
+## Confirmed restore HTTP submission — 2026-10-20
+
+Previous goal turn made progress: fixed rollback/executor and opt-in production
+worker passed 13 targeted checks. This slice exposes POST environments/{id}/
+snapshots/{snapshotName}/restore with a 4 KiB approval limit, both path identities
+bound to the complete confirmed target/request and mandatory data-loss agreement.
+Exactly one idempotency key is required; Origin-bearing requests are rejected.
+The handler checks the independent restore capability, provider scope and saved
+instance, then only enqueues. Same-key retries retain identity/age and return
+terminal/uncertain records without replay. Location points to operation GET.
+Static errors/diagnostic route templates omit selected names and raw request data.
+
+The actual production router now receives the same restore flag as its worker.
+Old router constructors default false; creation/lifecycle/provisioning flags do
+not grant restore. Preflight reports this capability independently of eligibility;
+true never bypasses stopped/disk-only checks. No schema/dependency/native/client
+change, new runtime flag or real provider operation was introduced in this slice.
+Earlier dirty source changes remain intact. ADR 0057/API/snapshots docs updated;
+roadmap acceptance remains open.
+
+Verification: eight new restore_api tests passed: exact approval/path binding,
+mandatory confirmations/fingerprint, unknown options/malformed/oversized bodies,
+Origin/key policy, independent capability, scope/target guards, saved operation
+lookup, concurrent idempotency, changed-input and mutation conflict, bearer auth
+and safe errors. The first test compilation found two incorrect format arguments
+in the new adapted fixture; corrected before running. Two new filtered restore_http
+verified-HTTPS tests passed: HTTP enqueue -> production round -> saved result for
+success, stale live digest, stale selected hash and lost submission reply; same-key
+terminal/uncertain retries do not write again, and query retargeting is ignored.
+Preflight capability is independently checked with both eligible and failed checks,
+exact 12 GETs, no journal/write, and true/false flag states.
+
+Because shared router construction and production flag forwarding changed, reran
+seven affected existing snapshot API tests, the existing restore-preflight target/
+creation-flag test, and the actual restore process test enhanced to send a real
+HTTP request. All nine pass (19 distinct checks in this slice). Actual server
+returns disabled 403 or configured-provider-absent 503 as expected; generated
+processes clean up. Targeted formatting/diff checks pass. Earlier executor/storage,
+unrelated UI/native/Android and broad suites were not repeated.
+
+Next task: native retained restore prepare/confirm/read/ack commands that bind the
+reviewed snapshot/configuration, require separate data-loss consent, preserve an
+unknown same-key retry, reject stale/disconnected replies and never replay a known
+operation. Then explicit React restore review/status and generated/native journey.
+Provider completion is not real guest-content proof; no actual rollback or phase
+0D/phase-4 infrastructure acceptance is claimed. Full roadmap remains open.
+
+
+## Native retained destructive restore commands — 2026-10-20
+
+Previous goal turn made progress: confirmed restore HTTP and independent capability
+passed 19 targeted checks. This slice registers native prepare/confirm/read/clear
+restore commands and retains one restore review/key in the current connection.
+Prepare reads the saved target then fixed preflight, binds target/request/revisions,
+requires all 13 distinct check codes and validates destructive/stopped/disk-only
+report consistency. Missing-snapshot failure can be reviewed but not submitted.
+Confirm requires separate displayed-target and data-loss booleans; full approval
+is constructed from the native retained review, never renderer revisions or URL.
+
+Submitted intent is retained before network await. Unknown response only permits
+same-key/body retry; known operation blocks POST and uses GET. Success validates
+exact target/name/hash plus task-backed stopped observation. Inconsistent definite/
+uncertain status combinations fail validation; uncertain state cannot be cleared.
+Only unsubmitted or verified terminal intent can be acknowledged. Generation
+changes clear local restore memory and reject late prepare/submission/status
+replies without server cancellation. No persisted client consent or credential,
+React controls, server/schema/dependency changes or real VM operation were added.
+
+Reuse the creation name grammar and bounded authenticated snapshot HTTPS helper;
+changed its denial text to generic snapshot action instead of creation. Added
+Clone to normalized snapshot metadata for retained restore review. Existing
+creation/recovery behavior remains otherwise unchanged. ADR 0057 and snapshot
+workflow docs describe the native boundary and remaining gates.
+
+Verification: actual Tauri/native command registration compiles using the signed
+.lab/native-deps prefix. Fourteen filtered remote_snapshot_restore tests pass with
+generated verified HTTPS: full prepare/dual-confirm/read/ack request sequence,
+identical unknown-response retry, disabled/failed reports, 15 malformed target/
+selection/check/power/fingerprint variants, exact task-backed success, status
+uncertainty, auth/status/malformed/size limits, in-flight disconnect, stale prepare,
+actual socket loss, missing-snapshot review, known uncertain GET-only completion
+and late disconnected status refusal. Initial ten tests passed; strengthening the
+shared new restore validator justified rerunning this slice's fourteen after
+adding uncertainty cases. One initial unused test-helper warning was resolved by
+asserting reset behavior in the disconnect test. Import cleanup compiled with the
+subsequent checks, without warnings.
+
+Because the existing HTTPS helper denial text is shared, reran only the affected
+creation happy path and authentication/status/size response test; both pass.
+Targeted Rust formatting and diff checks pass. No server/storage/browser/Android
+or unrelated native suite was repeated. No real provider or infrastructure contact.
+Next task: explicit React restore review showing VM/snapshot and current-data loss,
+independent unchecked consent, same-key unknown retry and GET-only status, with
+stale-reply suppression; then actual generated native restore journey. Native
+command evidence alone does not prove WebView/mobile behavior or restored guest
+contents. Full roadmap and real-provider gates remain open.
+
+
+## Explicit remote client restore review — 2026-10-20
+
+Previous goal turn made progress: native retained restore commands compiled and
+passed 14 new plus two affected HTTPS tests. This UI slice adds restore selection
+from the exact named snapshot row and a single retained review panel. Selection
+makes no request until explicit review. The panel displays VM/name/node/VMID and
+explains current-data/settings loss, stopped/disk-only requirements, power limits
+and snapshot dependence on original storage. It binds reviewed target/name and
+requires the full 13-check passed report, exact fingerprint, stopped observation
+and disk-only selection before enabling consent.
+
+Target confirmation and loss acknowledgement are separate initially unchecked
+checkboxes. Both must be checked. Confirm sends only native connection/key/booleans;
+revisions and approval remain native. Unknown response retains the same key/consent
+and only offers same-request retry; known operation exposes GET refresh only.
+Success evidence must match target/name/hash/task/stopped observation, with explicit
+unverified guest-content wording. Uncertain work cannot be acknowledged. A parent
+selection/lock prevents switching VM/snapshot or snapshot creation while retained.
+Disconnect resets selection/consent and generation checks discard late replies.
+No persistence, dependency, Rust/server/schema or real VM mutation was introduced.
+
+Verification: npm --prefix apps/client run build passed TypeScript/Vite.
+The new focused Firefox --snapshot-restore scenario passed first run using actual
+React with simulated IPC. Covers no automatic request on list/selection, disabled/
+running/mismatched review refusal, escaped description, both independent unchecked
+consents, target/creation exclusion, same-key retry after response loss, queued/
+running/uncertain GET refresh, invalid success fingerprint refusal, terminal ack,
+fresh connection and late prepare/status suppression. It checks confirm arguments
+cannot introduce URL/revision/hash fields and no creation command is invoked.
+Because shared environment/list controls changed, reran the existing focused
+--snapshot-create and --snapshots browser scenarios; both pass. JS syntax and
+repository diff checks pass. Earlier native/server/storage/Android and unrelated
+frontend suites were not repeated without source changes.
+
+Updated snapshot workflow/ADR/browser-fixture docs; existing dirty work remains
+intact. Next task: extend the isolated native fixture to exercise the actual
+WebView -> retained native restore commands -> authenticated API/worker -> generated
+HTTPS provider rollback, proving one fixed POST, independent completion evidence
+and no replay. Browser/simulated IPC does not prove this native journey, deployed
+or Android behavior, real storage rollback or restored guest contents. Real
+phase-0D/phase-4 acceptance and full roadmap remain open.
+
+
+## Actual native restore with lost HTTP submission response — 2026-10-20
+
+Previous goal turn made progress: explicit restore UI built and focused Firefox
+restore/creation/list scenarios passed. This slice adds a distinct mutually
+exclusive --snapshot-restore native fixture mode and registers production restore
+commands in the owned example. Actual WebView, native retained HTTPS state,
+authenticated API/SQLite/worker and generated provider all participate; no IPC
+mock or direct fixture submission bypass is used. Normal application startup does
+not link fixture drivers. No product source, dependency or schema changed.
+
+The driver selects the existing named disk-only fixture snapshot. First read-only
+review observes a running VM and cannot consent; subsequent synthetic reads show
+it stopped without power mutations. It cancels an eligible review, prepares again
+with two unchecked consents, requires each independently and confirms. The HTTPS
+proxy drops the first response only after real API 202/commit. Native retains the
+key/review; exact retry returns the same operation. Provider receives exactly one
+fixed rollback POST with start=0; creation/lifecycle flags are absent. Status/list,
+terminal ack and disconnect work, without a new provider write.
+
+Independent assertions pass: exactly two identical API path/key/body submissions;
+one succeeded vm_snapshot_restore journal entry with known successful task; exact
+instance/scope/node/VMID/name; canonical saved-config fingerprint independently
+computed in Python; stopped observation; unchanged instance association. Counts:
+12 snapshot-list GETs, 10 saved-config GETs, 10 power GETs and at least one task
+poll. Live digest changes after rollback, while selected saved-config hash stays
+stable. This is provider completion evidence, not restored guest-file contents.
+
+Verification: current embedded-asset native example and actual server builds
+passed. Initial scenario failed in its new driver before connecting because the
+CA textarea was filled with an input-only setter; corrected element dispatch,
+rebuilt only the affected example and reran the same scenario. It passed with all
+independent assertions. Final log .lab/native-deps/snapshot-restore-ui-check.log;
+earlier driver failure .lab/native-deps/snapshot-restore-ui-check.initial.log.
+Python/JS syntax, targeted Rust formatting and diff review pass. Existing unit/
+UI/Android suites were not repeated without product changes. TLS, sandbox and X11
+cookie checks remain enabled; minimal-session portal/accessibility warnings remain
+nonfatal. Owned processes, listeners and temporary state were cleaned up.
+
+Next task: scoped read-only restore operation history/detail with recorded target/
+request, so reconnect/restart recovery never submits a rollback or recreates
+consent; then native/client saved-ID recovery and actual app/server restart proof.
+No real VM/provider contact, mutation, credentials or production change occurred.
+Real storage rollback, recovered guest state, physical/mobile/packaged runtime and
+phase-0D/phase-4 infrastructure gates remain open. Full roadmap remains active.
+
+
+## Scoped read-only saved restore recovery — 2026-10-20
+
+Previous goal turn made progress: actual isolated native restore passed with lost
+HTTP response, identical API retry and one provider rollback POST. This slice adds
+GET-only per-instance restore operation history/detail. History filters instance/
+kind before newest-100 ordering/limit and omits request/result bodies. Detail
+returns original target/request/config fingerprint and dispatch marker, without
+approval/grant flags, live digest, request key, confirmation age, input hash, raw
+task ID or saved configuration. The existing immutable target DTO is reused.
+
+Reads use consistent SQLite transactions, resolving scope/kind before decoding
+other records. Validate saved approval/hash and qmrollback task, dispatch/status/
+failure consistency and exact task-backed successful target/name/fingerprint/
+stopped observation evidence. Normalize success through typed public evidence to
+strip unknown nested fields. Refuse corrupt/inconsistent success or unrelated
+workflow failures without changing records or disclosing their raw data. No
+provider, preflight, claim, consent renewal, state recovery, write capability or
+new submission is needed. Configured bearer protection remains common.
+
+Verification: eleven distinct focused restore_recovery HTTP/SQLite tests passed.
+Initial seven passed, then added/strengthened only affected filters for known
+running/uncertain/interrupted/auth-refusal/task-failure states, wrong task/dispatch
+combinations, same-instance creation isolation, saved success after reopen,
+unknown nested field suppression and six mismatched completion fields. The final
+failure-code whitelist change was checked with its new corruption test and the
+two affected failed-record history/isolation tests, without repeating unrelated
+passing filters. Coverage also includes queued reopen with no provider/flags,
+unchanged journal, instance/kind/ID guards before corruption errors, independent
+100-row history limit/order and bearer auth. All tests use owned SQLite; no real
+infrastructure or credential files are accessed.
+
+Targeted Rust formatting/diff checks pass. No dependency/schema, existing executor
+or creation behavior, runtime configuration, native/frontend code changed; earlier
+passing storage/native/browser/Android and broad suites were not rerun. This proves
+read-only API/database reopen, not a new application/server-process restart test.
+Updated API/snapshot/ADR docs and left roadmap gates open.
+
+Next task: native fixed authenticated GET restore-history/detail commands with
+recorded target/request/fingerprint validation, bounded private responses, current
+connection checks and no prepared intent/submission; then explicit React saved-ID/
+history recovery and actual app/server restart verification. Read completion is
+historical provider evidence, not current VM state or real guest-content recovery.
+Full roadmap and real phase-0D/phase-4 acceptance remain open.
+
+
+## Native saved restore history/detail recovery — 2026-10-20
+
+Previous goal turn made progress: eleven scoped restore-history/detail API/SQLite
+tests passed. This slice registers native read_remote_restore_history and
+recover_remote_restore commands. Canonical IDs select fixed GET paths through
+the retained verified HTTPS/token profile, with bearer marker, exact status and
+response size limits. History validates scope/count/unique IDs/names/timestamps
+and status/failure/task consistency. Detail validates requested identities,
+recorded target/request/config fingerprint, submission marker and exact task-backed
+successful stopped observation. Unknown nested fields and raw error bodies are
+not exposed. Read failures use static read-oriented text.
+
+Connection generation is checked after await; disconnect/reconnect rejects late
+reads. Recovery creates no review, grant, key, retry state or submission. Share
+existing restore request/operation validation for recorded context; added a
+dispatch-consistency check and tightened pre-dispatch failure codes to the server's
+restore vocabulary. Historical success remains provider evidence, not current
+power or guest recovery. No server/schema/dependency or frontend change occurred.
+Earlier dirty changes remain intact.
+
+Verification: actual Tauri/native command registration compiles with the isolated
+.lab/native-deps prefix. Nine focused remote_restore_recovery tests pass with
+generated verified HTTPS: two fixed authenticated GETs without prepared intent;
+queued/running/unknown/terminal and known-task states; exact target/request/hash/
+power/dispatch checks; history bounds/uniqueness; read auth/status/malformed/size/
+private errors; nested unknown field removal; invalid IDs before network; old
+connection reply suppression. Initial seven passed, then reran this slice after
+extending restore-specific guards and adding two status/known-task checks.
+
+The shared existing restore operation validator changed, so reran only its status
+validation and retained prepare/confirm/status happy path; both pass. Targeted Rust
+formatting and diff checks pass. No server/storage/React/browser/Android or unrelated
+native suite was repeated. No real provider or credential files were accessed.
+
+Next task: per-instance React saved-restore history/manual-ID/read-only refresh,
+with recorded/current wording, target binding, stale ID/disconnect suppression and
+no consent/submission controls; then actual app/server restart recovery fixture.
+Native command evidence alone does not prove WebView/mobile/restart integration
+or recovered guest contents. Full roadmap and real-provider gates remain open.
+
+
+## Client saved restore history and manual-ID recovery — 2026-10-20
+
+Previous goal turn made progress: native GET-only saved restore recovery compiled
+and passed nine new plus two affected HTTPS tests. This UI slice adds a separate
+per-instance saved-restore panel below creation recovery. Explicit history, row
+inspection, manual saved ID and read-only refresh work without snapshot listing
+or prepared consent. Detail binds selected instance/scope/node/VMID and operation
+ID/kind; success also needs matching saved fingerprint/name/task/submission and
+stopped target evidence. Saved completion is explicitly distinct from current VM,
+snapshot existence or guest-file recovery. Uncertain/failed outcomes remain clear.
+
+ID edits invalidate in-flight results and reset detail/error/busy state; unmount/
+disconnect suppress stale responses or failures. Fresh connection starts empty but
+can read the server record. Recovery exposes no consent, prepare, submit, retry
+write, cancel or acknowledge action. Existing creation history remains separate.
+No native/server/schema/dependency or real provider changes occurred in this slice;
+earlier dirty work remains intact.
+
+Verification: TypeScript/Vite build passed. New focused Firefox --restore-recovery
+passed, then was extended with wrong-success fingerprint refusal and rerun after
+small restore wording corrections; passes all cases. Actual React/simulated IPC
+covers no automatic reads, history empty/error distinction, row/manual-ID lookup,
+recorded/current/guest-state wording, unknown/failed states, wrong target/hash,
+stale edited-ID detail, late disconnected history error and fresh-connection
+lookup. Assertions prohibit any creation or restore mutation command. The shared
+snapshot area now mounts another panel, so ran only the affected existing
+--snapshot-recovery scenario too; it passes. JS syntax and diff review pass.
+Earlier Rust/storage/native/Android or unrelated UI suites were not repeated.
+
+Next task: actual isolated native restore followed by clean app/server restart,
+provider configuration removed and write flags off, recovering history/saved ID
+through real native commands with GET-only traffic and unchanged operation. This
+UI/browser evidence does not prove that integration or restored real guest state.
+Full roadmap and phase-0D/phase-4 infrastructure acceptance remain open.
+
+
+## Actual native saved restore recovery after app/server restart — 2026-10-20
+
+Previous goal turn made progress: client saved-restore lookup built and focused
+restore/creation recovery browser checks passed. This slice adds mutually exclusive
+--restore-recovery combined mode to the owned native fixture, registers production
+GET history/detail commands in the example and adds a second-process recovery
+driver. The initial actual native restore retains running-target refusal, cancelled
+review, dual consent and same-key API retry after a deliberately lost response.
+Exactly one rollback POST and independent completion evidence remain required.
+
+The first app exits. Runner saves the succeeded operation, stops the actual server
+cleanly, then starts a new server process on the same SQLite database with all four
+write flags explicitly false and all Proxmox settings removed. A second native
+app process starts empty and receives the generated connection explicitly. It
+finds history/row detail, reads the copied saved ID and refreshes it through actual
+commands/API. Old token/input/restore intent/consent are not restored automatically.
+
+Acceptance passed: new recovery proxy traffic is GET only; provider read/POST
+counts stay unchanged; the whole succeeded operation equals its saved value.
+The initial restore still proves two identical API path/key/body submissions,
+one provider rollback, exact selected-config fingerprint and stopped observation.
+No product source, dependency/schema, real VM or credential change was needed.
+
+Verification: targeted embedded native example and current server builds pass.
+The combined actual native scenario passes on first run; log
+.lab/native-deps/restore-recovery-ui-check.log. Python/JS syntax, targeted Rust
+formatting and diff checks pass. Unrelated unit/browser/Android suites were not
+repeated without changes. Owned listeners, process groups and temporary data were
+cleaned up. TLS, sandbox and X11 cookie checks remained enabled; nonfatal minimal-
+session portal/accessibility warnings remain.
+
+Limits: clean succeeded-record recovery only, isolated Linux/generated provider.
+No live rollback crash, real disk/guest restore, deployed/mobile/installed runtime
+or phase-0D/phase-4 infrastructure acceptance is proven. Next task: read-only
+retained-instance deletion prerequisites with ownership/power/lock/pending guards
+and exact disk/deletion scope for later explicit delete/recreate approval. Roadmap
+still requires delete/recreate, real-provider acceptance, remaining platform work
+and security/packaging/release gates; full goal remains active.
+
+
+## Read-only deletion target and candidate volume review — 2026-10-20
+
+Previous goal turn made progress: actual native app/server restore recovery passed
+with GET-only traffic/provider absent/writes off. This slice adds GET delete-preflight
+for a retained instance. It reuses unchanged lifecycle guards and adds stopped
+power, protection, live/unused/Cloud-Init/EFI/TPM and saved snapshot/RAM references,
+storage-inventory owner VMID, canonical two-read scope stability and final target/
+pending/power checks. Candidate volumes are deduplicated with source references;
+recognized ISO CD-ROM media is separate. No raw configs/private inventory fields or
+host paths escape. Current definition/association/journal remain unchanged.
+
+Overall result remains unknown if all implemented checks pass: HA/replication
+management has not yet been read. Existing flags never enable deletion. No delete,
+power, purge, approval or new operation transport is added. ADR 0058 records this
+explicit preparation boundary, primary upstream contracts and the need to review
+backend cleanup effects/independent volume removal before execution. API-visible
+scope is not full deletion authorization. Bounds: 20s, 64 snapshots, 256 images,
+1024 inventory entries/storage and existing provider response limits.
+
+Verification: five distinct targeted deletion_preflight generated-HTTPS/API tests
+pass, including five owned candidate types and separate ISO, 15-GET positive
+sequence, fourteen failed conditions, duplicate inventory/scope rejection, safe
+errors, retained association/definition, zero journal and off capability despite
+all existing flags on. The last error-fixture test initially failed compilation
+on a temporary scope borrow; bound the owned scope string and its filtered rerun
+passed. Earlier four passing filters were not repeated without related changes.
+Rust formatting/diff checks pass; existing lifecycle/snapshot helpers are unchanged,
+so unrelated storage/native/browser/Android and broad suites were not rerun.
+No dependency/schema or real provider/VM/credential change occurred.
+
+Next task: read-only HA/replication dependency checks and complete provider-effect
+scope, then explicit data-loss deletion approval with durable mutation exclusion,
+no-replay dispatch/task/independent absence checks and retained definition/history
+for recreation. Actual deletion/recreation and real infrastructure acceptance remain
+open; full roadmap remains active.
+
+
+## Permission-backed deletion HA/replication review — 2026-10-20
+
+Previous goal turn made progress: five read-only target/volume deletion checks
+passed. This slice reads HA/replication membership before and after candidate scope,
+blocks configured resources/jobs even if disabled or removal-pending, rejects
+membership changes and binds normalized target membership into scopeHash. Report
+adds target haManaged/replicationJobs without exposing unrelated cluster settings.
+No permission, HA or replication configuration is changed.
+
+Verified upstream contracts: HA index requires Sys.Audit on /; replication index
+silently filters jobs by VM.Audit on the guest. Therefore require effective target
+VM.Audit before/after each replication list. Permission values describe propagation:
+0/false with a present key still grants audit. Missing/revoked/malformed visibility
+is an error, not empty success. Target path is fixed from retained VMID; no userid
+or token override. Validate canonical HA IDs and replication id/guest consistency,
+duplicate IDs and 4096-entry bounds. Unknown fields and unrelated entries remain
+private. Execution remains off and overall status unknown while remaining provider
+cleanup effects are not fully reviewed; this does not grant deletion authorization.
+
+Verification: all five affected deletion_preflight filters passed with the new
+23-GET sequence. Three new generated-HTTPS management tests and one full-preflight
+management blocker test passed: exact GETs, nonpropagated audit, missing/wrong-path/
+revoked/malformed permissions, forbidden read, malformed/duplicate/oversized HA/jobs,
+canonical numeric/string guests, disabled/pending jobs, newly appearing dependency
+and private data suppression. Nine distinct checks passed. Targeted formatting and
+diff review pass. No schema/dependency/native/frontend or existing non-deletion
+behavior changed; unrelated suites were not repeated. No real VM/provider access,
+credential file inspection, permission or production change occurred.
+
+Next task: complete provider cleanup-effect/candidate scope review (including
+unreferenced owned/fleecing artifacts and non-disk VM-specific cleanup), then bind
+that explicit scope into durable destructive approval. Definition/association/
+history retention, no-replay delete and independent target/volume absence evidence
+must precede recreation. Actual deletion/recreation and real infrastructure gates
+remain open; full roadmap remains active.
+
+
+## Fixed deletion effects and recorded cleanup scope — 2026-10-20
+
+Previous goal turn made progress: nine target/volume/permission-backed management
+checks passed. This slice binds a fixed versioned deletion effect contract:
+configuration/snapshot metadata, VM ACL/firewall, IPAM and recorded fleecing cleanup;
+no job purge or bulk unreferenced-disk destruction, and definition/history retained.
+Parse current special-section fleecing references and prove owner VMID before any
+future write. Unknown sections or malformed/foreign cleanup block. Preserve
+non-Cloud-Init CD-ROM media and report extra owned images observed on inspected
+storages, without claiming global orphan discovery. Candidate/preserved images
+are jointly bounded to 256. Scope v2 hashes effects and preservation/config evidence.
+
+Upstream destroy does not promise removal of every snapshot-only disk reference;
+classify it explicitly and block this fixed delete path unless a live/unused/RAM
+reference covers its destruction. Moved the earlier positive old-snapshot-only
+disk into an explicit refusal case; supported positive uses the live disk shared
+by its snapshot. Cloud-Init filename recognition is only drive kind; storage
+inventory still proves ownership independently. Fully checked read preconditions
+can now pass, while execution is always false and no deletion consent, journal,
+transport, power action or provider mutation exists.
+
+Verification: six affected deletion_preflight tests passed with updated candidate/
+preservation expectations. Four new effect-scope test groups pass: valid fleecing,
+foreign/unsafe/changing cleanup, unknown sections, snapshot-only refusal, media
+preservation, unsupported slot and aggregate bounds. After adding the aggregate
+bound, reran only its new filter and the affected positive review. Ten distinct
+checks passed. Formatting/diff checks pass. No schema/dependency/native/frontend
+or non-deletion behavior changed, so unrelated suites were not repeated. Primary
+upstream effect/config/drive contracts are linked in ADR 0058. No real infrastructure,
+credential inspection/change or VM mutation occurred.
+
+Next task: complete-target/current-digest/scope-hash deletion approval with explicit
+loss acknowledgement and durable shared mutation exclusion/no-replay journal;
+then fixed DELETE/task tracking and independently verified VM/volume absence while
+retaining definition/history for recreation. Real storage cleanup, backend warnings,
+platform/deployment/release gates and full roadmap remain open.
+
+
+## Full-scope deletion approval and no-replay journal — 2026-10-20
+
+Previous goal turn made progress: ten deletion-effect/preflight checks passed.
+This slice retains complete target/digest/scope hash and normalized public plan
+(volumes/effects/references, snapshots, preserved media/images and fixed effects)
+in mandatory dual-confirmed deletion approval. The 64 KiB shape validator rejects
+unsafe/unverified/ambiguous/duplicate/overlapping scope or changed backend effects.
+A real generated-provider preflight plan is directly checked as valid approval.
+Input hash has its own deletion domain; same-key identity/age never renews.
+
+Schema 13 adds vm_delete to common mutation exclusion and retains existing operation
+and provisioning child graphs. Active/uncertain provisioning blocks; failed
+provisioning is retained but does not prevent explicit cleanup. Migration is atomic,
+checks FKs before commit and restores enforcement before exposing the store. Exact
+fresh approval/claim precede the irreversible dispatch marker; matching qmdestroy
+task is retained once. Unknown submission never reclaims; known tasks only reconcile
+with backoff and cannot dispatch again. A failed destroy task remains uncertain
+and holds target exclusion because partial deletion is possible.
+
+There is deliberately no success/retirement transition before independent absence
+proof is implemented; generic operation completion cannot bypass the guard. Current
+association, definition and history remain intact. No HTTP submission, runtime
+capability/worker, provider DELETE or client controls are connected yet. ADR 0059
+records the plan, failed-provision cleanup exception and partial-failure semantics.
+No dependency or real provider/VM/credential change was made.
+
+Verification: eight new deletion_storage tests passed, covering mandatory consent/
+full-scope identity, mutated keys, lifetime/clock rollback, dispatch once, mutation
+exclusion, reopen/crash windows, no-task uncertainty, known task/no redispatch,
+partial task failure retention, concurrent identity/corrupt claim rollback, actual
+schema-12 restore/task/child-graph preservation and atomic orphan refusal. Five
+initial tests passed first; subsequent filtered migration/concurrency tests passed.
+
+The operation-table rebuild affects existing callers: all 64 targeted lifecycle
+(9), provisioning-intent (34), snapshot-storage (10) and restore-storage (11) tests
+passed. Affected instance v2 migration and fresh/migrated/reopened FK enforcement
+checks passed, including v12/v13. The affected generated-provider public-plan
+preflight check passed. Total: eight new plus 67 affected checks, no unrelated
+native/browser/Android or full suite. Latest-version assertions changed to 13;
+historical migration files are unchanged. Formatting and diff checks pass.
+
+Next task: provider VM/volume absence observation with permission/identity-safe
+semantics and exact plan coverage, then atomic completion/retained-association
+retirement without deleting definition/history. Follow with fixed one-shot DELETE,
+opt-in worker, HTTP/native/UI confirmation and recreation from retained inputs.
+Actual deletion, partial-cleanup reconciliation and real infrastructure/platform/
+release acceptance remain open; full roadmap remains active.
+
+
+## Independent deletion absence observation — 2026-10-20
+
+Added a GET-only observer bound to validated retained approval/provider scope.
+Explicit cluster-wide VMID availability must return the exact integer before and
+after storage reads. Each candidate storage requires effective Datastore.Allocate
+before/after its unfiltered-by-VMID image list, because Audit alone can hide images
+after VM ACL removal. Permission values are propagation flags, including false/0.
+No permissions are changed. Remaining candidate IDs are retained even when owner
+VMID changes. Errors never mean absence; malformed/duplicate/wrong-storage entries,
+4096-entry inventory bounds and an overall 20-second deadline fail closed.
+
+Verification: three targeted generated-HTTPS tests pass, covering exact five-GET
+positive/partial-cleanup traffic, approval hash, owner changes, missing/Audit-only/
+revoked/malformed grants, unsafe/duplicate/wrong-storage/oversized inventories,
+changed or mistyped VMID, 401/403/404/500, invalid scope and missing consent before
+network access. Targeted formatting and diff checks pass. No existing helper,
+schema, dependency, native or frontend behavior changed; unrelated tests were not
+repeated. Official cluster/content/volume visibility contracts are linked in
+docs/deletion.md. No real provider, credential or VM mutation occurred.
+
+Limitations: point-in-time observation only; no preservation/auxiliary-cleanup
+proof, success transition, retirement, DELETE, worker or client capability yet.
+Next task: atomically retire the retained association after separately verified
+task and approved VM/volume absence, preserving definition/history and mutation
+exclusion on partial cleanup. Real infrastructure and full roadmap remain open.
+
+
+## Atomic deletion completion and retained identity retirement — 2026-10-20
+
+Previous goal turn made progress: GET-only VM/candidate-volume absence observation
+passed three HTTPS tests. This slice requires a provider-created non-deserializable
+completion proof: matching qmdestroy task independently succeeded, then complete
+approved VM/candidate-volume absence. Full approval hash/exact linked task and
+30-second monotonic freshness prevent rebinding/stale completion. No task status
+boolean or caller-supplied empty-volume list can authorize retirement.
+
+Schema 14 retains the whole instance/foreign-key graph and adds deleted status.
+An immediate transaction writes succeeded evidence and retires the association
+atomically; injected failure rolls both back. YAML/definition/target/history remain.
+Deleted identities reject new operations and live target resolution. Registered
+scope/VMID uniqueness allows a later new identity on that VMID without letting
+old associations read or mutate it. Local/remote native list decoders and both
+lists accept/display deleted rows without active VM controls. ADR 0060 records
+these consequential schema/status/proof choices.
+
+Verification: four generated-HTTPS/storage completion tests pass (positive, partial/
+failed/running task refusal, mismatched approval/task, missing marker, injected
+rollback, reopen, retained YAML/history, same-key replay and reused-VMID identity).
+The proof expiry/rebinding unit check passes. Actual schema-13 marked-delete upgrade
+and atomic orphan refusal pass one new storage test. Shared instance-table rebuild
+justified all 82 affected association/lifecycle/provisioning/snapshot/restore/delete
+storage tests; all pass, plus the fresh/migrated/reopened FK enforcement check.
+Historical migration files are unchanged; latest-version assertions now say 14.
+
+Both client native enums compile; three affected remote workspace HTTPS tests and
+one new local HTTP retained-status reader test pass. Frontend build passes. Both
+local and remote Firefox simulated-IPC fixtures pass, including retained deleted
+rows and no active controls for those identities. These are generated/local
+checks, not real infrastructure, mobile or native end-to-end deletion acceptance.
+Initial added tests needed ownership/SQLite-type fixes and explicit FK disabling
+only to inject a corrupt historical fixture; corrected targeted reruns pass.
+Targeted formatting/diff checks pass; unrelated native/browser/Android/full suites
+were not repeated. No dependency, credential, real provider/VM or production change.
+
+Limits: absence is point-in-time, not a reservation; preservation/auxiliary cleanup
+are not independently certified. No DELETE, runtime capability/worker, HTTP deletion
+submission or client deletion confirmation exists yet. Next task: fixed one-shot
+DELETE with purge/unreferenced destruction disabled and no-replay executor using
+revalidated approval, durable dispatch/task linkage and independent completion.
+Then opt-in worker/API/native/UI, recreation and real/platform/release gates remain.
+Full roadmap remains active.
+
+
+## Fixed deletion transport and standalone executor — 2026-10-20
+
+Previous goal turn made progress: schema-14 atomic retirement and retained deleted
+identities passed local task/absence/storage/client checks. This slice adds one
+fixed retained-target DELETE with query purge=0/destroy-unreferenced-disks=0, empty
+body, no skiplock/power/extra-volume operations, verified TLS, bounded response,
+redirect refusal and no retry. Returned node/qmdestroy/VMID must match exactly.
+Only explicit 401/403 refusal is definite after the durable dispatch marker;
+missing/invalid replies remain unknown and non-reclaimable.
+
+The standalone executor requires explicit capability for a fresh dispatch. It
+checks retained identity/scope and permission-backed future absence visibility,
+then repeats full stopped/protection/pending/lock/owned-volume/snapshot/effect/HA/
+replication review. Exact digest and full public plan must match recorded consent;
+the original approval expiry is checked before committing the once-only marker.
+Known tasks only read, even after writes are disabled. Failed tasks, read failures,
+remaining volumes/VM or missing/changed provider stay uncertain and hold exclusion.
+A later full absence proof can retire the same association through GET-only recovery.
+No runtime flag/worker, HTTP submission or native/client deletion controls are wired.
+
+Verification: server library cargo check passes. Eight new generated-HTTPS tests
+pass: exact one DELETE/32-request executor sequence and independent retirement;
+18 before-dispatch guards with exact failure codes; unknown/lost/wrong replies
+across reopen; known-task restart with dispatch disabled; seven partial/failure
+outcomes with retained identity/exclusion and no private error text; later cleanup
+reconciliation with the same task and seven GETs; missing/changed provider recovery;
+explicit auth/server errors and relative redirect refusal without retry.
+
+One new reconciliation fixture initially omitted its intended remaining-volume
+variant and completed immediately; fixed its variant selector, and the targeted
+reconciliation rerun now proves uncertainty then GET-only success. The affected
+public-preflight positive check passes after extracting its unchanged route builder.
+Total nine distinct targeted tests; unrelated storage/native/browser/Android/full
+suites were not repeated. Targeted formatting/diff checks pass. No schema/dependency,
+credential, production or real provider/VM mutation occurred.
+
+Primary upstream destroy API and HTTP DELETE query parser were reviewed and linked
+in ADR 0061. The provider offers no digest compare-and-delete: external actors can
+change the target between our review and its mutation. Local operation exclusion
+is not an external lock; no atomic infrastructure consent claim or real acceptance
+is made. Absence remains point-in-time and auxiliary cleanup/preserved media are
+not independently certified.
+
+Next task: independently default-off deletion runtime config/capability and fair
+worker integration, with actual isolated server process checks. Follow with exact
+HTTP/native/client consent and recovery, recreation, real disposable-target review
+and remaining platform/deployment/release gates. Full roadmap remains active.

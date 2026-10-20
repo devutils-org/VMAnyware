@@ -24,41 +24,7 @@ impl Proxmox {
             .filter(|value| value.len() == 40 && value.bytes().all(|b| b.is_ascii_hexdigit()))
             .ok_or(Error::InvalidResponse)?
             .to_string();
-        let template = match config.get("template") {
-            None => false,
-            Some(Value::Bool(value)) => *value,
-            Some(value) if value.as_u64() == Some(0) => false,
-            Some(value) if value.as_u64() == Some(1) => true,
-            _ => return Err(Error::InvalidResponse),
-        };
-        let locked = match config.get("lock") {
-            None => false,
-            Some(Value::String(value)) if !value.is_empty() => true,
-            _ => return Err(Error::InvalidResponse),
-        };
-        let tags = match config.get("tags") {
-            None => "",
-            Some(Value::String(value)) if value.len() <= 4096 => value,
-            _ => return Err(Error::InvalidResponse),
-        };
-        if !tags.is_empty()
-            && tags
-                .split(';')
-                .any(|tag| tag.is_empty() || tag.trim() != tag)
-        {
-            return Err(Error::InvalidResponse);
-        }
-        let markers: Vec<_> = tags
-            .split(';')
-            .filter(|tag| tag.to_ascii_lowercase().starts_with("vmanyware-"))
-            .collect();
-        let instance_marker = markers.len() == 1 && markers[0] == expected_marker;
-        Ok(Identity {
-            digest,
-            instance_marker,
-            template,
-            locked,
-        })
+        decode_identity(&value, expected_marker, digest)
     }
 
     pub(crate) async fn vm_has_pending_changes(&self, target: &VmReference) -> Result<bool, Error> {
@@ -102,4 +68,47 @@ impl Proxmox {
         }
         Ok(pending)
     }
+}
+
+pub(super) fn decode_identity(
+    value: &Value,
+    expected_marker: &str,
+    digest: String,
+) -> Result<Identity, Error> {
+    let config = value.as_object().ok_or(Error::InvalidResponse)?;
+    let template = match config.get("template") {
+        None => false,
+        Some(Value::Bool(value)) => *value,
+        Some(value) if value.as_u64() == Some(0) => false,
+        Some(value) if value.as_u64() == Some(1) => true,
+        _ => return Err(Error::InvalidResponse),
+    };
+    let locked = match config.get("lock") {
+        None => false,
+        Some(Value::String(value)) if !value.is_empty() => true,
+        _ => return Err(Error::InvalidResponse),
+    };
+    let tags = match config.get("tags") {
+        None => "",
+        Some(Value::String(value)) if value.len() <= 4096 => value,
+        _ => return Err(Error::InvalidResponse),
+    };
+    if !tags.is_empty()
+        && tags
+            .split(';')
+            .any(|tag| tag.is_empty() || tag.trim() != tag)
+    {
+        return Err(Error::InvalidResponse);
+    }
+    let markers: Vec<_> = tags
+        .split(';')
+        .filter(|tag| tag.to_ascii_lowercase().starts_with("vmanyware-"))
+        .collect();
+    let instance_marker = markers.len() == 1 && markers[0] == expected_marker;
+    Ok(Identity {
+        digest,
+        instance_marker,
+        template,
+        locked,
+    })
 }

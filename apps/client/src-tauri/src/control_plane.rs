@@ -429,6 +429,7 @@ pub struct InstanceSummary {
 #[serde(rename_all = "snake_case")]
 pub enum InstanceStatus {
     Registered,
+    Deleted,
 }
 
 #[derive(PartialEq, Eq, Deserialize, Serialize)]

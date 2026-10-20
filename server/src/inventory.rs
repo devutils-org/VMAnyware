@@ -7,6 +7,9 @@ use std::time::Duration;
 pub struct AppState {
     pub lifecycle_enabled: bool,
     pub provisioning_enabled: bool,
+    pub snapshots_enabled: bool,
+    pub restores_enabled: bool,
+    pub deletions_enabled: bool,
     pub provider: Option<Proxmox>,
     pub store: crate::store::Store,
     pub catalog: Option<crate::provisioning::Catalog>,

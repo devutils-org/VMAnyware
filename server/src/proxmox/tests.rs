@@ -5469,3 +5469,27 @@ async fn durable_readiness_executor_lost_submission_or_expired_deadline_never_re
 
 #[path = "tests/create_flow.rs"]
 mod create_flow;
+
+#[path = "tests/snapshots.rs"]
+mod snapshots;
+
+#[path = "tests/snapshot_execution.rs"]
+mod snapshot_execution;
+
+#[path = "tests/snapshot_restore.rs"]
+mod snapshot_restore;
+
+#[path = "tests/restore_execution.rs"]
+mod restore_execution;
+
+#[path = "tests/deletion.rs"]
+mod deletion;
+
+#[path = "tests/deletion_management.rs"]
+mod deletion_management;
+
+#[path = "tests/deletion_absence.rs"]
+mod deletion_absence;
+
+#[path = "tests/deletion_execution.rs"]
+mod deletion_execution;

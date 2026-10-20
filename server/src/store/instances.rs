@@ -19,9 +19,11 @@ pub enum RegistrationError {
 
 fn summary(row: &rusqlite::Row<'_>) -> rusqlite::Result<Summary> {
     let status: String = row.get(7)?;
-    if status != "registered" {
-        return Err(rusqlite::Error::InvalidQuery);
-    }
+    let status = match status.as_str() {
+        "registered" => Status::Registered,
+        "deleted" => Status::Deleted,
+        _ => return Err(rusqlite::Error::InvalidQuery),
+    };
     Ok(Summary {
         id: row.get(0)?,
         definition_name: row.get(1)?,
@@ -33,7 +35,7 @@ fn summary(row: &rusqlite::Row<'_>) -> rusqlite::Result<Summary> {
             node: row.get(5)?,
             vmid: row.get(6)?,
         },
-        status: Status::Registered,
+        status,
         created_at: row.get(8)?,
     })
 }

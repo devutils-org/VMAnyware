@@ -10,7 +10,7 @@ targets must be proven separately; upstream Tauri support alone is insufficient.
 | Linux | Arch Linux x86_64: frontend build/23 Node tests; workspace fmt/Clippy and 122 tests (104 server, 18 native HTTP) using a temporary signed-package WebKitGTK prefix. Isolated software-rendered native React/WebKit/Tauri IPC -> actual Axum -> generated-HTTPS start/shutdown passes. Earlier Debian 12 arm64 container checks passed; Ubuntu CI prepared | Normal packaged/native startup, GPU rendering, Linux SSH terminal and first CI run |
 | Windows | Portable source plus Ctrl-C handling prepared | MSVC/WebView2 setup, compilation, launch, process/terminal tests |
 | iOS | No application build/runtime evidence | Full Xcode, signing, simulator/device and SSH/terminal/lifecycle proof |
-| Android | ARM64/x86_64 debug APKs build; Android 15/API 35 x86_64 emulator launches the packaged app with actual Tauri bridge, encrypted identity/restart, native guard and painted-layout proof | Actual SSH/PTY and remote create journey, keyboard/lifecycle, physical ARM64, current WebView parity, iOS-independent proof and release packaging |
+| Android | ARM64/x86_64 debug APKs build; Android 15/API 35 x86_64 emulator launches the packaged app with actual Tauri bridge, encrypted identity/restart, native guard and painted-layout proof; current APK SSH/PTY/input/rotation/reconnect pass via owned ADB tunnel | Direct-network remote create journey, full software IME/suspend-resume, physical ARM64, current WebView parity, iOS-independent proof and release packaging |
 | Browser | Vite build/preview | Native bridge intentionally unavailable; this is not the product's native runtime |
 
 The current Mac reports macOS build `26A434`. Apple developer directory is
@@ -128,3 +128,54 @@ guards reject invalid inputs. A framebuffer check plus reviewed screenshot prove
 actual painted launch, distinct from DOM or native protocol compilation. ARM64 was
 packaged but not executed. APK signatures are debug signatures; no release/Play,
 physical phone, Android SSH session, keyboard/lifecycle or iOS claim is made.
+
+
+## Current Android SSH input evidence — 2026-10-19
+
+The current x86_64 debug APK passes actual native SSH trust/authentication, typed
+shell commands, rotation/OS PTY size, foreground interrupt, reconnect and process
+death cleanup on the owned Android 15 emulator. The emulator host alias returned
+`Network is unreachable` in an independent TCP probe, so this evidence explicitly
+uses an owned ADB reverse tunnel. Direct remote network access remains unverified.
+The software keyboard is visible; command input uses ADB events, not physical or
+complete software-IME interaction. Controls wrap with 44px targets; a current
+terminal screenshot was reviewed. ADR 0049 and the Android harness README record
+scope and remaining limits. Historical statements above describe earlier slices.
+
+## Android native HTTPS and retained-operation recovery — 2026-10-19
+
+The current x86_64 APK now initializes the Android TLS verifier and packages its
+matching Kotlin component. A per-connection public CA supports privately issued
+server certificates without changing device roots or disabling verification.
+The owned native HTTPS harness uses the production server with an isolated DB,
+a generated HTTPS proxy and explicit ADB reverse mappings. It verifies issuer/
+hostname refusal before HTTP, actual bearer rejection, authenticated connection,
+retained failed-operation/target recovery and explicit reconnection after process
+restart without token/profile persistence or request replay. No writes are sent.
+The absent template catalog remains an actionable error. These are native Android
+checks, not browser IPC simulation. Direct deployed access, complete create-to-SSH,
+physical devices and release/iOS support remain separate gates (ADR 0050).
+
+
+## Android generated-provider creation and SSH integration — 2026-10-19
+
+The current x86_64 APK now completes real native confirmation/API/production-worker
+creation and strict readiness against an owned HTTPS provider fixture, followed
+by explicit exact-address/account handoff. The same app key is asserted in
+Cloud-Init and authenticates to a real localhost OS-shell SSH peer after explicitly
+changing the endpoint to the owned ADB tunnel. Exactly one creation and expected
+provider mutations remain unchanged across SSH/restart. No native IPC is mocked.
+The guest/IP and readiness evidence are simulated; this is not real VM or direct
+network proof. ADR 0052 and .lab/android-create records separate these boundaries.
+
+
+## Direct emulator transport supersedes the tunnel boundary — 2026-10-19
+
+The same current x86_64 APK now passes native verified HTTPS/create/API/worker
+and strict SSH/PTY using 10.0.2.2 directly, including a cold-boot repeat with an
+owned TCP readiness probe. No data-plane ADB reverse mapping exists before or
+after the journey; ADB/CDP remains instrumentation only. No route/firewall/trust
+modification was required. The older intermittent failures were not reproduced;
+their precise cause remains unproven. Reports label direct and tunnel transports.
+ADR 0053 supersedes the historical host-alias limitation, while synthetic guest,
+physical/deployed network, full IME/lifecycle and real VM limits still apply.

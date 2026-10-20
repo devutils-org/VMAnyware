@@ -1,5 +1,6 @@
 package dev.vmanyware.client
 
+import android.content.Context
 import android.graphics.Color
 import android.graphics.drawable.ColorDrawable
 import android.os.Bundle
@@ -11,7 +12,11 @@ import androidx.core.view.ViewCompat
 import androidx.core.view.WindowInsetsCompat
 
 class MainActivity : TauriActivity() {
+  private external fun initializePlatformVerifier(context: Context)
+
   override fun onCreate(savedInstanceState: Bundle?) {
+    System.loadLibrary("vmanyware_client_lib")
+    initializePlatformVerifier(applicationContext)
     enableEdgeToEdge(
       statusBarStyle = SystemBarStyle.dark(Color.TRANSPARENT),
       navigationBarStyle = SystemBarStyle.dark(Color.TRANSPARENT)

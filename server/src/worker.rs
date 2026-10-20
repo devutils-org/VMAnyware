@@ -113,13 +113,81 @@ pub async fn run_with_execution(
     lifecycle_enabled: bool,
     provisioning_enabled: bool,
 ) -> Result<(), store::Error> {
+    run_with_snapshots(
+        store,
+        provider,
+        catalog,
+        lifecycle_enabled,
+        provisioning_enabled,
+        false,
+    )
+    .await
+}
+
+pub async fn run_with_snapshots(
+    store: Store,
+    provider: Option<Proxmox>,
+    catalog: Option<crate::provisioning::Catalog>,
+    lifecycle_enabled: bool,
+    provisioning_enabled: bool,
+    snapshots_enabled: bool,
+) -> Result<(), store::Error> {
+    run_with_restores(
+        store,
+        provider,
+        catalog,
+        lifecycle_enabled,
+        provisioning_enabled,
+        snapshots_enabled,
+        false,
+    )
+    .await
+}
+
+pub async fn run_with_restores(
+    store: Store,
+    provider: Option<Proxmox>,
+    catalog: Option<crate::provisioning::Catalog>,
+    lifecycle_enabled: bool,
+    provisioning_enabled: bool,
+    snapshots_enabled: bool,
+    restores_enabled: bool,
+) -> Result<(), store::Error> {
+    run_with_deletions(
+        store,
+        provider,
+        catalog,
+        lifecycle_enabled,
+        provisioning_enabled,
+        snapshots_enabled,
+        restores_enabled,
+        false,
+    )
+    .await
+}
+
+/// Production runner with independent deletion opt-in; all queues remain sequential.
+#[allow(clippy::too_many_arguments)]
+pub async fn run_with_deletions(
+    store: Store,
+    provider: Option<Proxmox>,
+    catalog: Option<crate::provisioning::Catalog>,
+    lifecycle_enabled: bool,
+    provisioning_enabled: bool,
+    snapshots_enabled: bool,
+    restores_enabled: bool,
+    deletions_enabled: bool,
+) -> Result<(), store::Error> {
     loop {
-        if !run_execution_round(
+        if !run_deletion_round(
             &store,
             provider.as_ref(),
             catalog.as_ref(),
             lifecycle_enabled,
             provisioning_enabled,
+            snapshots_enabled,
+            restores_enabled,
+            deletions_enabled,
         )
         .await?
         {
@@ -139,6 +207,76 @@ pub async fn run_execution_round(
     let provisioning = run_provisioning_one(store, provider, catalog, provisioning_enabled).await?;
     Ok(existing || provisioning)
 }
+/// Preserve sequential fairness: existing queues, then one snapshot claim/reconciliation.
+pub async fn run_snapshot_round(
+    store: &Store,
+    provider: Option<&Proxmox>,
+    catalog: Option<&crate::provisioning::Catalog>,
+    lifecycle_enabled: bool,
+    provisioning_enabled: bool,
+    snapshots_enabled: bool,
+) -> Result<bool, store::Error> {
+    let existing = run_execution_round(
+        store,
+        provider,
+        catalog,
+        lifecycle_enabled,
+        provisioning_enabled,
+    )
+    .await?;
+    let snapshot = crate::snapshot_executor::run_one(store, provider, snapshots_enabled).await?;
+    Ok(existing || snapshot)
+}
+
+/// Existing queues, then one restore; retained-task reconciliation stays GET-only.
+pub async fn run_restore_round(
+    store: &Store,
+    provider: Option<&Proxmox>,
+    catalog: Option<&crate::provisioning::Catalog>,
+    lifecycle_enabled: bool,
+    provisioning_enabled: bool,
+    snapshots_enabled: bool,
+    restores_enabled: bool,
+) -> Result<bool, store::Error> {
+    let existing = run_snapshot_round(
+        store,
+        provider,
+        catalog,
+        lifecycle_enabled,
+        provisioning_enabled,
+        snapshots_enabled,
+    )
+    .await?;
+    let restore = crate::restore_executor::run_one(store, provider, restores_enabled).await?;
+    Ok(existing || restore)
+}
+
+/// Existing queues, then one deletion; uncertain known-task work only reconciles through reads.
+#[allow(clippy::too_many_arguments)]
+pub async fn run_deletion_round(
+    store: &Store,
+    provider: Option<&Proxmox>,
+    catalog: Option<&crate::provisioning::Catalog>,
+    lifecycle_enabled: bool,
+    provisioning_enabled: bool,
+    snapshots_enabled: bool,
+    restores_enabled: bool,
+    deletions_enabled: bool,
+) -> Result<bool, store::Error> {
+    let existing = run_restore_round(
+        store,
+        provider,
+        catalog,
+        lifecycle_enabled,
+        provisioning_enabled,
+        snapshots_enabled,
+        restores_enabled,
+    )
+    .await?;
+    let deletion = crate::deletion_executor::run_one(store, provider, deletions_enabled).await?;
+    Ok(existing || deletion)
+}
+
 async fn run_provisioning_one(
     store: &Store,
     provider: Option<&Proxmox>,

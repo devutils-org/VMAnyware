@@ -22,6 +22,10 @@ Asynchronous inventory requests and persisted statuses are described in
 Image catalog, offline preview and read-only preflight routes are documented in
 [provisioning plans](provisioning-plan.md).
 
+Registered-instance snapshot metadata is available through the read-only
+`GET /api/v1/environments/{id}/snapshots` route; the read-only `POST /api/v1/environments/{id}/snapshot-preflight` checks a
+bounded disk-only creation request without submitting it. See [snapshot workflows](snapshots.md).
+
 ## Control-plane access token
 
 When VMANYWARE_ACCESS_TOKEN is set, every route, including health and fallbacks,
@@ -213,3 +217,69 @@ full app restart/reconnect. The server retains its operation independently and i
 GET detail route remains available. Native HTTPS tests and browser simulated-IPC
 checks pass separately; actual native command launch/mobile and a deployed remote
 control plane remain unverified. See [ADR 0044](decisions/0044-remote-create-confirmation.md).
+
+### Native HTTPS connection trust
+
+The native `connect_remote` command accepts an optional `caPem` containing one
+public PEM CA certificate, at most 16 KiB. Omission/blank input uses platform
+trust. An explicit CA limits the current profile to that CA only, with certificate
+chain, validity and hostname verification still enabled; it does not install or
+modify device roots. Obtain the public CA through a trusted channel. Private keys,
+certificate bundles and malformed/oversized input are rejected. The endpoint is
+still HTTPS-only, without a path, query, fragment or embedded credentials.
+
+The certificate and bearer profile remain in memory. The mounted form retains
+only the public CA until disconnect/unmount, while the bearer field is cleared
+on submission. Disconnect or application process restart requires entering the
+connection settings again. No new server endpoint or authentication bypass is
+introduced. Android packages include explicit platform-verifier initialization
+and its Cargo-matched Kotlin component; see ADR 0050 and the native Android
+fixture for verified-HTTPS/read-only recovery evidence and remaining limits.
+
+
+## Saved snapshot operation recovery
+
+Read-only per-instance snapshot history and operation-context routes are available
+at `/api/v1/environments/{id}/snapshot-operations` and
+`/api/v1/environments/{id}/snapshot-operations/{operation_id}`. They work with
+provider/write capability disabled and never enqueue or resume execution. See
+[snapshot recovery](snapshots.md#read-only-server-operation-recovery) for the
+historical metadata, isolation, bounds and error contract.
+
+
+Restore has a separate read-only
+`POST /api/v1/environments/{id}/snapshot-restore-preflight` route accepting only a
+selected snapshot name. It reports the independent restore capability separately
+from eligibility and does not enqueue rollback or power actions.
+`POST /api/v1/environments/{id}/snapshots/{snapshotName}/restore` now accepts a
+complete target/snapshot approval with explicit data-loss acknowledgement and one
+idempotency key, returning a tracked operation. Both route and worker require
+`VMANYWARE_RESTORES_ENABLED=true` (default false). See
+[restore prerequisites](snapshots.md#read-only-restore-preflight) and
+[confirmed restore HTTP behavior](snapshots.md#confirmed-restore-http-behavior).
+
+## Saved restore operation recovery
+
+`GET /api/v1/environments/{id}/restore-operations` returns the newest 100 restore
+records for that instance. `GET /api/v1/environments/{id}/restore-operations/{operation_id}`
+returns the recorded operation/target/request/fingerprint and submission marker.
+These reads require no provider or write flag and never restore approval, claim
+work or resubmit rollback. They validate the saved journal and normalize public
+evidence. See [restore recovery](snapshots.md#read-only-saved-restore-operation-recovery)
+for scope, status consistency, safe errors and historical/current-state limits.
+
+## Read-only deletion preparation
+
+`GET /api/v1/environments/{id}/delete-preflight` reports retained-target identity,
+stopped/protection guards and API-visible live/snapshot volume candidates with
+storage ownership checks. HA/replication dependencies and replication visibility are checked explicitly.
+Fixed cleanup effects and candidate/preserved volume scope are now reviewed; all
+checked prerequisites can pass, but execution remains disabled without consent or
+a delete journal. It does not delete, change the association or
+create an operation. See [deletion preparation](deletion.md).
+
+Environment list/detail `status` is `registered` or `deleted`. Deleted associations
+retain definition, YAML snapshot, provider reference and operation history; they
+must not be used to address a replacement VM on the same VMID. New operations and
+live target resolution refuse deleted identities. A replacement has a new instance
+ID. This schema-14 retention contract does not enable deletion submission.

@@ -4,7 +4,7 @@ export type InstanceSummary = {
   definitionHash: string;
   definitionRevision: number;
   providerReference: { provider: string; scopeId: string; node: string; vmid: number };
-  status: "registered";
+  status: "registered" | "deleted";
   createdAt: string;
 };
 export type ObservationOperation = {

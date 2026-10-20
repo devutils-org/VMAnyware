@@ -69,7 +69,24 @@ rust {
     rootDirRel = "../../../"
 }
 
+// Resolve the Kotlin verifier from the same version recorded by Cargo. A
+// mismatched JNI component can fail at runtime even when the APK builds.
+val verifierVersion = providers.fileContents(
+    rootProject.layout.projectDirectory.file("../../../../../Cargo.lock")
+).asText.map { lock ->
+    Regex("name = \"rustls-platform-verifier-android\"\\s+version = \"([^\"]+)\"")
+        .find(lock)?.groupValues?.get(1)
+        ?: error("rustls-platform-verifier-android missing from Cargo.lock")
+}
+repositories {
+    maven {
+        url = uri("https://raw.githubusercontent.com/rustls/rustls-platform-verifier/maven-archive/android-release-support/maven/")
+        content { includeGroup("org.rustls") }
+    }
+}
+
 dependencies {
+    implementation("org.rustls:rustls-platform-verifier:${verifierVersion.get()}")
     implementation("androidx.webkit:webkit:1.14.0")
     implementation("androidx.appcompat:appcompat:1.7.1")
     implementation("androidx.activity:activity-ktx:1.10.1")

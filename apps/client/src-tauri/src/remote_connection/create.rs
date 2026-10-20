@@ -659,7 +659,7 @@ mod tests {
 }
 
 #[cfg(test)]
-mod prepare_tests {
+pub(super) mod prepare_tests {
     use super::*;
     use std::sync::Arc;
     use tokio::{
@@ -667,7 +667,7 @@ mod prepare_tests {
         net::TcpListener,
     };
     use tokio_rustls::{rustls, TlsAcceptor};
-    pub(super) async fn sequence(
+    pub(in crate::remote_connection) async fn sequence(
         responses: Vec<(&'static str, String)>,
     ) -> (
         String,

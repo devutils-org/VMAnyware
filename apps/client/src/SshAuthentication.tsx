@@ -17,8 +17,8 @@ function cancel(selectionId: string | null) {
   if (selectionId) void invoke("cancel_ssh_authentication", { selectionId }).catch(() => {});
 }
 
-export function SshAuthentication({ host, port }: { host: string; port: number }) {
-  const [username, setUsername] = useState("");
+export function SshAuthentication({ host, port, initialUsername = "" }: { host: string; port: number; initialUsername?: string }) {
+  const [username, setUsername] = useState(initialUsername);
   const [agentSupported, setAgentSupported] = useState(false);
   const [source, setSource] = useState("application");
   const [passphrase, setPassphrase] = useState("");

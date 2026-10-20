@@ -4,7 +4,7 @@ import { AppIdentity } from "./AppIdentity";
 
 type Plan = { definitionName: string; definitionHash: string; planHash: string; creationEnabled: boolean; sshKeyCount: number; source: { templateVmid: number; templateVersion: string }; target: { node: string; vmid: number; storage: string; bridge: string; guestUser: string; resources: { cpu: number; memoryMiB: number; diskGiB: number } } };
 type Operation = { id: string; status: "queued" | "running" | "uncertain" | "interrupted" | "succeeded" | "failed"; result: null | { guestReady: boolean; guest: { ipv4: string } } };
-export function RemoteCreate({ connectionId, endpoint, disabled }: { connectionId: number; endpoint: string; disabled: boolean }) {
+export function RemoteCreate({ connectionId, endpoint, disabled, onSshTarget }: { connectionId: number; endpoint: string; disabled: boolean; onSshTarget: (host: string, username: string) => void }) {
   const [name, setName] = useState("mobile-lab"), [image, setImage] = useState("debian-13"), [vmid, setVmid] = useState("202");
   const [cpu, setCpu] = useState("2"), [memory, setMemory] = useState("2048"), [disk, setDisk] = useState("8"), [key, setKey] = useState("");
   const [plan, setPlan] = useState<Plan | null>(null), [requestKey, setRequestKey] = useState("");
@@ -66,7 +66,10 @@ export function RemoteCreate({ connectionId, endpoint, disabled }: { connectionI
       </>}
     </>}
     {operation && <><p role="status">Creation: {operation.status} · operation <code>{operation.id}</code></p>
-      {operation.status === "succeeded" && operation.result?.guestReady && <p>Guest initialized at {operation.result.guest.ipv4}. SSH access and host identity still need verification.</p>}
+      {operation.status === "succeeded" && operation.result?.guestReady && <>
+        <p>Guest initialized at {operation.result.guest.ipv4}. SSH access and host identity still need verification.</p>
+        {plan && <button type="button" disabled={disabled || busy} onClick={() => onSshTarget(operation.result!.guest.ipv4, plan.target.guestUser)}>Prepare SSH connection</button>}
+      </>}
       {operation.status === "failed" && <p role="alert">Creation failed. The target is retained for inspection.</p>}
       <button type="button" disabled={disabled || busy} onClick={refresh}>Refresh creation status</button></>}
     {busy && <p role="status">Contacting the server…</p>}

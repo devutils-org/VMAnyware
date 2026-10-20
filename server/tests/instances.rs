@@ -176,7 +176,7 @@ fn version_two_migrates_preserving_definitions_and_operations() {
         connection
             .pragma_query_value(None, "user_version", |row| row.get::<_, u32>(0))
             .unwrap(),
-        10
+        14
     );
 }
 

@@ -93,3 +93,37 @@ D-Bus/portal/accessibility warnings remain; asserted interactions still pass.
 WebKit sandbox, X11 cookie authentication and TLS verification were not disabled.
 Normal packaged startup, hardware GPU rendering, real Proxmox, macOS/mobile and
 SSH remain outside this result. See the [native harness](../experiments/lifecycle-native/README.md).
+
+## Recreated snapshot-test prefix — 2026-10-20
+
+The earlier `/tmp` prefix is absent. Recreated the same seven-package native
+library prefix under the ignored workspace directory `.lab/native-deps`, so a
+host reboot alone will not remove it. The installed Arch keyring integrity check
+again reported 17 files and no changes. Each archive was downloaded through
+verified HTTPS and its detached signature verified against a dearmored copy of
+the system-shipped public keyring before extraction. No package hooks or system
+installation were used. Copied pkg-config prefixes point to this owned tree.
+
+`.lab/native-deps/packages.json` retains exact package URLs, versions, hashes and
+signature verification outputs; `prepare.py` records the executed setup. This is
+an owned experiment, not an application dependency installer. To use the library
+prefix for a targeted check, from the repository root:
+
+```sh
+export PKG_CONFIG_PATH="$PWD/.lab/native-deps/sysroot/usr/lib/pkgconfig"
+export LIBRARY_PATH="$PWD/.lab/native-deps/sysroot/usr/lib"
+export LD_LIBRARY_PATH="$PWD/.lab/native-deps/sysroot/usr/lib"
+cargo test -p vmanyware-client --lib remote_snapshot_read -- --nocapture
+```
+
+This prefix currently provides compilation and headless command-test libraries;
+it does not include the older Xvfb additions or prove normal packaged GUI startup.
+Check actual presence before reuse. Native snapshot results are recorded in
+STATE.md and docs/snapshots.md after the checks finish.
+
+The 2026-10-20 prefix was subsequently extended with the same verified/extracted
+libxmu, xorg-xauth and xorg-server-xvfb packages for the real snapshot UI scenario.
+The package manifest now records all ten archives. The isolated `--snapshots`
+WebView/IPC/HTTPS/server journey passed with read-only overlays, a generated X11
+cookie, Mesa rendering and a private D-Bus session. This supersedes the earlier
+library-only limitation for `.lab/native-deps`; packaged startup remains separate.

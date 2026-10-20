@@ -17,9 +17,9 @@ function cancelChallenge(challengeId: string | null) {
   if (challengeId) void invoke("cancel_ssh_host", { challengeId }).catch(() => {});
 }
 
-export function SshHostTrust({ native }: { native: boolean }) {
+export function SshHostTrust({ native, initialHost = "", initialUsername = "" }: { native: boolean; initialHost?: string; initialUsername?: string }) {
   const [supported, setSupported] = useState<boolean | null>(null);
-  const [host, setHost] = useState("");
+  const [host, setHost] = useState(initialHost);
   const [port, setPort] = useState("22");
   const [inspection, setInspection] = useState<Inspection | null>(null);
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null);
@@ -146,7 +146,7 @@ export function SshHostTrust({ native }: { native: boolean }) {
       {inspection.status === "changed" && <p role="alert" className="error">This host key differs from the trusted key. Connection is refused. Verify the change with the host administrator through an independent trusted channel.</p>}
       {inspection.status === "trusted" && <>
         <p role="status">The observed key matches the trusted key for this endpoint. No login or shell was opened.</p>
-        <SshAuthentication key={`${inspection.host}:${inspection.port}`} host={inspection.host} port={inspection.port} />
+        <SshAuthentication key={`${inspection.host}:${inspection.port}`} host={inspection.host} port={inspection.port} initialUsername={inspection.host === initialHost ? initialUsername : ""} />
       </>}
       {inspection.status === "unknown" && <>
         <p>This endpoint has no trusted key. Compare this fingerprint with the host administrator or a trusted local console through an independent channel before confirming.</p>

@@ -1,6 +1,6 @@
 use std::{future::IntoFuture, time::Duration};
 use vmanyware_server::{
-    config::Config, diagnostics, provisioning::Catalog, proxmox::Proxmox, router_with_execution,
+    config::Config, diagnostics, provisioning::Catalog, proxmox::Proxmox, router_with_deletions,
     store::Store,
 };
 
@@ -37,6 +37,30 @@ async fn run() -> Result<(), &'static str> {
     let config = config
         .with_provisioning(provisioning.as_deref())
         .map_err(|_| "invalid_provisioning_configuration")?;
+    let snapshots = match std::env::var("VMANYWARE_SNAPSHOTS_ENABLED") {
+        Ok(value) => Some(value),
+        Err(std::env::VarError::NotPresent) => None,
+        Err(_) => return Err("invalid_snapshot_configuration"),
+    };
+    let config = config
+        .with_snapshots(snapshots.as_deref())
+        .map_err(|_| "invalid_snapshot_configuration")?;
+    let restores = match std::env::var("VMANYWARE_RESTORES_ENABLED") {
+        Ok(value) => Some(value),
+        Err(std::env::VarError::NotPresent) => None,
+        Err(_) => return Err("invalid_restore_configuration"),
+    };
+    let config = config
+        .with_restores(restores.as_deref())
+        .map_err(|_| "invalid_restore_configuration")?;
+    let deletions = match std::env::var("VMANYWARE_DELETIONS_ENABLED") {
+        Ok(value) => Some(value),
+        Err(std::env::VarError::NotPresent) => None,
+        Err(_) => return Err("invalid_deletion_configuration"),
+    };
+    let config = config
+        .with_deletions(deletions.as_deref())
+        .map_err(|_| "invalid_deletion_configuration")?;
     let access = vmanyware_server::auth::AccessToken::from_environment()
         .map_err(|_| "invalid_access_configuration")?;
     let provider = Proxmox::from_environment().map_err(|_| "invalid_provider_configuration")?;
@@ -57,23 +81,29 @@ async fn run() -> Result<(), &'static str> {
     store
         .recover_interrupted_operations()
         .map_err(|_| "operation_recovery_failed")?;
-    let mut worker = tokio::spawn(vmanyware_server::worker::run_with_execution(
+    let mut worker = tokio::spawn(vmanyware_server::worker::run_with_deletions(
         store.clone(),
         provider.clone(),
         catalog.clone(),
         config.lifecycle_enabled(),
         config.provisioning_enabled(),
+        config.snapshots_enabled(),
+        config.restores_enabled(),
+        config.deletions_enabled(),
     ));
     let (stopping, stopped_signal) = tokio::sync::oneshot::channel();
     let server = axum::serve(
         listener,
         vmanyware_server::auth::protect(
-            router_with_execution(
+            router_with_deletions(
                 provider,
                 store,
                 catalog,
                 config.lifecycle_enabled(),
                 config.provisioning_enabled(),
+                config.snapshots_enabled(),
+                config.restores_enabled(),
+                config.deletions_enabled(),
             ),
             access,
         ),

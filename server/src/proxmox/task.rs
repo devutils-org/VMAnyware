@@ -31,6 +31,27 @@ impl TaskReference {
             && fields[6] == target.vmid().to_string()
     }
 
+    pub(crate) fn matches_snapshot(&self, target: &super::VmReference) -> bool {
+        let fields: Vec<_> = self.upid.split(':').collect();
+        self.node == target.node()
+            && fields[5] == "qmsnapshot"
+            && fields[6] == target.vmid().to_string()
+    }
+
+    pub(crate) fn matches_restore(&self, target: &super::VmReference) -> bool {
+        let fields: Vec<_> = self.upid.split(':').collect();
+        self.node == target.node()
+            && fields[5] == "qmrollback"
+            && fields[6] == target.vmid().to_string()
+    }
+
+    pub(crate) fn matches_deletion(&self, target: &super::VmReference) -> bool {
+        let fields: Vec<_> = self.upid.split(':').collect();
+        self.node == target.node()
+            && fields[5] == "qmdestroy"
+            && fields[6] == target.vmid().to_string()
+    }
+
     pub(crate) fn matches_clone(&self, source: &super::VmReference) -> bool {
         let fields: Vec<_> = self.upid.split(':').collect();
         self.node == source.node()
