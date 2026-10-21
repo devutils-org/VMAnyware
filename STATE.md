@@ -6764,3 +6764,13 @@ Next task: extend the owned actual Linux WebView/IPC/manual-SSH fixture to start
 private test vault, remember through the new production command, select the system
 source, authenticate/open the real owned terminal, forget and verify read refusal.
 Then batch delivery/platform validation rather than rebuilding per tiny edit.
+
+Publication checkpoint: `f5755aa` is pushed to VMAnyware main. Website copy now
+separates the optional Linux backend/browser evidence from pending joined WebView
+and other-OS stores, and notes that existing artifacts predate vault commands.
+Build/render generation and diff review pass (`.lab/identity-vault-site-build.log`);
+no unrelated website suite reran for text-only changes. Website commit `d89765a`
+is pushed; Pages run `39652211141` succeeds (`.lab/identity-vault-site-deploy.log`).
+The worktrees were clean after publication. No release tag or artifact rebuild was
+made. Next joined native fixture must build with `tauri/custom-protocol`, use only
+an owned private bus/XDG/keyring and retain exact host trust and terminal gates.
