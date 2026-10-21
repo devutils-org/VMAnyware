@@ -11,6 +11,10 @@
     calls.push({command,args});if(command.endsWith('_support'))return false;
     if(command==='connect_remote')return {connectionId:++connection,endpoint:'https://fixture.example.test/'};
     if(command==='disconnect_remote'||command==='cancel_ssh_host')return;
+    if(command==='read_remote_provisioning_progress'){
+      check(args.connectionId===connection&&args.operationId==='e'.repeat(32)&&Object.keys(args).length===2,'Wrong progress scope or supplied consent');
+      return {operationId:'e'.repeat(32),instanceId:newId,sourceInstanceId:id,definitionHash:hash,planHash,node:'fixture-node',vmid:203,status:'succeeded',stages:['full_clone','configure_resources','configure_cloud_init','start_vm','wait_for_guest_readiness','install_declared_packages','snapshot_after_provisioning'].map((kind,position)=>({position,kind,status:'succeeded',submissionStarted:true}))};
+    }
     if(command==='read_remote_images')return [];
     if(command==='read_remote_environments')return environments;
     if(command==='prepare_remote_recreation'){
@@ -62,6 +66,7 @@
     await click('Refresh recreation status');await wait(()=>text().includes('Recreation success lacks matching'));check(!button('Prepare SSH for recreated VM'),'False guest readiness offered SSH');
     await click('Refresh recreation status');await wait(()=>text().includes('distinct new instance'));check(text().includes('Recreation status: uncertain'),'Old identity reused');
     await click('Refresh recreation status');await wait(()=>text().includes('Recreation status: succeeded'));check(text().includes(newId)&&text().includes('192.0.2.42'),'New instance evidence missing');
+    await click('Read recorded steps');await wait(()=>text().includes('Create final disk-only snapshot: succeeded'));check(text().includes('Saved stage evidence only'),'Recreation steps lack historical wording');
     await click('Prepare SSH for recreated VM');await wait(()=>text().includes('SSH target: debian@192.0.2.42'));check(text().includes('independently verify its host key'),'SSH trust bypassed');
     await click('Acknowledge recreation result');await wait(()=>!text().includes('Reviewed recreation:'));
     await click('Review recreation');await wait(()=>release);await click('Disconnect');await connect();release();await new Promise(resolve=>setTimeout(resolve,50));check(!text().includes('STALE_RECREATION')&&!text().includes('Reviewed recreation:'),'Stale review survived reconnect');

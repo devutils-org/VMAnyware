@@ -384,5 +384,8 @@ and ordered stages (`position`, `kind`, `status`, `submissionStarted`). It retur
 neither private journal nor guest output. A started marker records an attempted
 stage dispatch, including read-only probes; it does not establish completion,
 power or readiness. Missing/wrong-kind IDs yield 404; corrupt storage yields a
-fixed 503. No repair or automatic retry occurs. The native client integration is
-next; current packaged server artifacts predate the new endpoint. See ADR 0085.
+fixed 503. No repair or automatic retry occurs. Native/client creation, recreation
+and saved recovery offer explicit **Read recorded steps** controls with historical
+wording, exact known plan/source/target checks and stale-response suppression.
+Refreshed delivery artifacts include this workflow; Android execution and real
+guest acceptance remain open. See ADRs 0085–0086.

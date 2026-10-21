@@ -33,6 +33,7 @@ def free_port():
 def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--prefix', type=Path, required=True, help='Verified package prefix containing sysroot/usr')
+    parser.add_argument('--server-binary', type=Path, default=REPO / 'target/debug/vmanyware-server', help='Owned server executable, including an extracted local release package')
     modes = parser.add_mutually_exclusive_group()
     modes.add_argument('--manual-ssh', action='store_true', help='Existing-row native application-key SSH terminal against owned peer; no provider read')
     modes.add_argument('--lifecycle-recovery', action='store_true', help='Remote start/shutdown, restart app/server and recover both operations by GET only')
@@ -48,6 +49,8 @@ def main():
     modes.add_argument('--recreation', action='store_true', help='Actual native retained-source recreation against generated HTTPS infrastructure')
     modes.add_argument('--recreation-recovery', action='store_true', help='Recreate once, restart app/server and recover by GET only without provider/catalog/writes')
     args = parser.parse_args()
+    server_binary = args.server_binary.resolve(strict=True)
+    assert server_binary.is_file() and os.access(server_binary, os.X_OK)
     args.remote_lifecycle = args.remote_lifecycle or args.lifecycle_recovery
     args.declared = args.declared_create or args.declared_recreation
     args.recreation = args.recreation or args.recreation_recovery or args.declared
@@ -247,7 +250,7 @@ def main():
                 server_env.update({'VMANYWARE_PROXMOX_URL': f'https://localhost:{provider_port}', 'VMANYWARE_TEMPLATES': str(catalog), 'VMANYWARE_PROVISIONING_ENABLED': 'true'})
             if args.declared:
                 server_env['VMANYWARE_SNAPSHOTS_ENABLED'] = 'true'
-            server = subprocess.Popen([str(REPO / 'target/debug/vmanyware-server')], env=server_env,
+            server = subprocess.Popen([str(server_binary)], env=server_env,
                                       stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True, start_new_session=True)
             children.append(server)
             lines, ready = [], queue.Queue()
@@ -429,7 +432,7 @@ def main():
                     if args.recreation_recovery or args.lifecycle_recovery:
                         server_env.pop('VMANYWARE_TEMPLATES', None)
                     ready = queue.Queue()
-                    server = subprocess.Popen([str(REPO / 'target/debug/vmanyware-server')], env=server_env,
+                    server = subprocess.Popen([str(server_binary)], env=server_env,
                         stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True, start_new_session=True)
                     children.append(server)
                     log_thread = threading.Thread(target=log_reader, daemon=True)

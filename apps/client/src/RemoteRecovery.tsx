@@ -1,3 +1,4 @@
+import { ProvisioningProgress } from "./ProvisioningProgress";
 import { ProvisioningFailure } from "./ProvisioningFailure";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
@@ -37,6 +38,7 @@ export function RemoteRecovery({ connectionId, endpoint, disabled, onSshTarget }
     </form>
     {busy && <p role="status">Reading this server's retained operation…</p>}
     {result && <>
+      <ProvisioningProgress key={result.operation.id + result.operation.status} connectionId={connectionId} operationId={result.operation.id} disabled={disabled || busy} node={result.environment.providerReference.node} vmid={result.environment.providerReference.vmid} />
       <p>Retained target: {result.environment.definitionName} · {result.environment.providerReference.node} · VM {result.environment.providerReference.vmid}</p>
       <p role="status">Recovered creation: {result.operation.status} · operation <code>{result.operation.id}</code></p>
       {result.operation.status === "succeeded" && result.operation.result?.guestReady && <>

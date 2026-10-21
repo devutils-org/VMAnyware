@@ -24,9 +24,12 @@ server and ARM64/x86_64 Android debug artifacts now include this integrated sour
 and pass package/signature/content checks. Exact APK/platform/real-target acceptance
 remains open. Safe provisioning failure codes/messages now pass native and browser
 checks across creation/recreation/recovery (ADR 0084). A safe recorded per-stage
-progress API now passes five focused HTTP/SQLite checks (ADR 0085). Next: native
-progress reader/UI, followed by a batched delivery refresh. Current archives predate
-the new progress API and richer failure messages.
+progress API passes focused HTTP/SQLite checks (ADR 0085). Its native reader and
+explicit four-view React display now pass protocol/browser checks (ADR 0086); joined
+Linux declared creation/recreation pass with package/snapshot stage reads. Server
+and ARM64/x86_64 Android artifacts are refreshed, and the exact extracted server
+also passes the joined native declared journey. Current-APK/real-guest/OS-backed
+storage acceptance remains open. Next: platform credential-store implementation.
 Current Android delivery already includes existing-instance manual SSH; Linux native
 application-key/PTY integration passes. Exact APK/real guest acceptance stays open.
 
@@ -6638,3 +6641,71 @@ recorded packaging evidence does not cover these latest changes. No real VM,
 Android runtime, host deployment or OS-backed key storage was validated here.
 Next task: one native/client recorded-progress slice, preserving operation/target/
 plan/source binding and historical wording, followed by a batched delivery refresh.
+
+
+## 2026-10-21 — Native/client recorded provisioning stages (ADR 0086)
+
+Scope: fixed read-only native progress reader and explicit stage display across
+creation, recreation and both recovery views. Acceptance: operation/target/plan/
+source binding, ordered typed stages, private fields discarded, no execution or
+restored consent, historical wording and late-response suppression.
+
+Implemented one command with explicit production handler/manifest/local-main ACL
+(total 77). Existing strict GET-only recovery reconstructs operation/environment;
+the progress GET must match identity, hashes/scope/target, status and failure, plus
+successful readiness plan. Known mandatory/optional stage order, consecutive
+positions and sequential status prefix are checked. A racing worker transition
+requires an explicit read refresh; nothing redispatches. Four views use the shared
+component, match known plan/source/target and clear/discard obsolete results. Raw
+read errors get fixed text; progress does not grant SSH or replace operation status.
+
+Verification so far: three new native projection/HTTPS tests pass
+(`.lab/native-deps/provisioning-progress-native-tests.log`) and three affected
+GET-only recovery tests pass (`provisioning-progress-affected-recovery.log` in that
+directory). Frontend typecheck/build passes (`.lab/provisioning-progress-ui-build.log`).
+Three scoped real React/Firefox simulated-IPC journeys pass
+(`.lab/provisioning-progress-{create,recreation,recovery}-ui.log`), covering stage
+ordering, plan mismatch, error redaction, stale response, source/target matching,
+no automatic reads and no progress-based SSH. Scoped format/syntax/diff and command
+ACL review pass. Current server and native example compile; after correcting the
+example build to use `--features tauri/custom-protocol`, joined Linux native declared
+creation also passes with explicit package/final-snapshot stage reads
+(`.lab/native-deps/provisioning-progress-create-native.log`). The initial two
+launches omitted that feature and timed out before any create/provider operation;
+they are not counted as acceptance. Recreation/delivery checks follow below.
+
+
+ADR 0086 completion: joined Linux native declared recreation also passes, including
+explicit succeeded package/snapshot stage display
+(`.lab/native-deps/provisioning-progress-recreation-native.log`). Both native
+workflows retain exact same-key lost-reply retry, expected provider calls and
+independent SSH trust handoff; progress introduces no provider requests.
+
+Batched delivery scope/acceptance: compile/package changed server API and client
+native/ACL/UI once; verify exact contents and one extracted release-server journey.
+`make package-server` passes (`.lab/provisioning-progress-server-package.log`),
+outer/inner checksums pass, and the exact extracted release binary passes the
+joined native declared creation/package/snapshot/progress flow
+(`.lab/native-deps/provisioning-progress-package-native.log`). The owned harness
+now accepts an explicit `--server-binary`; default remains the current debug binary.
+Linux archive SHA-256: `ab04bd9f92f42b3d1b0b0e0927cbc62abd4116878d705df0ca73417e0bc8ab96`.
+No installation/systemd/real provider operation occurred; unrelated package suites
+were not rerun for this API/client slice.
+
+With the existing owned toolchain, `make package-android` passes frontend, both
+native targets, Gradle/signature/manifest and exact embedded native-content checks
+(`.lab/android-toolchain/provisioning-progress-package.log`). New ARM64 APK SHA-256
+`9882383f1abed8d0c73a7256b01ffe9508e2416d7fe5289219ab605317da33aa`
+(483945936 bytes); x86_64 SHA-256
+`1964bdb4833064313e40b443ec1bf693305a1fa920f13f1f8a81fd3d9d612109`
+(492274477 bytes). They include richer failure messages, new progress IPC/ACL and
+all four progress views. `releaseCandidate=false` and
+`runtimeValidatedForTheseApks=false` remain accurate. No AVD/device was started or
+installed. Android instructions are copied into the output package.
+
+Limitations: simulated Proxmox responses do not prove actual guest apt, target ACL,
+storage, SSH or restored state. Current APK execution, real deployment,
+Keychain/Keystore support, Windows/iOS parity and the added local-provider request
+remain open. Next autonomous source task: inspect and implement the first concrete
+platform credential-store use case without reading personal credentials, keeping
+passphrase-encrypted-file support labelled accurately and tests in an owned store.

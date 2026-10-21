@@ -26,6 +26,7 @@
       check(Date.now()<end,'Recreation never reached guest-ready completion');await click('Refresh recreation status');await wait(()=>document.querySelector('.remote-recreation').getAttribute('aria-busy')==='false','operation read');await new Promise(resolve=>setTimeout(resolve,100));
     }
     check(text().includes('New guest initialized at 192.0.2.42')&&!button('Retry the same recreation request'),'Missing new guest evidence or known operation resubmission');
+    if(window.__snapshotFixture.declared){await click('Read recorded steps');await wait(()=>text().includes('Create final disk-only snapshot: succeeded'),'recorded native recreation stages');check(text().includes('Install declared packages: succeeded')&&text().includes('Saved stage evidence only'),'Native recreation progress incomplete');}
     await click('Prepare SSH for recreated VM');await wait(()=>text().includes('SSH target: debian@192.0.2.42'),'SSH trust handoff');check(text().includes('independently verify its host key'),'Host trust bypassed');
     await click('Acknowledge recreation result');await wait(()=>!text().includes('Reviewed recreation:'),'acknowledge');
     await click('Disconnect');await wait(()=>!text().includes('Connected to'),'disconnect');

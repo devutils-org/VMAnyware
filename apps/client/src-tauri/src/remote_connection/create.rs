@@ -1,4 +1,6 @@
 //! Fixed create workflow; confirmation is reconstructed from the native retained plan.
+#[path = "provisioning_progress.rs"]
+pub(crate) mod progress;
 use super::{hex, identifier, Profile, RemoteConnection};
 use serde::{Deserialize, Serialize};
 use serde_json::json;
@@ -76,7 +78,7 @@ impl Operation {
         )
     }
 }
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 pub(super) enum Status {
     Queued,
@@ -88,7 +90,7 @@ pub(super) enum Status {
 }
 // Only fixed provisioning failure codes cross the native boundary. Raw provider
 // messages, repository output and unrelated operation failures are never forwarded.
-#[derive(Debug, Deserialize, Serialize)]
+#[derive(Debug, Clone, Copy, PartialEq, Eq, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
 enum Failure {
     ProviderNotConfigured,

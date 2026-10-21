@@ -87,6 +87,7 @@ pub fn run() {
             remote_connection::create::read_remote_create,
             remote_connection::create::read_remote_creations,
             remote_connection::create::recover_remote_creation,
+            remote_connection::create::progress::read_remote_provisioning_progress,
             remote_connection::read_remote_images,
             remote_connection::read_remote_environments,
             remote_connection::snapshots::read_remote_snapshots,

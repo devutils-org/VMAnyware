@@ -25,6 +25,7 @@
     "allow-confirm-remote-create",
     "allow-read-remote-create",
     "allow-read-remote-creations",
+    "allow-read-remote-provisioning-progress",
     "allow-recover-remote-creation",
     "allow-read-remote-images",
     "allow-read-remote-environments",

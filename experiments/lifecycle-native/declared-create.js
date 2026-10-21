@@ -28,6 +28,7 @@
     }
     check(text().includes('Guest initialized at 192.0.2.42')&&!button('Retry same confirmed request'),'Missing final readiness or known-operation POST');
     check(!document.querySelector('.remote-ssh-target'),'Readiness automatically selected SSH');
+    await click('Read recorded steps');await wait(()=>text().includes('Create final disk-only snapshot: succeeded'),'recorded native stages');check(text().includes('Install declared packages: succeeded')&&text().includes('Saved stage evidence only'),'Native progress omitted packages or historical context');
     await click('Prepare SSH connection');await wait(()=>text().includes('SSH target: debian@192.0.2.42'),'explicit guest handoff');check(text().includes('independently verify its host key'),'SSH trust bypassed');
     await click('Disconnect');await window.__TAURI_INTERNALS__.invoke('smoke_report',{ok:true,failure:null});
   })().catch(error=>window.__TAURI_INTERNALS__.invoke('smoke_report',{ok:false,failure:String(error)}));

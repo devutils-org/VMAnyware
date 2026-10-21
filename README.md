@@ -57,15 +57,15 @@ open. Fixtures are not proof of a working home Proxmox deployment.
 See [current state](STATE.md), [remaining work](docs/roadmap-status.md) and the
 [platform matrix](docs/platforms.md); no audited completion percentage is claimed.
 
-Safe package/snapshot/provider failure reasons are now shown in creation and saved
-recovery; raw guest/provider output is not exposed. A read-only API now exposes retained provisioning step order/status without
-provider access or private journal output. The next product slice is native/client
-progress integration,
-alongside exact-artifact platform acceptance. Existing delivery files predate this
-new progress endpoint and the richer failure messages. A home Proxmox
-host will later need an explicitly mapped Debian template, storage/network, verified
-TLS, least-privilege token and an approved disposable target. Start with the
-[template preparation guide](docs/debian-template.md) and
+Safe package/snapshot/provider failure reasons and explicit recorded stage reads are
+available in creation, recreation and saved recovery. Native readers validate the
+operation/target/plan; private journal and guest/provider output stay hidden. Joined
+Linux native journeys, including the exact extracted server package, pass against
+an owned generated provider. Refreshed server and both Android debug artifacts now
+include this workflow; current Android execution and real guest acceptance remain
+open. A home Proxmox host will need an explicitly mapped Debian template,
+storage/network, verified TLS, least-privilege token and an approved disposable
+target. Start with the [template preparation guide](docs/debian-template.md) and
 [Proxmox setup](docs/proxmox-setup.md).
 
 ## Install

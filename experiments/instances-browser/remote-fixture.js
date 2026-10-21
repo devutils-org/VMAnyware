@@ -12,6 +12,7 @@
   let reads = 0, releaseImages, rejectEnvironments;
   let submittedKey, createAttempts = 0, createReads = 0, releaseCreate;
   let historyReads = 0, recoveryReads = 0, releaseRecovery;
+  let progressReads = 0, releaseProgress;
   let trustedSsh = false;
   window.isTauri = true;
   window.__TAURI_INTERNALS__ = { invoke: async (command, args = {}) => {
@@ -66,6 +67,16 @@
       if (createReads === 6) return new Promise(resolve => { releaseCreate = resolve; });
       return {id:"d".repeat(32),kind:"vm_provision",status:"succeeded",result:{guestReady:true,guest:{ipv4:"192.0.2.42"}}};
     }
+    if (command === "read_remote_provisioning_progress") {
+      check(args.operationId === "d".repeat(32) && [1,3].includes(args.connectionId) && Object.keys(args).length === 2, "Progress supplied mutation input or wrong scope");
+      progressReads++;
+      const kinds = ["full_clone", "configure_resources", "configure_cloud_init", "start_vm", "wait_for_guest_readiness", "install_declared_packages", "snapshot_after_provisioning"];
+      const value = {operationId:args.operationId,instanceId:"e".repeat(32),sourceInstanceId:null,definitionHash:"a".repeat(64),planHash:"b".repeat(64),node:args.connectionId===1?"fixture-node":"recovered-node",vmid:202,status:"uncertain",privateJournal:"PRIVATE_PROVIDER_OUTPUT",stages:kinds.map((kind,position)=>({position,kind,status:position===5?"uncertain":position<5?"succeeded":"queued",submissionStarted:position<=5}))};
+      if(progressReads===2)value.planHash="f".repeat(64);
+      if(progressReads===3)throw "PRIVATE_ENDPOINT_ERROR";
+      if(progressReads===4)return new Promise(resolve=>{releaseProgress=()=>resolve({...value,node:"STALE_PROGRESS"});});
+      return value;
+    }
     if (command === "read_remote_creations") {
       check(args.connectionId === 3, "History read used the wrong connection");
       return ++historyReads === 1 ? [] : [{id:"d".repeat(32),kind:"vm_provision",status:"succeeded",instanceId:"e".repeat(32),createdAt:"2026-10-18T10:00:00Z"}];
@@ -86,7 +97,7 @@
   const check = (ok, message) => { if (!ok) throw new Error(message); };
   async function wait(predicate) {
     const end = Date.now() + 5000;
-    while (!predicate()) { if (Date.now() > end) throw new Error(`UI wait timed out: ${text().slice(-400)}`); await new Promise(resolve => setTimeout(resolve, 10)); }
+    while (!predicate()) { if (Date.now() > end) throw new Error(`UI wait timed out (progress reads ${progressReads}): ${text().slice(-400)}`); await new Promise(resolve => setTimeout(resolve, 10)); }
   }
   function mode(value) { const element = document.getElementById("connection-mode"); element.value = value; element.dispatchEvent(new Event("change", { bubbles: true })); }
   function input(id, value) { const element = document.getElementById(id); Object.getOwnPropertyDescriptor(element instanceof HTMLTextAreaElement ? HTMLTextAreaElement.prototype : HTMLInputElement.prototype, "value").set.call(element, value); element.dispatchEvent(new Event("input", { bubbles: true })); }
@@ -163,9 +174,18 @@
     button("Retry same confirmed request").click();
     await wait(() => text().includes("Creation: queued") && !button("Refresh creation status").disabled);
     check(!button("Prepare SSH connection") && !document.querySelector('.remote-ssh-target'), "Queued creation offered SSH handoff");
+    check(progressReads === 0, "Progress loaded implicitly");
+    button("Read recorded steps").click(); await wait(()=>text().includes("Install declared packages: uncertain"));
+    check(text().includes("Create final disk-only snapshot: queued") && text().includes("A started marker does not confirm completion") && !text().includes("PRIVATE_"), "Missing ordered stages or private progress text exposed");
+    button("Refresh recorded steps").click(); await wait(()=>text().includes("Recorded steps are unavailable"));
+    check(!text().includes("Install declared packages: uncertain"), "Mismatched plan retained old progress");
+    button("Read recorded steps").click(); await wait(()=>progressReads===3); await new Promise(resolve=>setTimeout(resolve,30)); await wait(()=>!button("Read recorded steps").disabled);
+    check(!text().includes("PRIVATE_"), "Progress error leaked private details");
+    button("Read recorded steps").click(); await wait(()=>releaseProgress);
     button("Refresh creation status").click();
     await wait(() => text().includes("Creation: failed") && !button("Refresh creation status").disabled);
     check(!button("Prepare SSH connection") && !document.querySelector('.remote-ssh-target'), "Failed creation offered SSH handoff");
+    releaseProgress(); await new Promise(resolve=>setTimeout(resolve,30)); check(!text().includes("STALE_PROGRESS"), "Old progress survived operation status replacement");
     check(text().includes("Declared package installation failed"), "Package failure reason missing");
     for (const message of ["Package installation exceeded its deadline", "snapshot task completed, but its exact disk-only snapshot is not confirmed", "Provisioning failure details are unavailable"]) {
       button("Refresh creation status").click(); await wait(() => text().includes(message) && !button("Refresh creation status").disabled);
@@ -231,6 +251,8 @@
     button(`Inspect ${"d".repeat(32)}`).click();
     await wait(() => text().includes("Recovered creation: uncertain"));
     check(text().includes("Package installation is not confirmed") && !button("Prepare SSH connection") && !text().includes("PRIVATE_"), "Saved creation failure missing/leaked or offered SSH");
+    button("Read recorded steps").click(); await wait(()=>text().includes("Recorded steps: uncertain · recovered-node"));
+    check(!button("Prepare SSH connection"), "Recovered stages granted SSH");
     button("Refresh recovered creation").click();
     await wait(() => text().includes("Recovered creation: succeeded"));
     check(text().includes("recovered-lab") && text().includes("recovered-node") && text().includes("VM 202"), "Recovered target association missing");

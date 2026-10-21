@@ -441,3 +441,11 @@ wiring, including GET-only recovery without provider/catalog/write flags.
 Logs: `.lab/native-deps/declared-create-native-check.log`,
 `.lab/native-deps/declared-recreation-native-check.log` and
 `.lab/native-deps/declared-workflow-default-recovery-check.log`.
+
+Declared create/recreation also explicitly read recorded stage progress through
+the production native command and authenticated API after completion. They require
+succeeded package/final-snapshot stages and saved-evidence wording before the
+independent SSH handoff. The extra calls are GET-only and must not change the
+expected provider mutations. The default uses current debug server/example binaries. To exercise an extracted
+owned release archive, pass `--server-binary /path/to/extracted/bin/vmanyware-server`.
+This does not install a host service or execute an Android APK.

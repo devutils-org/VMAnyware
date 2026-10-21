@@ -227,6 +227,7 @@ fn main() {
             remote_connection::create::prepare_remote_create,
             remote_connection::create::confirm_remote_create,
             remote_connection::create::read_remote_create,
+            remote_connection::create::progress::read_remote_provisioning_progress,
             remote_connection::connect_remote,
             remote_connection::disconnect_remote,
             remote_connection::read_remote_images,

@@ -24,6 +24,7 @@ Missing/malformed/non-provisioning IDs return a fixed 404; unavailable or corrup
 storage returns a fixed 503, without details or journal mutation. No schema,
 dependency, production write capability or native application command is added.
 
-The client progress reader and four creation/recovery views are a subsequent slice.
-Current delivery archives predate this endpoint and must not be advertised as
-containing it until rebuilt and checked.
+The client progress reader and four creation/recovery views are implemented in
+ADR 0086. Refreshed delivery archives include this endpoint; the exact extracted
+server also passes the joined declared native workflow. Actual Android runtime
+and real guest acceptance remain separate gates.

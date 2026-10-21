@@ -1,3 +1,4 @@
+import { ProvisioningProgress } from "./ProvisioningProgress";
 import { ProvisioningFailure } from "./ProvisioningFailure";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
@@ -82,7 +83,7 @@ export function RemoteRecreation({ connectionId, source, disabled, onLock, onSsh
       {(!submitted || terminal) && <button type="button" disabled={disabled || busy} onClick={clear}>{submitted ? "Acknowledge recreation result" : "Cancel recreation review"}</button>}
     </>}
     {submitted && !operation && <p role="status">No verified operation ID received. Keep this request key and retry only this same confirmed recreation.</p>}
-    {operation && <><p role="status">Recreation status: {operation.status} · operation <code>{operation.id}</code> · new instance <code>{operation.instanceId}</code></p>
+    {operation && <><ProvisioningProgress key={operation.id + operation.status} connectionId={connectionId} operationId={operation.id} instanceId={operation.instanceId} disabled={disabled || busy} planHash={review?.plan.planHash} definitionHash={review?.plan.definitionHash} sourceInstanceId={source.id} node={review?.plan.target.node} vmid={review?.plan.target.vmid} /><p role="status">Recreation status: {operation.status} · operation <code>{operation.id}</code> · new instance <code>{operation.instanceId}</code></p>
       {operation.status === "succeeded" && operation.result && <><p>New guest initialized at {operation.result.guest.ipv4}. Previous disk contents were not recovered. SSH access and host identity still need verification.</p><button type="button" disabled={disabled || busy} onClick={() => onSshTarget(operation.result!.guest.ipv4, review!.plan.target.guestUser)}>Prepare SSH for recreated VM</button></>}
       {["failed", "interrupted", "uncertain"].includes(operation.status) && <ProvisioningFailure code={operation.failure} />}
       {["failed", "interrupted", "uncertain"].includes(operation.status) && <p role="alert">Recreation did not confirm readiness. The new target is retained for inspection; refreshing does not submit another creation.</p>}

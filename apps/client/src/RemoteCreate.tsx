@@ -1,3 +1,4 @@
+import { ProvisioningProgress } from "./ProvisioningProgress";
 import { ProvisioningFailure } from "./ProvisioningFailure";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
@@ -78,7 +79,7 @@ export function RemoteCreate({ connectionId, endpoint, disabled, onSshTarget }: 
         {!operation && <button type="button" disabled={disabled || busy} onClick={submit}>Retry same confirmed request</button>}
       </>}
     </>}
-    {operation && <><p role="status">Creation: {operation.status} · operation <code>{operation.id}</code></p>
+    {operation && <><ProvisioningProgress key={operation.id + operation.status} connectionId={connectionId} operationId={operation.id} disabled={disabled || busy} planHash={plan?.planHash} definitionHash={plan?.definitionHash} sourceInstanceId={null} node={plan?.target.node} vmid={plan?.target.vmid} /><p role="status">Creation: {operation.status} · operation <code>{operation.id}</code></p>
       {operation.status === "succeeded" && operation.result?.guestReady && <>
         <p>Guest initialized at {operation.result.guest.ipv4}. SSH access and host identity still need verification.</p>
         {plan && <button type="button" disabled={disabled || busy} onClick={() => onSshTarget(operation.result!.guest.ipv4, plan.target.guestUser)}>Prepare SSH connection</button>}

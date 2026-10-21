@@ -9,6 +9,10 @@
     calls.push({command,args});if(command.endsWith('_support'))return false;
     if(command==='connect_remote')return {connectionId:++connection,endpoint:'https://fixture.example.test/'};
     if(command==='disconnect_remote'||command==='cancel_ssh_host')return;
+    if(command==='read_remote_provisioning_progress'){
+      check(args.connectionId===connection&&args.operationId===op&&Object.keys(args).length===2,'Wrong progress scope or supplied consent');
+      return {operationId:op,instanceId:target,sourceInstanceId:id,definitionHash:hash,planHash,node:'new-node',vmid:204,status:'succeeded',stages:['full_clone','configure_resources','configure_cloud_init','start_vm','wait_for_guest_readiness','install_declared_packages','snapshot_after_provisioning'].map((kind,position)=>({position,kind,status:'succeeded',submissionStarted:true}))};
+    }
     if(command==='read_remote_images')return [];
     if(command==='read_remote_environments')return environments;
     if(command==='read_remote_recreation_history'){
@@ -34,6 +38,7 @@
     await click('Find recreations from VM 202');await wait(()=>text().includes("No recreations in this source's recent history"));await click('Find recreations from VM 202');await click('Inspect recreation operation '+op);await wait(()=>text().includes('Saved recreation status: succeeded'));
     check(text().includes('new-node · VM 204')&&text().includes(target)&&text().includes('Current VM existence, guest readiness, address and SSH host identity have not been checked'),'Saved target/historical context missing');check(text().includes('previous disk contents and snapshots are not restored'),'Fresh disk semantics missing');
     check(!panel().querySelector('input[type="checkbox"]')&&!panel().textContent.includes('Prepare SSH'),'Saved proof restored consent or current SSH access');
+    await click('Read recorded steps');await wait(()=>text().includes('Create final disk-only snapshot: succeeded'));check(text().includes('Saved stage evidence only')&&!panel().textContent.includes('Prepare SSH'),'Saved stages granted current guest access');
     mode='uncertain';await click('Refresh saved recreation operation');await wait(()=>text().includes('Saved recreation status: uncertain'));check(text().includes('never repeats creation')&&!text().includes('Recorded guest initialization succeeded'),'Uncertain evidence presented as success');check(text().includes('snapshot task completed, but its exact disk-only snapshot is not confirmed')&&!text().includes('PRIVATE_'),'Saved recreation reason missing or leaked provider text');
     mode='false-success';await click('Inspect recreation operation '+op);await wait(()=>text().includes('Saved recreation success lacks'));check(!text().includes('Recorded guest initialization succeeded'),'False success displayed');
     mode='wrong-source';await click('Inspect recreation operation '+op);await wait(()=>text().includes('Saved recreation belongs to a different source'));mode='success';

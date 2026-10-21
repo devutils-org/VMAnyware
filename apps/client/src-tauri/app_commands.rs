@@ -26,6 +26,7 @@ pub const COMMANDS: &[&str] = &[
     "confirm_remote_create",
     "read_remote_create",
     "read_remote_creations",
+    "read_remote_provisioning_progress",
     "recover_remote_creation",
     "read_remote_images",
     "read_remote_environments",

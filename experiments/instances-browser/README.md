@@ -240,3 +240,10 @@ existing unknown-response retry/status/recovery/SSH-trust journey. The launcher
 requires the declared scenario's result marker. --remote-connection still covers
 the empty/no-snapshot default. --recreation additionally checks retained package/
 final-snapshot summaries. No native provider, SSH or VM mutation occurs here.
+
+The declared-create, recreation and recreation-recovery scenarios also exercise
+explicit recorded provisioning progress: ordered package/snapshot stages,
+operation/plan/source/target matching, historical wording and no progress-based
+SSH grant. Creation covers fixed error/redaction, mismatched plan refusal and a
+late read discarded after replacing operation status. Reads supply only connection
+and operation IDs; no intent or consent is installed. These remain simulated IPC.

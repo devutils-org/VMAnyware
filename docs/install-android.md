@@ -57,6 +57,12 @@ A final snapshot requires the independent server snapshot enablement as well as
 provisioning. Recreation uses the packages/snapshot declaration saved with the
 retained definition; it does not restore previous disk contents or old snapshots.
 
+Use **Read recorded steps** in creation/recreation or saved-operation recovery to
+inspect ordered stage statuses, including packages and the final snapshot. This
+GET-only view does not check current guest state or authorize another execution.
+A dispatch marker does not prove completion. Older servers can leave this optional
+view unavailable; keep the operation ID and refresh the saved operation.
+
 Wait for the complete operation to succeed: Cloud-Init availability alone does not
 prove package installation or final-snapshot completion. Failed or uncertain work
 retains the target for inspection. Refresh the known operation; do not start a new
