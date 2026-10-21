@@ -15,7 +15,18 @@ The optional final snapshot worker now also passes six targeted HTTPS/SQLite tes
 plus affected package/create/scheduling checks (ADR 0080). API admission now accepts
 supported package/final-snapshot declarations and passes all create/recreate feature
 combinations with independent gates and actual initial clone tagging (ADR 0081).
-Next: native plan/form/review/result integration; its current form remains restricted.
+Native declared-plan acceptance now passes create/recreate/recovery protocol checks
+(ADR 0082). Explicit React package/final-snapshot inputs and creation/recreation
+review now build/pass focused browser checks (ADR 0083). Actual Linux native
+create/recreate now also pass the full declared workflow against an owned HTTPS
+provider, with identical lost-reply retry and exact stage evidence. Refreshed Linux
+server and ARM64/x86_64 Android debug artifacts now include this integrated source
+and pass package/signature/content checks. Exact APK/platform/real-target acceptance
+remains open. Safe provisioning failure codes/messages now pass native and browser
+checks across creation/recreation/recovery (ADR 0084). A safe recorded per-stage
+progress API now passes five focused HTTP/SQLite checks (ADR 0085). Next: native
+progress reader/UI, followed by a batched delivery refresh. Current archives predate
+the new progress API and richer failure messages.
 Current Android delivery already includes existing-instance manual SSH; Linux native
 application-key/PTY integration passes. Exact APK/real guest acceptance stays open.
 
@@ -6415,3 +6426,215 @@ Next implementation: client-native plan validation and explicit create/recreate
 review/form support for declared packages/final snapshots, followed by owned native
 integration and refreshed APKs. The full roadmap remains active; real home Proxmox
 acceptance awaits the user's future server. No real VM operation occurred here.
+
+
+## 2026-10-21 — Native declared-plan validation
+
+Scope: native Plan acceptance shared by remote create/recreate/recovery; no UI,
+server production behavior, runtime launch, dependency or infrastructure change.
+Packages now follow the same bounded/unique grammar as server transport; final
+snapshot intent is accepted and retained. Shared fixture corpus locks both sides
+without adding server dependencies to the client. Exact comparison includes
+package order/names/versions and snapshot intent; runtime capability alone may
+change independently. Unknown-response retry preserves the retained private plan,
+hashed approval and identical request key/body. Existing scope/readiness checks
+are unchanged. ADR 0082 documents source and acceptance boundaries.
+
+Verification: 13 native create/prepare/recovery tests pass (three new), log
+`.lab/native-deps/declared-native-plan-tests.log`. Twenty affected native recreation/
+recovery checks pass (`.lab/native-deps/declared-native-affected-recreation.log`).
+One server contract check passes against the same 17-case corpus
+(`.lab/native-deps/declared-native-server-contract.log`). Rust formatting and diff
+review are scoped to the changed files. No unrelated suites, app launch or artifact
+rebuild were needed. Earlier checkpoint remains committed/pushed; this is its next
+reviewable source slice.
+
+Limits: the current React create form still submits empty packages/no final
+snapshot; richer review/results and full native declared workflow need integration.
+Current APK/server artifacts and real target/platform gates remain separate.
+Next task: explicit package inputs and final-snapshot option in RemoteCreate, with
+exact plan summaries in creation/recreation, stale-consent invalidation and scoped
+browser acceptance; then native generated-provider integration and refreshed APKs.
+
+
+## 2026-10-21 — Declared package/final-snapshot inputs and reviews
+
+Scope: RemoteCreate inputs/exact returned-feature check/review, retained recreation
+feature summary and the affected UI drivers. No new native/server/dependency/VM
+change in this slice; prior native-plan changes remain separately verified.
+Package input begins empty and final snapshot unchecked. One declaration per line
+preserves order/versions, trims surrounding whitespace and ignores blanks. Reviews
+show the exact returned plan. A changed package sequence/snapshot intent is rejected
+before consent. Existing fieldset locks prevent editing while prepared/submitted;
+Edit definition clears review/consent and a fresh preview uses a new request key.
+Unknown submission still allows only the same retained confirmed request. A stable
+create-confirm ID separates consent from the new option. Recreation explicitly
+shows retained packages/new snapshot without implying old disk/snapshot recovery.
+ADR 0083 records boundaries and consistency/dependency wording.
+
+Verification: frontend typecheck/build passes (`.lab/declared-ui-build.log`). New
+--declared-create React/Firefox simulated-IPC flow passes
+(`.lab/declared-ui-browser.log`), including changed server declaration rejection,
+exact versions/intent, defaults, edit/key/consent invalidation, lock and same-key
+retry plus existing status/recovery/SSH-trust assertions. The launcher checks that
+the declared scenario was active. Existing --remote-connection and --recreation
+pass (`.lab/declared-ui-default-create.log`, `.lab/declared-ui-recreation.log`), the
+latter also checking retained feature summaries. The initial test's disabled
+property check ignored inherited fieldset state; it was corrected to :disabled
+before passing. JS syntax and diff review pass for changed drivers. No unrelated
+native/server suite reran; Android driver's updated consent selector is syntax-only.
+
+Limitations: browser IPC is simulated, not a joined native declared workflow or
+actual guest package/snapshot execution. Current packaged artifacts predate this UI.
+Next task: exercise actual native create/recreate with declared package/final
+snapshot through the authenticated control plane and owned generated provider,
+including full stage result and no duplicate mutations; then refresh deliverables.
+Full real-target/platform roadmap remains open; no real VM was modified.
+
+
+## 2026-10-21 — Joined native declared creation and recreation
+
+Scope: --declared-create/--declared-recreation owned native acceptance, example-only
+production create-command wiring, generated provider optional declared mode and
+SQLite/submission evidence. No product dependency or real infrastructure mutation.
+The real React/WebKit form/review calls production retained native commands over
+verified HTTPS/bearer to the actual server/worker. Each workflow explicitly reviews
+build-essential plus git=1:2.0-1 and final disk-only snapshot, requires consent,
+loses its first accepted reply and retries only the identical path/key/body.
+
+Generated provider asserts seed/start/Cloud-Init observation before package dispatch,
+exact bounded package command/declarations, package completion observation before
+snapshot and exact operation/definition/plan snapshot metadata. Only eight expected
+non-GET provider requests occur (including the read-only Cloud-Init exec), with no
+duplicate clone/config/seed/start/package/snapshot. SQLite all-stage success,
+scoped installed/count proof, final disk-only snapshot, matching definition/ready
+instance and unchanged retired source are required. Recreation links source lineage;
+creation does not. SSH handoff is explicit and still demands independent host trust.
+No guest login or actual apt process is part of these controlled provider tests.
+
+Verification: native example and current debug server compile, logs
+`.lab/native-deps/declared-workflow-native-build.log` and
+`.lab/native-deps/declared-workflow-server-build.log`. --declared-create passes
+(`.lab/native-deps/declared-create-native-check.log`); --declared-recreation passes
+(`.lab/native-deps/declared-recreation-native-check.log`). Shared provider/example/
+runner changes warrant the existing --recreation-recovery check; it passes through
+app/server restart and provider/catalog/write-off GET-only recovery with unchanged
+counters (`.lab/native-deps/declared-workflow-default-recovery-check.log`). Scoped
+JS/Python syntax, Rust example formatting and diff review pass. No unrelated suites
+rerun. Earlier native/UI source slices remain dirty and retain their recorded checks.
+
+Limits: generated HTTPS/guest results, not actual Proxmox, Debian apt execution,
+snapshot guest-state restoration or current Android runtime. Current packaged
+server/APKs predate this source. Next task: rebuild the Linux archive and both
+Android debug APKs from the integrated source, verify exact packaged content and
+server behavior, then pursue Android/real-target/platform acceptance within concrete
+approval/environment boundaries. Full roadmap remains active.
+
+
+## 2026-10-21 — Integrated declared-workflow delivery artifacts
+
+Scope: build/verify the Linux release archive and both Android debug APKs for the
+now-integrated native package/final-snapshot workflow. No host service installation,
+emulator/device operation, VM or credential change. Android install guidance now
+covers exact review, independent snapshot permission, all-stage completion,
+uncertain-operation recovery and fresh-instance versus old-snapshot semantics.
+The companion INSTALL.md copy matches the updated guide exactly.
+
+Verification: make package-server passes optimized compilation/allowlisted archive
+creation (`.lab/declared-delivery-server-build.log`). The exact archive's staged
+process passes checksums/staging/reinstall preservation, unit syntax, authenticated
+startup, auth refusal, restart/persistence, admission/refill, stopped backup/restore,
+history and scoped lifecycle route checks
+(`.lab/declared-delivery-server-check.log`). No host unit was started. Existing
+schema-specific migration checks were not repeated: this diff has no schema change;
+this packaged-process check and recorded source/native stage proofs cover delivery.
+The declared native workflows remain independently proven against the debug server,
+not relabelled as a new full workflow test of this release archive.
+
+make package-android passes frontend typecheck/build, ARM64/x86_64 native builds,
+Gradle, signatures, compiled-manifest policies, ABI and exact current embedded
+native-library hashes (`.lab/android-toolchain/declared-workflow-package.log`).
+SHA256SUMS, artifacts.json and installation instructions are refreshed. These are
+releaseCandidate=false and runtimeValidatedForTheseApks=false artifacts; historical
+Android runtime does not validate these hashes. No unrelated application tests ran.
+
+Current deliverables:
+- `.lab/packages/vmanyware-server-0.1.0-linux-x86_64.tar.gz` SHA-256 `543c26c7b63971d0aff6bd42bac14690dabd45df202cc85a5c4a6e15074b89a2`.
+- `.lab/packages/android/vmanyware-0.1.0-android-arm64-v8a-debug.apk` SHA-256 `81a353932fbfc9f63dad3d17cfc93cb098c9a0a27f11912ef053c4fcdedf3de4`.
+- `.lab/packages/android/vmanyware-0.1.0-android-x86_64-debug.apk` SHA-256 `82a878f751110aecc1749d70897664961c5a8390c91ecc493d69acd2e4593dc2`.
+
+Limits: current Android execution, actual home Proxmox/guest packages/restored state,
+real deployment and platform/OS-storage acceptance remain open. The roadmap is not
+complete. Next task: expose safe, actionable provisioning failure/step evidence in
+native create/recreate/recovery, so package/snapshot failures are distinguishable
+while preserving retained operation identity and no-replay behavior. Exact-APK
+execution remains available only within its concrete target approval boundary.
+
+
+## 2026-10-21 — Safe provisioning failure reasons in native/UI recovery
+
+Scope: typed optional provisioning failure on the native Operation shared by
+creation/recreation/recovery, and fixed local messages in their four React views.
+No server/schema/dependency/VM mutation. Native permits only known relevant codes,
+strips raw extra fields, rejects unrelated/unknown/object failures and contradictory
+healthy failure/non-success readiness. Older missing-code failures remain readable.
+The renderer never prints a raw unknown code or provider/guest message. Packages
+failed/unconfirmed/timed out and final snapshot disabled/precondition/state reasons
+are distinct. Timeout remains uncertain; snapshot task completion does not establish
+metadata proof. No extra mutation, restored consent, blind retry or failure SSH path
+is introduced. ADR 0084 records compatibility and private-journal boundaries.
+
+Verification: 15 native create/prepare/recovery tests pass (two new) in
+`.lab/native-deps/provisioning-failure-native-tests.log`, including generated-HTTPS
+GET forwarding only the safe code while retaining operation ID. Twenty affected
+native recreation/recovery tests pass
+(`.lab/native-deps/provisioning-failure-affected-recreation.log`). Frontend build/
+typecheck passes (`.lab/provisioning-failure-ui-build.log`). Three scoped React/
+Firefox simulated-IPC journeys pass: declared creation plus saved creation recovery
+(`.lab/provisioning-failure-create-ui.log`), recreation
+(`.lab/provisioning-failure-recreation-ui.log`) and saved recreation
+(`.lab/provisioning-failure-recovery-ui.log`). Assertions cover safe package/snapshot
+reasons, unknown-code fallback, redaction, no false readiness/SSH and unchanged
+request counts/IDs. Scoped syntax/format/diff review pass. No unrelated server suite,
+actual native launch or APK rebuild reran for this slice.
+
+Limits: separate native protocol/browser evidence, not new joined failure injection
+or exact-APK runtime. Current APKs include the complete declared workflow but predate
+these richer messages; the packaged server is unchanged. Earlier dirty slices keep
+their recorded verification. Next task: read-only safe per-stage provisioning
+progress and history evidence, preserving target/plan/operation binding and hiding
+private approval, task/PID and seed data; then refresh client artifacts in a batch.
+Full real home Proxmox/platform/OS-storage/release roadmap remains open.
+
+
+## 2026-10-21 — Safe recorded provisioning progress (ADR 0085)
+
+Scope/acceptance: authenticated GET-only ordered provisioning stage evidence,
+retained operation/target/plan/source binding, no provider access or write flags,
+no private journal exposure or mutation. Implemented the bounded public projection
+and one-transaction Store read at `/api/v1/operations/{id}/provisioning`. Existing
+strict job decoding plus sequential prefix/status checks reject corrupt data with
+a fixed 503; malformed, absent and non-provisioning IDs have a fixed 404.
+`submissionStarted` is historical dispatch evidence, including read-only probes;
+it does not establish completion, current power/readiness or SSH trust.
+
+Verification: five focused HTTP/SQLite tests pass in
+`.lab/provisioning-progress-api-tests.log`, covering authentication/method/identity,
+all eight ordered stages, failure/prefix, restart uncertainty, corruption refusal,
+redaction and unchanged operation records. Two targeted generated-HTTPS workflow
+tests pass across 12 create/recreate × package/snapshot × disk combinations in
+`.lab/provisioning-progress-declared-flow-tests.log`; completed progress is read
+through a provider/catalog/write-free router with correct lineage and hashes.
+Scoped rustfmt and diff review pass. No unrelated suite or artifact rebuild ran.
+
+Website status now reflects ADRs 0082–0084 in English/French, including joined Linux
+native declared workflows, safe failure messages and refreshed debug artifacts.
+Its build/typecheck and 12 focused site/render checks pass in
+`.lab/declared-status-site-{build,tests}.log`. Website commit `4e0e5a5` is pushed.
+
+Limits: progress is not yet wired into native commands/UI. Current packaged server
+predates this endpoint, and current APKs predate richer failure messages; their
+recorded packaging evidence does not cover these latest changes. No real VM,
+Android runtime, host deployment or OS-backed key storage was validated here.
+Next task: one native/client recorded-progress slice, preserving operation/target/
+plan/source binding and historical wording, followed by a batched delivery refresh.

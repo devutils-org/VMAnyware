@@ -616,3 +616,82 @@ impl Job {
             && proof.snapshot.provider_state.is_none()
     }
 }
+
+/// Safe recorded progress only. No approval, task, PID, seed or guest output.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Progress {
+    pub operation_id: String,
+    pub instance_id: String,
+    pub source_instance_id: Option<String>,
+    pub provider_scope_id: String,
+    pub definition_hash: String,
+    pub plan_hash: String,
+    pub node: String,
+    pub vmid: u32,
+    pub status: Status,
+    pub failure: Option<crate::operation::Failure>,
+    pub stages: Vec<StageProgress>,
+}
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct StageProgress {
+    pub position: usize,
+    pub kind: String,
+    pub status: Status,
+    pub submission_started: bool,
+}
+impl Job {
+    pub(crate) fn progress(&self) -> Option<Progress> {
+        // A single ordered prefix can have succeeded. Later steps cannot have
+        // started past an incomplete/failed predecessor in this sequential worker.
+        let first = self
+            .stages
+            .iter()
+            .position(|s| s.status != Status::Succeeded);
+        if let Some(index) = first {
+            if self.stages[index + 1..]
+                .iter()
+                .any(|s| s.status != Status::Queued || s.dispatch_started)
+            {
+                return None;
+            }
+        }
+        let valid = match (self.operation.status, first.map(|i| self.stages[i].status)) {
+            (Status::Succeeded, None) => true,
+            (Status::Queued, Some(Status::Queued)) => {
+                self.stages.iter().all(|s| s.status == Status::Queued)
+            }
+            (Status::Running, Some(Status::Running | Status::Queued)) => true,
+            (Status::Failed, Some(Status::Failed)) => true,
+            (Status::Interrupted, Some(Status::Interrupted)) => true,
+            (Status::Uncertain, Some(Status::Uncertain | Status::Interrupted)) => true,
+            _ => false,
+        };
+        if !valid || self.stages.is_empty() || self.stages.len() > 8 {
+            return None;
+        }
+        Some(Progress {
+            operation_id: self.operation.id.clone(),
+            instance_id: self.operation.instance_id.clone()?,
+            source_instance_id: self.recreated_from.clone(),
+            provider_scope_id: self.approval.provider_scope_id.clone(),
+            definition_hash: self.approval.definition_hash.clone(),
+            plan_hash: self.approval.plan_hash.clone(),
+            node: self.approval.target_node.clone(),
+            vmid: self.approval.target_vmid,
+            status: self.operation.status,
+            failure: self.operation.failure,
+            stages: self
+                .stages
+                .iter()
+                .map(|s| StageProgress {
+                    position: s.position,
+                    kind: s.kind.clone(),
+                    status: s.status,
+                    submission_started: s.dispatch_started,
+                })
+                .collect(),
+        })
+    }
+}

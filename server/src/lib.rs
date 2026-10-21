@@ -275,6 +275,7 @@ pub fn router_with_deletions(
             post(restores_api::restore).layer(DefaultBodyLimit::max(4096)),
         )
         .route("/api/v1/operations/{id}", get(operations_api::get))
+        .route("/api/v1/operations/{id}/provisioning", get(provisioning_api::progress))
         .route(
             "/api/v1/definitions",
             get(definitions_api::list).post(definitions_api::create),

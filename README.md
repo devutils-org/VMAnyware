@@ -43,8 +43,11 @@ Implemented, with local/generated-provider evidence:
 - API/worker execution of declared packages and an optional final disk-only snapshot.
 
 The package/final-snapshot workflow passes all create/recreate combinations against
-an owned generated HTTPS provider. Its native form/plan/review integration is next;
-the current create form still sends empty packages and no final snapshot.
+an owned generated HTTPS provider. Native plan validation passes protocol checks, and explicit package/final-snapshot
+inputs/reviews and joined Linux native create/recreate journeys now also pass against
+the owned provider, including lost-reply retry and final stage evidence. Refreshed Linux
+server/Android debug artifacts pass packaging checks; actual platform/guest
+acceptance remains open.
 
 **Development status:** this is not a release candidate. Linux native integration,
 server package checks and Android compilation/signature/content checks have evidence.
@@ -54,8 +57,12 @@ open. Fixtures are not proof of a working home Proxmox deployment.
 See [current state](STATE.md), [remaining work](docs/roadmap-status.md) and the
 [platform matrix](docs/platforms.md); no audited completion percentage is claimed.
 
-The next product slice is client support for declared packages/final snapshots,
-followed by native integration and refreshed installable artifacts. A home Proxmox
+Safe package/snapshot/provider failure reasons are now shown in creation and saved
+recovery; raw guest/provider output is not exposed. A read-only API now exposes retained provisioning step order/status without
+provider access or private journal output. The next product slice is native/client
+progress integration,
+alongside exact-artifact platform acceptance. Existing delivery files predate this
+new progress endpoint and the richer failure messages. A home Proxmox
 host will later need an explicitly mapped Debian template, storage/network, verified
 TLS, least-privilege token and an approved disposable target. Start with the
 [template preparation guide](docs/debian-template.md) and

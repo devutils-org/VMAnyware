@@ -16,6 +16,7 @@ mod provisioning_cloud_init;
 mod provisioning_disk;
 mod provisioning_readiness;
 mod provisioning_packages;
+mod provisioning_progress;
 mod provisioning_snapshot;
 mod provisioning_seed;
 mod provisioning_start;

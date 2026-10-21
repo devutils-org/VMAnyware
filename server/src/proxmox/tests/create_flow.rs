@@ -360,6 +360,55 @@ async fn run_confirmed_flow(recreation: bool, packages: bool, snapshot: bool) {
         let job = store.provisioning_job(&id).unwrap().unwrap();
         assert_eq!(job.installed_packages().is_some(), packages);
         assert_eq!(job.stages.iter().filter(|s|s.kind=="snapshot_after_provisioning" && s.status==Status::Succeeded).count(),usize::from(snapshot));
+        // The progress read must work from retained data with provider/catalog/writes absent.
+        let progress_app = crate::auth::protect(
+            crate::router_with_services(None, store.clone()),
+            Some(crate::auth::AccessToken::parse("owned-declared-flow-token-0000000000").unwrap()),
+        );
+        let response = progress_app
+            .oneshot(
+                Request::get(format!("/api/v1/operations/{id}/provisioning"))
+                    .header(
+                        "authorization",
+                        "Bearer owned-declared-flow-token-0000000000",
+                    )
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let progress: serde_json::Value =
+            serde_json::from_slice(&to_bytes(response.into_body(), 65536).await.unwrap()).unwrap();
+        assert_eq!(progress["operationId"], id);
+        assert_eq!(
+            progress["instanceId"],
+            completed.instance_id.as_ref().unwrap().as_str()
+        );
+        assert_eq!(progress["status"], "succeeded");
+        assert_eq!(progress["planHash"], approval.plan_hash);
+        assert_eq!(
+            progress["sourceInstanceId"],
+            source
+                .as_ref()
+                .map(|s| s["id"].clone())
+                .unwrap_or(serde_json::Value::Null)
+        );
+        assert!(progress["stages"]
+            .as_array()
+            .unwrap()
+            .iter()
+            .all(|s| s["status"] == "succeeded"));
+        for private in [
+            "UPID:",
+            "approval",
+            "requestKey",
+            "journal",
+            "pid",
+            "resultJson",
+        ] {
+            assert!(!progress.to_string().contains(private));
+        }
         let requests: Vec<_> = std::iter::from_fn(|| fixture.requests.try_recv().ok()).collect();
         for request in &requests {
             assert!(request

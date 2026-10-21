@@ -322,8 +322,9 @@ invalid/removal/shell/release selectors return HTTP 422. snapshotAfterProvisioni
 requires VMANYWARE_SNAPSHOTS_ENABLED=true in addition to provisioning; otherwise
 creationEnabled=false and enqueue returns HTTP 403 snapshot_disabled. Declared
 stages must all succeed; they are never silently omitted. See ADRs 0079–0081 for
-PID/task recovery and actual-guest validation limits. The current native form still
-restricts packages/final snapshots pending its separate client integration. Browser Origin and duplicate request keys are
+PID/task recovery and actual-guest validation limits. The native form now offers explicit package/final-snapshot inputs and exact reviews;
+React/browser, native protocol and joined Linux native API/worker/provider checks
+now pass. Refreshed-artifact, Android and actual guest acceptance remain open. Browser Origin and duplicate request keys are
 rejected. Missing/invalid confirmation returns 400, changed plan/scope or conflicting
 work 409, absent definition 404, disabled capability 403, missing provider/catalog
 or unavailable storage 503. Unknown JSON fields return 422; body limit is 4096 bytes.
@@ -372,3 +373,16 @@ and verifies it with CPU/memory. This replaces inherited template tags on that f
 clone and enables subsequent strict lifecycle/snapshot checks; it does not repair
 existing VMs or replay an uncertain resource write. Real ACL/target validation is
 still required. API/worker tests are not evidence of actual guest apt execution.
+
+
+### Recorded stage progress
+
+Authenticated `GET /api/v1/operations/{id}/provisioning` reads retained progress
+without a provider connection or enabled writes. It returns operation/instance/source
+identity, provider scope, node/VMID, definition/plan hashes, recorded status/failure
+and ordered stages (`position`, `kind`, `status`, `submissionStarted`). It returns
+neither private journal nor guest output. A started marker records an attempted
+stage dispatch, including read-only probes; it does not establish completion,
+power or readiness. Missing/wrong-kind IDs yield 404; corrupt storage yields a
+fixed 503. No repair or automatic retry occurs. The native client integration is
+next; current packaged server artifacts predate the new endpoint. See ADR 0085.

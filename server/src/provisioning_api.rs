@@ -259,3 +259,39 @@ pub(crate) fn create_problem(issue: crate::store::ProvisioningError) -> Response
     };
     error(status, code, message).into_response()
 }
+
+/// Recorded progress only; provider/capability configuration is deliberately unused.
+pub async fn progress(
+    State(state): State<AppState>,
+    path: Result<axum::extract::Path<String>, axum::extract::rejection::PathRejection>,
+) -> Response {
+    let id = path.ok().map(|axum::extract::Path(id)| id).filter(|id| {
+        id.len() == 32
+            && id
+                .bytes()
+                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+    });
+    let Some(id) = id else {
+        return error(
+            StatusCode::NOT_FOUND,
+            "provisioning_progress_not_found",
+            "Provisioning operation not found.",
+        )
+        .into_response();
+    };
+    match tokio::task::spawn_blocking(move || state.store.provisioning_progress(&id)).await {
+        Ok(Ok(Some(progress))) => Json(progress).into_response(),
+        Ok(Ok(None)) => error(
+            StatusCode::NOT_FOUND,
+            "provisioning_progress_not_found",
+            "Provisioning operation not found.",
+        )
+        .into_response(),
+        _ => error(
+            StatusCode::SERVICE_UNAVAILABLE,
+            "storage_unavailable",
+            "Recorded provisioning progress is unavailable.",
+        )
+        .into_response(),
+    }
+}
