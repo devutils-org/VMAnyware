@@ -1,7 +1,9 @@
 use crate::definition::Definition;
 mod deletion;
+mod deletion_recovery;
 mod instances;
 mod lifecycle;
+mod lifecycle_recovery;
 mod restore_recovery;
 pub use lifecycle::LifecycleError as DeletionError;
 mod snapshot;
@@ -13,8 +15,11 @@ mod provisioning;
 mod provisioning_cloud_init;
 mod provisioning_disk;
 mod provisioning_readiness;
+mod provisioning_packages;
+mod provisioning_snapshot;
 mod provisioning_seed;
 mod provisioning_start;
+mod recreation_history;
 pub use provisioning::ProvisioningError;
 mod operations;
 pub use instances::RegistrationError;
@@ -95,7 +100,7 @@ impl Store {
         let version: u32 = transaction
             .pragma_query_value(None, "user_version", |row| row.get(0))
             .map_err(|_| Error::Unavailable)?;
-        if version > 14 {
+        if version > 15 {
             return Err(Error::Unavailable);
         }
         if version < 1 {
@@ -218,6 +223,14 @@ impl Store {
                 .map_err(|_| Error::Unavailable)?;
             transaction
                 .pragma_update(None, "user_version", 14)
+                .map_err(|_| Error::Unavailable)?;
+        }
+        if version < 15 {
+            transaction
+                .execute_batch(include_str!("../../migrations/0015_recreation_lineage.sql"))
+                .map_err(|_| Error::Unavailable)?;
+            transaction
+                .pragma_update(None, "user_version", 15)
                 .map_err(|_| Error::Unavailable)?;
         }
         if version < 14 {

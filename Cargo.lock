@@ -5918,6 +5918,7 @@ dependencies = [
  "rustls-platform-verifier",
  "serde",
  "serde_json",
+ "sha2 0.10.9",
  "ssh-key 0.7.0-rc.11",
  "tauri",
  "tauri-build",

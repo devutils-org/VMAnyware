@@ -60,9 +60,23 @@ pub struct Operation {
     #[serde(default)]
     result: Option<Ready>,
 }
+impl Operation {
+    pub(super) fn id(&self) -> &str {
+        &self.id
+    }
+    pub(super) fn instance_id(&self) -> Option<&str> {
+        self.instance_id.as_deref()
+    }
+    pub(super) fn terminal(&self) -> bool {
+        matches!(
+            self.status,
+            Status::Succeeded | Status::Failed | Status::Interrupted
+        )
+    }
+}
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
-enum Status {
+pub(super) enum Status {
     Queued,
     Running,
     Succeeded,
@@ -100,7 +114,7 @@ fn valid_key(key: &str) -> bool {
             .all(|b| b.is_ascii_alphanumeric() || b"._-".contains(&b))
 }
 impl Plan {
-    fn valid(&self, vmid: u32) -> bool {
+    pub(super) fn valid(&self, vmid: u32) -> bool {
         (!self.definition_name.is_empty()
             && self.definition_name.len() <= 63
             && !self.definition_name.starts_with('-')
@@ -130,17 +144,38 @@ impl Plan {
             && self.packages.is_empty()
             && !self.snapshot_after_provisioning
     }
-    fn approval(&self) -> serde_json::Value {
+    pub(super) fn matches_definition(&self, name: &str, hash: &str) -> bool {
+        self.definition_name == name && self.definition_hash == hash
+    }
+    pub(super) fn target_vmid(&self) -> u32 {
+        self.target.vmid
+    }
+    pub(super) fn enabled(&self) -> bool {
+        self.creation_enabled
+    }
+    pub(super) fn same_configuration(&self, other: &Self) -> bool {
+        let (Ok(mut a), Ok(mut b)) = (serde_json::to_value(self), serde_json::to_value(other))
+        else {
+            return false;
+        };
+        a.as_object_mut().unwrap().remove("creationEnabled");
+        b.as_object_mut().unwrap().remove("creationEnabled");
+        a == b
+    }
+    pub(super) fn approval(&self) -> serde_json::Value {
         json!({"definitionName":self.definition_name,"definitionHash":self.definition_hash,"providerScopeId":self.provider_scope_id,"planHash":self.plan_hash,"targetNode":self.target.node,"targetVmid":self.target.vmid,"sourceVmid":self.source.template_vmid,"storage":self.target.storage,"bridge":self.target.bridge,"confirmed":true})
     }
 }
 impl Profile {
-    async fn create_response(
+    pub(super) async fn create_response(
         &self,
         request: reqwest::RequestBuilder,
     ) -> Result<(reqwest::StatusCode, Vec<u8>), String> {
-        let mut response=request.header(reqwest::header::AUTHORIZATION,self.authorization.clone()).send().await.map_err(|_|"Server response unavailable. A submitted creation may still be running; retain the request key.")?;
+        let mut response=request.header(reqwest::header::AUTHORIZATION,self.authorization.clone()).send().await.map_err(|_|"Server response unavailable. A submitted action may still be running; retain the request key.")?;
         let status = response.status();
+        if status.as_u16() == 429 {
+            return Err(super::RATE_LIMITED.into());
+        }
         if status.as_u16() == 401 {
             return Err("The server rejected the access token.".into());
         }
@@ -165,7 +200,7 @@ impl Profile {
         }
         Ok((status, bytes))
     }
-    async fn create_json<T: serde::de::DeserializeOwned>(
+    pub(super) async fn create_json<T: serde::de::DeserializeOwned>(
         &self,
         request: reqwest::RequestBuilder,
     ) -> Result<T, String> {
@@ -405,7 +440,7 @@ fn validate_read_operation(operation: &Operation) -> Result<(), String> {
     }
     Ok(())
 }
-fn validate_operation(operation: &Operation, plan: &Plan) -> Result<(), String> {
+pub(super) fn validate_operation(operation: &Operation, plan: &Plan) -> Result<(), String> {
     validate_read_operation(operation)?;
     if let Some(result) = operation
         .result
@@ -513,6 +548,68 @@ mod tests {
         manager.begin().unwrap();
         assert!(manager.confirm_create(id, "fixed-key", true).await.is_err());
     }
+    #[tokio::test]
+    async fn request_capacity_refusal_retains_creation_and_explicit_retry_uses_identical_key_and_body(
+    ) {
+        let operation =
+            json!({"id":"d".repeat(32),"kind":"vm_provision","status":"queued","result":null})
+                .to_string();
+        let (endpoint, ca, task) = super::prepare_tests::sequence(vec![
+            ("429 Too Many Requests", "PRIVATE_SERVER_BODY".into()),
+            ("202 Accepted", operation),
+        ])
+        .await;
+        let manager = RemoteConnection::default();
+        let id = manager.begin().unwrap();
+        manager
+            .complete(id, Profile::new(&endpoint, TOKEN, Some(ca)).unwrap())
+            .unwrap();
+        manager.0.lock().unwrap().prepared = Some(Prepared {
+            key: "retained-key".into(),
+            plan: plan(),
+            submitted: false,
+            inflight: false,
+            operation: None,
+        });
+        assert_eq!(
+            manager
+                .confirm_create(id, "retained-key", true)
+                .await
+                .unwrap_err(),
+            super::super::RATE_LIMITED
+        );
+        {
+            let state = manager.0.lock().unwrap();
+            let prepared = state.prepared.as_ref().unwrap();
+            assert!(prepared.submitted && !prepared.inflight);
+            assert_eq!(prepared.key, "retained-key");
+            assert!(prepared.operation.is_none());
+            assert_eq!(prepared.plan.approval(), plan().approval());
+        }
+        assert!(manager
+            .prepare_create(id, "new-key".into(), "ignored".into(), 203)
+            .await
+            .is_err());
+        assert_eq!(
+            manager
+                .confirm_create(id, "retained-key", true)
+                .await
+                .unwrap()
+                .id,
+            "d".repeat(32)
+        );
+        let requests = task.await.unwrap();
+        assert_eq!(requests.len(), 2);
+        assert!(requests
+            .iter()
+            .all(|r| r.starts_with("POST /api/v1/provisioning/create ")
+                && r.to_lowercase().contains("idempotency-key: retained-key")));
+        assert_eq!(
+            requests[0].split_once("\r\n\r\n").unwrap().1,
+            requests[1].split_once("\r\n\r\n").unwrap().1
+        );
+    }
+
     #[tokio::test]
     async fn remote_create_errors_keep_same_key_and_never_echo_server_body_or_token() {
         for headers in ["x-vmanyware-authenticated: bearer\r\n", ""] {

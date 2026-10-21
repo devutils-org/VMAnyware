@@ -402,7 +402,7 @@ fn schema_five_upgrade_preserves_dispatched_lifecycle_identity_and_recovery() {
     let upid = "UPID:pve-test:00000001:00000002:00000003:qmstart:202:fixture@pve:";
     connection.execute("INSERT INTO operations(id,request_key,kind,instance_id,status,approval_json,input_hash,confirmed_at,dispatch_started,provider_upid) VALUES (?1,'retained','vm_start',?2,'running',?3,?4,unixepoch(),1,?5)",params!["d".repeat(32),approval.instance_id,serde_json::to_string(&approval).unwrap(),approval.input_hash().unwrap(),upid]).unwrap();
     connection
-        .execute_batch("DROP TABLE IF EXISTS provisioning_seed_regeneration;")
+        .execute_batch("DROP TABLE IF EXISTS recreation_sources; DROP TABLE IF EXISTS provisioning_seed_regeneration;")
         .unwrap();
     connection.pragma_update(None, "user_version", 5).unwrap();
     drop(connection);
@@ -425,7 +425,7 @@ fn schema_five_upgrade_preserves_dispatched_lifecycle_identity_and_recovery() {
         connection
             .pragma_query_value(None, "user_version", |r| r.get::<_, u32>(0))
             .unwrap(),
-        14
+        15
     );
     assert!(connection
         .prepare("PRAGMA foreign_key_check")
@@ -820,7 +820,7 @@ fn schema_six_upgrade_preserves_completed_clone_and_resource_queue() {
     let connection = rusqlite::Connection::open(&path).unwrap();
     connection
         .execute_batch(
-            "DROP TABLE IF EXISTS provisioning_seed_regeneration; DROP TABLE provisioning_cloud_init_dispatch; DROP TABLE provisioning_disk_dispatch; ALTER TABLE provisioning_stages DROP COLUMN config_digest; PRAGMA user_version=6;",
+            "DROP TABLE IF EXISTS recreation_sources; DROP TABLE IF EXISTS provisioning_seed_regeneration; DROP TABLE provisioning_cloud_init_dispatch; DROP TABLE provisioning_disk_dispatch; ALTER TABLE provisioning_stages DROP COLUMN config_digest; PRAGMA user_version=6;",
         )
         .unwrap();
     drop(connection);
@@ -841,7 +841,7 @@ fn schema_six_upgrade_preserves_completed_clone_and_resource_queue() {
         connection
             .pragma_query_value(None, "user_version", |r| r.get::<_, u32>(0))
             .unwrap(),
-        14
+        15
     );
     assert!(connection
         .prepare("PRAGMA foreign_key_check")
@@ -1209,7 +1209,7 @@ fn disk_journal_schema_seven_upgrade_preserves_resource_evidence() {
     drop(store);
     let connection = rusqlite::Connection::open(&path).unwrap();
     connection
-        .execute_batch("DROP TABLE IF EXISTS provisioning_seed_regeneration; DROP TABLE provisioning_cloud_init_dispatch; DROP TABLE provisioning_disk_dispatch; PRAGMA user_version=7;")
+        .execute_batch("DROP TABLE IF EXISTS recreation_sources; DROP TABLE IF EXISTS provisioning_seed_regeneration; DROP TABLE provisioning_cloud_init_dispatch; DROP TABLE provisioning_disk_dispatch; PRAGMA user_version=7;")
         .unwrap();
     drop(connection);
     let migrated = Store::open(&path).unwrap();
@@ -1236,7 +1236,7 @@ fn disk_journal_schema_seven_upgrade_preserves_resource_evidence() {
         connection
             .pragma_query_value(None, "user_version", |r| r.get::<_, u32>(0))
             .unwrap(),
-        14
+        15
     );
     assert!(connection
         .prepare("PRAGMA foreign_key_check")
@@ -1648,7 +1648,7 @@ fn cloud_init_journal_schema_eight_upgrade_preserves_completed_disk_evidence() {
     drop(store);
     let connection = rusqlite::Connection::open(&path).unwrap();
     connection
-        .execute_batch("DROP TABLE IF EXISTS provisioning_seed_regeneration; DROP TABLE provisioning_cloud_init_dispatch; PRAGMA user_version=8;")
+        .execute_batch("DROP TABLE IF EXISTS recreation_sources; DROP TABLE IF EXISTS provisioning_seed_regeneration; DROP TABLE provisioning_cloud_init_dispatch; PRAGMA user_version=8;")
         .unwrap();
     drop(connection);
     let migrated = Store::open(&path).unwrap();
@@ -1673,7 +1673,7 @@ fn cloud_init_journal_schema_eight_upgrade_preserves_completed_disk_evidence() {
         connection
             .pragma_query_value(None, "user_version", |r| r.get::<_, u32>(0))
             .unwrap(),
-        14
+        15
     );
     assert!(connection
         .prepare("PRAGMA foreign_key_check")
@@ -1937,7 +1937,7 @@ fn seed_journal_schema_nine_upgrade_preserves_settings_without_inventing_regener
     drop(store);
     let connection = rusqlite::Connection::open(&path).unwrap();
     connection
-        .execute_batch("DROP TABLE provisioning_seed_regeneration; PRAGMA user_version=9;")
+        .execute_batch("DROP TABLE IF EXISTS recreation_sources; DROP TABLE provisioning_seed_regeneration; PRAGMA user_version=9;")
         .unwrap();
     drop(connection);
     let reopened = Store::open(&path).unwrap();
@@ -1950,7 +1950,7 @@ fn seed_journal_schema_nine_upgrade_preserves_settings_without_inventing_regener
         connection
             .pragma_query_value(None, "user_version", |r| r.get::<_, u32>(0))
             .unwrap(),
-        14
+        15
     );
     assert!(!connection
         .prepare("PRAGMA foreign_key_check")

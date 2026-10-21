@@ -1,0 +1,53 @@
+{
+  "instanceId": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+  "providerScopeId": "bbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbbb",
+  "definitionHash": "cccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccccc",
+  "node": "pve-test",
+  "vmid": 202,
+  "configDigest": "dddddddddddddddddddddddddddddddddddddddd",
+  "plan": {
+    "scopeHash": "ffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffffff",
+    "volumes": [
+      {
+        "volume": "storage:vm-202-disk-0",
+        "references": [
+          "live:scsi0",
+          "snapshot/before-work:scsi0"
+        ],
+        "ownerVerified": true,
+        "effect": "delete_owned_volume"
+      },
+      {
+        "volume": "storage:vm-202-fleecing",
+        "references": [
+          "live:special/fleecing"
+        ],
+        "ownerVerified": true,
+        "effect": "fleecing_cleanup"
+      }
+    ],
+    "snapshots": [
+      "before-work"
+    ],
+    "preservedMedia": [
+      "local:iso/debian.iso"
+    ],
+    "preservedOwnedVolumes": [
+      "storage:vm-202-orphan"
+    ],
+    "effects": {
+      "version": 1,
+      "removeVmConfiguration": true,
+      "removeSnapshotMetadata": true,
+      "removeVmPermissions": true,
+      "removeVmFirewall": true,
+      "cleanupIpam": true,
+      "cleanupRecordedFleecingImages": true,
+      "purgeJobs": false,
+      "destroyUnreferencedDisks": false,
+      "retainDefinitionAndHistory": true
+    }
+  },
+  "confirmed": true,
+  "acknowledgeDataLoss": true
+}

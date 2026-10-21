@@ -39,6 +39,8 @@ export async function createProvider({tls,listen,publicKey,authorization,check})
           for(const key of ["net0","ipconfig0","citype","sshkeys"])target[key]=form[key];
           target.ciupgrade=0;delete target.ciuser;target.digest="f".repeat(40);
         }else{
+          target.tags=form.tags;
+          check(target.tags===`vmanyware-${target.description.split("\n")[0].split(" ").at(-1)}`,"Missing or wrong created-instance tag");
           for(const key of ["sockets","cores","vcpus","cpulimit","memory","balloon"])target[key]=Number(form[key]);
           target.digest="e".repeat(40);
         }

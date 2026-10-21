@@ -418,6 +418,10 @@ fn restore_schema_eleven_upgrade_preserves_snapshot_and_provisioning_journals() 
     let approval = setup(&store);
     let connection = rusqlite::Connection::open(&path).unwrap();
     // Rebuild an actual schema-11 fixture, not just its version marker.
+    // Remove schema-15 objects before constructing this historical schema fixture.
+    connection
+        .execute_batch("DROP TABLE recreation_sources;")
+        .unwrap();
     connection
         .execute_batch(include_str!("../../migrations/0011_snapshot_creation.sql"))
         .unwrap();
@@ -466,7 +470,7 @@ fn restore_schema_eleven_upgrade_preserves_snapshot_and_provisioning_journals() 
         connection
             .pragma_query_value(None, "user_version", |r| r.get::<_, u32>(0))
             .unwrap(),
-        14
+        15
     );
     for table in [
         "provisioning_intents",
@@ -505,6 +509,10 @@ fn restore_schema_eleven_corruption_aborts_migration_without_replacing_tables() 
     let path = directory.path().join("broken-v11.sqlite");
     drop(Store::open(&path).unwrap());
     let connection = rusqlite::Connection::open(&path).unwrap();
+    // Remove schema-15 objects before constructing this historical schema fixture.
+    connection
+        .execute_batch("DROP TABLE recreation_sources;")
+        .unwrap();
     connection
         .execute_batch(include_str!("../../migrations/0011_snapshot_creation.sql"))
         .unwrap();

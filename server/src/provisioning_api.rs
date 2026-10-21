@@ -74,7 +74,7 @@ async fn respond(
             plan.provider_scope_id = state.provider.as_ref().map(|p| p.scope_id());
             plan.creation_enabled = state.provisioning_enabled
                 && plan.provider_scope_id.is_some()
-                && plan.minimum_create_issue().is_none();
+                && plan.minimum_create_issue(state.snapshots_enabled).is_none();
             match state.provider {
                 Some(provider) => {
                     Json(crate::preflight::run(&provider, plan).await).into_response()
@@ -91,7 +91,7 @@ async fn respond(
             plan.provider_scope_id = state.provider.as_ref().map(|p| p.scope_id());
             plan.creation_enabled = state.provisioning_enabled
                 && plan.provider_scope_id.is_some()
-                && plan.minimum_create_issue().is_none();
+                && plan.minimum_create_issue(state.snapshots_enabled).is_none();
             Json(plan).into_response()
         }
         Err(issue) => {
@@ -186,7 +186,7 @@ pub async fn create(
                 crate::store::ProvisioningError::TargetChanged,
             ));
         }
-        if let Some((code, message)) = plan.minimum_create_issue() {
+        if let Some((code, message)) = plan.minimum_create_issue(state.snapshots_enabled) {
             return Err(CreateIssue::Unsupported(code, message));
         }
         state
@@ -205,9 +205,16 @@ pub async fn create(
             Json(operation),
         )
             .into_response(),
-        Ok(Err(CreateIssue::Unsupported(code, message))) => {
-            error(StatusCode::UNPROCESSABLE_ENTITY, code, message).into_response()
-        }
+        Ok(Err(CreateIssue::Unsupported(code, message))) => error(
+            if code == "snapshot_disabled" {
+                StatusCode::FORBIDDEN
+            } else {
+                StatusCode::UNPROCESSABLE_ENTITY
+            },
+            code,
+            message,
+        )
+        .into_response(),
         Ok(Err(CreateIssue::Storage(issue))) => create_problem(issue),
         Err(_) => create_problem(crate::store::ProvisioningError::Unavailable),
     }
@@ -221,7 +228,7 @@ impl From<crate::store::ProvisioningError> for CreateIssue {
         Self::Storage(issue)
     }
 }
-fn create_problem(issue: crate::store::ProvisioningError) -> Response {
+pub(crate) fn create_problem(issue: crate::store::ProvisioningError) -> Response {
     use crate::store::ProvisioningError as E;
     let (status, code, message) = match issue {
         E::InvalidApproval => (

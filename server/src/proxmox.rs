@@ -20,6 +20,8 @@ pub use deletion::{DeletionVolume, DeletionVolumeEffect};
 mod task;
 pub use task::{TaskPollOptions, TaskReference, TaskStatus};
 mod identity;
+mod packages;
+pub use packages::{PackageProgress, PackageRequest};
 mod readiness;
 pub use readiness::{GuestProbe, GuestReadiness, ReadinessRequest};
 mod snapshot;

@@ -211,3 +211,199 @@ rollback, current VM/snapshot state, real disk/guest contents, mobile/installed
 startup or any real infrastructure mutation. Separate journal/native tests cover
 queued/running/uncertain records. Generated listeners/processes and temporary
 state are cleaned up; TLS, sandbox and display-cookie checks remain enabled.
+
+
+## Deletion and restart recovery
+
+After building the embedded example with the verified native prefix, run:
+
+```sh
+python3 experiments/lifecycle-native/check.py --prefix .lab/native-deps --deletion-recovery
+```
+
+This mode uses the actual deletion UI/production native commands and authenticated
+server worker. It checks running-target refusal, cancel/re-review, independent
+consent, a lost accepted API response and identical path/key/body retry. Exactly
+one fixed provider DELETE is allowed, without job purge or bulk unreferenced-disk
+removal. The journal must contain a succeeded destroy task with VM/volume absence
+and retirement evidence. The deleted association and unchanged definition remain.
+
+The runner then restarts both app and server. Provider configuration is removed
+and all five write flags are false. The new app starts without restored credentials,
+operation ID or consent; the driver explicitly connects using generated fixture
+configuration. History, copied-ID lookup and refresh use only GETs, leave provider
+counters unchanged and return the unchanged operation. TLS, WebKit sandbox and
+X11 cookie authentication remain enabled. All owned processes are cleaned up.
+Evidence: `.lab/native-deps/deletion-recovery-ui-check.log`.
+
+This is generated-infrastructure Linux proof. Real Proxmox deletion/ACL/storage
+behavior, packaged startup, fresh mobile runs and live provider crash recovery
+remain separate acceptance gates. The affected restore/recovery mode also passes
+with the shared launcher changes.
+
+## Retained-definition recreation
+
+Build the current frontend/server and embedded example with the verified prefix,
+then run:
+
+```sh
+python3 experiments/lifecycle-native/check.py --prefix .lab/native-deps --recreation
+```
+
+This mode reuses the generated HTTPS provider from the Android creation fixture
+through an owned Node adapter. Node is an additional prerequisite for this mode;
+no emulator or real Proxmox is required. The runner saves a minimal `mobile-lab`
+definition (2 CPUs/2048 MiB/8 GiB, no packages), registers an association and retires
+that association in the isolated SQLite fixture. It does not perform deletion.
+The current catalog includes an explicit synthetic image-default-user attestation.
+A public demonstration SSH key is used; no private key or personal identity is read.
+
+The actual native React/WebKit UI selects the retired source, reviews target VMID
+202, cancels/reviews again with consent cleared, and explicitly confirms fresh
+provisioning. The verified HTTPS proxy loses only the first accepted response.
+Both API submissions must retain the identical path/key/body. Production native
+commands, authenticated Axum server process and its production worker then run
+clone, resource/Cloud-Init configuration, seed regeneration, start and synthetic
+Cloud-Init/network readiness. The driver reads status and prepares the existing
+SSH host-trust form for `debian@192.0.2.42`; it does not establish SSH or accept a key.
+
+Independent runner assertions require exactly six provider mutations (one clone,
+two configuration writes, one seed regeneration, one start and one guest-status
+exec), one succeeded provisioning operation, all stages succeeded and exactly one
+new distinct registered instance. Source/YAML/hash, current definition and durable
+source lineage must remain intact. Provider assertions check settings/public key,
+resource values, stage order and no duplicate clone/seed/start. Reports/owned
+processes/listeners are closed, then the server shuts down cleanly. Logs:
+`.lab/native-deps/recreation-ui-check.log`. The shared deletion/restart mode is
+selected to verify the launcher changes.
+
+This proves only isolated Linux native integration with generated infrastructure.
+It does not prove normal installed startup, real template/ACL/guest/SSH behavior,
+fresh mobile recreation, live provider crash recovery or a combined real delete-
+recreate journey. Separate storage/worker tests cover database reopen; native
+saved-source history/restart recovery remains open.
+
+## Recreation app/server restart recovery
+
+```sh
+python3 experiments/lifecycle-native/check.py --prefix .lab/native-deps --recreation-recovery
+```
+
+This combined mode first runs the complete actual native recreation journey,
+including cancelled review, fresh consent, lost accepted HTTP reply and identical
+API retry with six expected provider mutations. It records the succeeded operation,
+retired source and new target, then cleanly restarts both server and application.
+All five write flags are false; provider variables and the runtime template catalog
+are removed. New native profile/consent state starts with no token or saved ID.
+
+The second UI process explicitly connects using only generated fixture TLS/auth
+configuration, loads source history, selects the saved operation, enters the copied
+ID and refreshes the saved result. The panel must describe historical evidence,
+without restoring a recreation form/checkbox or exposing direct SSH from an old
+result. Recovery requests through the authenticated HTTPS proxy must be GET only.
+The generated provider stays alive; its complete request/error snapshot must be
+unchanged after recovery, as must the complete operation and source/target records.
+The final provider report still requires exactly six mutation calls and closes the
+owned listener/process. No actual VM or emulator is created in this fixture.
+
+The embedded example/server builds and combined mode pass. Shared deletion/restart
+is selected because the launcher/restart branch changed. Evidence:
+`.lab/native-deps/recreation-recovery-ui-check.log`. This is actual isolated Linux
+WebView/IPC/process/HTTPS evidence, not a live-provider crash, deployed/packaged
+startup, updated Android APK acceptance or real guest/SSH proof.
+
+## Remote lifecycle through the retained HTTPS profile
+
+```sh
+python3 experiments/lifecycle-native/check.py --prefix .lab/native-deps --remote-lifecycle
+```
+
+Build the existing embedded lifecycle_smoke example first using the verified native
+prefix and `--features tauri/custom-protocol`. This mode launches actual React/
+WebKit/native IPC, authenticated Axum and its production worker against the owned
+generated HTTPS provider. The remote workspace reviews/cancels/reviews and confirms
+start, then graceful shutdown. The HTTPS proxy loses the first accepted API reply
+for each action; native/UI must explicitly retry the same key and approval. Exact
+request pairs match, distinct actions have distinct keys, known IDs are read by GET,
+and only one provider start plus one provider shutdown is observed. Both durable
+operations must show matching target/scope, successful task and expected power state;
+instance identity stays unchanged. Power success never claims SSH/guest readiness.
+
+No IPC simulation, actual VM, installed host service or personal credential is used.
+Generated certificates/tokens/state, sandboxed Xvfb and processes are owned and
+cleaned up. Log: `.lab/native-deps/remote-lifecycle-ui-check.log`. Android, real guest,
+normal installed startup and saved lifecycle recovery after losing native state
+remain separate acceptance gates.
+
+## Lifecycle app/server restart recovery
+
+```sh
+python3 experiments/lifecycle-native/check.py --prefix .lab/native-deps --lifecycle-recovery
+```
+
+The first owned native process completes remote start/shutdown with the accepted-
+reply-loss/same-key retry scenario. The runner snapshots both full saved operations,
+instance/definition and provider counters, stops the actual server, then opens the
+same DB in a new server process/port with all five write flags false and provider/
+catalog configuration absent. A second actual native app begins without token,
+operation ID or restored intent, connects explicitly and reads history, both saved
+actions, copied ID and refresh through production HTTPS commands and React controls.
+The proxy requires GET-only recovery traffic; both full operations, retained
+instance/definition and provider read/task/power/write counters remain unchanged.
+Historical start power is explicitly distinct from current state. No consent or
+SSH action is restored. All owned processes and temporary state are cleaned up.
+This proves clean isolated Linux restart recovery, not a crash, real VM or Android
+runtime. Log: `.lab/native-deps/lifecycle-recovery-ui-check.log`.
+
+The remote lifecycle driver now also exercises the explicit power panel. It reads
+stopped before any action, running after acknowledged start, and stopped after
+acknowledged shutdown. Each native read traverses verified HTTPS to the registered
+instance status route. The relay verifies target/scope and the exact observed
+sequence; the provider still receives only the original one start/one shutdown.
+The UI must show a read timestamp/staleness/no-readiness warning and invalidate its
+old power result during action review. --lifecycle-recovery additionally verifies
+that mounting this panel in the new app does not introduce automatic provider reads.
+Logs: `.lab/native-deps/remote-power-native-ui-check.log` and
+`.lab/native-deps/remote-power-restart-check.log` (see STATE.md for completed runs).
+
+## Retained definition in real native recovery contexts
+
+Both --lifecycle-recovery and --recreation-recovery now inspect saved definition
+panels in the second app, after the actual server restarts without provider/catalog
+and with all writes false. The shared instance-detail.js helper targets the exact
+association ID (archived and new associations may reuse the same VMID), explicitly
+reads/refreshes and compares literal YAML text, SHA-256, revision/name and saved
+status to the fixture's original stored record, then hides it. No edit/consent/SSH
+control follows. Existing full journal/identity/provider-counter invariants still
+apply, establishing that detail inspection adds no provider reads or mutation.
+The example alone includes this acceptance driver; normal application builds do not.
+Logs: `.lab/native-deps/instance-detail-active-ui-check.log` and
+`.lab/native-deps/instance-detail-archived-ui-check.log`. These are isolated Linux
+native/server checks, not Android or real VM validation.
+
+## Existing-instance manual native SSH host trust
+
+```sh
+python3 experiments/lifecycle-native/check.py --prefix .lab/native-deps --manual-ssh
+```
+
+The owned example embeds the real remote React entry and production native host,
+application-identity and session commands. An in-process loopback SSH peer, fresh
+passphrase-encrypted application identity and temporary trust directory are created
+for this run. Only its generated public key is accepted, for account `fixture`.
+The agent manager has an explicit nonexistent owned socket path, preventing personal
+agent discovery; Linux agent support remains false.
+
+The UI selects the registered row, begins with blank address/account, enters the
+explicit endpoint, confirms the independently supplied fingerprint and reinspects.
+It explicitly unlocks the connection identity, selects its public key and opens the
+real PTY/OS shell. xterm input executes a command whose stdout must render, then
+`stty size` must match the resized renderer. Terminal disconnect closes the peer
+connection. A subsequent owned host-key rotation is refused without replacing the
+saved trust bytes. Peer counters require exactly one session channel and recorded
+PTY, shell and resize requests. Temporary peer, shell, identity and trust are removed.
+Normal application builds include no driver, rotation command or owned peer.
+
+The control-plane side is real authenticated HTTPS, with zero Proxmox provider
+reads/tasks/writes. This is Linux native evidence, not real VM endpoint ownership
+or Android execution. Log: `.lab/native-deps/manual-ssh-terminal-check.log`.

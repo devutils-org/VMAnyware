@@ -169,7 +169,7 @@
     await wait(() => text().includes("remote-debian") && text().includes("remote-lab"));
     check(text().includes("retired-remote-lab") && text().includes("deleted · definition and history retained"), "Remote deleted identity missing");
     check(!button("Prepare snapshot for VM 203"), "Deleted remote identity exposed snapshot controls");
-    check(text().includes("8 GiB") && text().includes("live state not checked"), "Remote details or registration qualification missing");
+    check(text().includes("8 GiB") && text().includes("Power state not observed."), "Remote details or registration qualification missing");
     button("Load remote workspace").click();
     await wait(() => text().includes("Catalog unavailable") && button("Load remote workspace"));
     check(text().includes("remote-lab") && !text().includes("remote-debian"), "Partial failure lost successful results or retained failed results");

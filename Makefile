@@ -65,3 +65,22 @@ check-ssh:
 	cargo fmt --manifest-path experiments/ssh/Cargo.toml -- --check
 	cargo clippy --locked --manifest-path experiments/ssh/Cargo.toml --all-targets -- -D warnings
 	cargo test --locked --manifest-path experiments/ssh/Cargo.toml
+
+# Local artifact only; no account, configuration or running service is changed.
+.PHONY: package-server
+package-server:
+	cargo build --locked --release -p vmanyware-server
+	python3 scripts/package-server.py
+
+# Pass an explicit archive; checks use temporary paths and localhost processes only.
+.PHONY: check-server-package
+check-server-package:
+	@test -n "$(SERVER_PACKAGE)" || (echo 'Set SERVER_PACKAGE=/absolute/path/to/archive.tar.gz' >&2; exit 2)
+	python3 scripts/check-server-package.py "$(SERVER_PACKAGE)"
+
+# Explicit owned Android/signing/Gradle paths; builds and verifies, never installs.
+.PHONY: package-android
+package-android:
+	@test -n "$(JAVA_HOME)" -a -n "$(ANDROID_HOME)" -a -n "$(NDK_HOME)" -a -n "$(ANDROID_USER_HOME)" -a -n "$(GRADLE_USER_HOME)" || (echo 'Configure an owned JDK/SDK/NDK, ANDROID_USER_HOME and GRADLE_USER_HOME first.' >&2; exit 2)
+	npm --prefix apps/client run tauri -- android build --debug --apk --target x86_64 aarch64 --split-per-abi --ci
+	python3 scripts/package-android.py --sdk "$(ANDROID_HOME)"

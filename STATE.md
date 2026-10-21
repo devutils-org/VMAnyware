@@ -1,6 +1,6 @@
 # VMAnyware — current state
 
-Updated: 2026-10-20. Historical evidence and decisions are in Git and docs.
+Updated: 2026-10-21. Historical evidence and decisions are in Git and docs.
 
 Naming note: historical lab resource identifiers below are normalized to the
 current VMAnyware name. External resources were not renamed; use VMIDs and
@@ -8,10 +8,155 @@ ignored local lab records to verify actual identifiers before operations.
 
 ## Latest resume point
 
+Current slice (ADR 0079): package transport and durable sequential worker now
+compile/pass six focused SQLite/HTTPS worker tests and three affected readiness/seed
+checks. PID/deadline/no-replay restart behavior is proven against owned fixtures.
+The optional final snapshot worker now also passes six targeted HTTPS/SQLite tests
+plus affected package/create/scheduling checks (ADR 0080). API admission now accepts
+supported package/final-snapshot declarations and passes all create/recreate feature
+combinations with independent gates and actual initial clone tagging (ADR 0081).
+Next: native plan/form/review/result integration; its current form remains restricted.
+Current Android delivery already includes existing-instance manual SSH; Linux native
+application-key/PTY integration passes. Exact APK/real guest acceptance stays open.
+
+
+Latest source slice: production HTTP admission now has a global burst-120,
+20/second budget and 32 in-flight handler cap before authentication. Focused
+middleware and affected authentication checks pass (ADR 0071). The Linux release
+archive has now been rebuilt and its exact staged process passes admission/refill,
+authentication and restart/persistence checks. No host service was installed.
+Android APKs are unaffected by this server-only change. Next delivery gate remains
+approved exact-APK Android allocation/SSH execution. The phase-6 source threat-model
+review is recorded in docs/security.md. The follow-up native-command audit found
+custom commands outside the old core-only capability. All 76 current production commands
+use an explicit local-main application ACL; actual Linux two-window refusal and
+recreation/restart integration pass (ADR 0072). Android APKs are now rebuilt with
+this ACL: both architectures compile/package and exact embedded native hashes pass.
+Exact-current Android runtime and real target acceptance remain open. The secret-
+storage review confirmed existing backup exclusions and removed the unused broad
+Android FileProvider; rebuilt APKs pass compiled-manifest policy checks (ADR 0073).
+Native remote HTTP 429 handling now displays a fixed wait/retry instruction across
+all four decoders without losing retained mutation/idempotency state. Focused HTTPS
+and affected error/status checks pass. Both Android APK snapshots now include this
+native message change and pass packaging/signature/hash/content checks; exact-current
+runtime still awaits approved emulator execution. Same-version stopped-directory
+backup/restore now passes against the exact packaged server, including retained
+operation/history/idempotency and rollback of a later definition. The packaged
+process also now migrates an isolated SQL schema-14 fixture to schema 15, retaining
+legacy definition/operation/key, integrity and backup across restart/restore.
+Future-schema refusal now passes too: the exact package rejects two schema-16
+starts while preserving database bytes/version/rows/schema and releasing its lock.
+Roadmap readiness review is recorded in docs/roadmap-status.md. It identifies a
+material source gap: existing start/shutdown controls used local loopback. Remote
+native lifecycle commands and React controls are now implemented; explicit standalone
+live status/detail and saved lifecycle recovery remain open.
+Native retained remote lifecycle preflight/clear now compile and pass five focused
+HTTPS tests (ADR 0074). Native confirmed start/shutdown, identical-key/body unknown-
+reply retry and known-operation GET status now also pass: nine lifecycle tests plus
+three affected local and two capacity checks. Remote workspace lifecycle UI now builds
+and passes the focused Firefox simulated-IPC flow plus two affected parent scenarios.
+Actual Linux native remote lifecycle integration now passes through HTTPS/API/worker:
+one provider start/shutdown each despite lost accepted replies and identical retries.
+Server scoped saved lifecycle history/detail now pass six router/SQLite checks
+without provider/write flags, plus nine affected lifecycle storage tests (ADR 0075).
+Stateless native lifecycle history/detail GET readers now also compile/pass six
+focused HTTPS tests, plus three local and nine remote affected lifecycle checks.
+No approval/consent is constructed or installed by recovery. The explicit saved
+lifecycle history/manual-ID/refresh UI now builds and passes focused Firefox
+simulated-IPC checks. Actual Linux clean app/server restart now passes: no provider/
+catalog, all write flags false, GET-only recovery and unchanged journal/identity/
+provider counters. Linux server archive and both Android APKs are now refreshed
+with this integrated path; exact-package checks and signature/native-content checks
+pass. Explicit scoped remote power/QMP native reading now also passes five focused
+HTTPS tests (ADR 0076), with no readiness/ownership inference. Registered remote
+rows now offer read/refresh with device-clock observation time/staleness wording;
+frontend build and focused simulated-IPC checks pass. Actual Linux native HTTPS/
+server/provider reads now verify stopped→running→stopped across confirmed actions,
+with observation invalidation and no additional mutation. Both Android APKs now
+include this completed client feature and pass signature/manifest/native-content
+checks. The server archive hash remains unchanged. Retained remote instance detail
+now also compiles/passes five native HTTPS tests, binding selected target/name and
+exact YAML SHA-256 (ADR 0077). Explicit detail/YAML inspection UI now builds and
+passes focused Firefox simulated-IPC checks for active/archived rows, literal text,
+metadata, desired-state wording and stale-result rejection. Actual native/server
+inspection now also passes for registered and archived associations after restart
+without provider/writes, preserving exact YAML/hash/revision and all journal/provider
+invariants. Android artifacts now include this completed client feature and pass
+signature/manifest/native-content checks; server hash remains unchanged. Existing
+registered rows now expose explicit manual SSH preparation with empty endpoint/account
+and unchanged strict host trust; frontend build and focused simulated-IPC checks pass
+(ADR 0078). Actual Linux native host-trust preparation now also passes against an
+owned loopback SSH peer: explicit trust/fresh inspection, changed-key refusal,
+zero auth/channels and unchanged trust on refusal. The owned integration now also
+passes application-key authentication, real PTY/shell command output, remote resize,
+explicit disconnect and subsequent changed-key refusal, without personal keys/agent.
+Both Android APKs now include the existing-instance manual SSH entry and pass
+packaging/signature/manifest/current native-library checks. Exact-APK execution
+remains open.
+Exact-current Android runtime and real deployment/VM acceptance remain open.
+
+Delivery priority after user feedback: produce installable/testable artifacts for
+mobile -> allocation -> SSH, while retaining the full roadmap. The Linux x86_64
+server release archive now exists in `.lab/packages/`, with service/config files,
+checksums and a copy-only staging installer. Actual packaged process auth/restart/
+persistence checks and unit syntax verification pass. No host service was installed
+or started. Current-source ARM64/x86_64 Android test APKs now compile and are
+packaged in `.lab/packages/android/`, with verified signatures/manifests/ABIs and
+current native-library hashes. Emulator 37.2.12 and verified Android 15 x86_64
+image are now prepared in the owned SDK; current host SSH fixture compiles. No
+AVD exists on the dedicated port. Explicit approval was requested for creating/
+starting vmanyware-native-smoke and resetting/installing only its VMAnyware app,
+under AGENTS.md's VM-mutation rule; it has not been granted yet. Do not interpret
+automatic goal continuation as target approval. Next: run the exact-APK owned
+Android allocation/SSH journey after approval. Target systemd/TLS/real Proxmox
+acceptance still needs concrete environment and approvals.
+The saved-recreation client history/manual-ID panel is implemented and passes
+focused Firefox simulated-IPC and actual Linux native restart checks. Both Android
+APK snapshots have now been rebuilt from this source; signatures, manifest/ABI and
+embedded native-library hashes pass. Their exact-artifact Android runtime test
+stays pending approval. Actual isolated Linux app/server saved-recreation restart now
+passes without provider/catalog/writes and with unchanged provider/journal/identity
+records. Next delivery gate: approved exact-APK Android allocation/SSH execution;
+the rebuilt snapshots now include the latest source UI.
+
+
 2026-10-21: the user widened the scope to a local provider beside Proxmox
 (VMAnyware.md §9). ADR 0062 proposes the seam, direct QEMU (or libvirt) and a
 first slice with its acceptance; it awaits the user's choice of hypervisor and
 first local target. No code, no VM operation.
+
+Current implementation (2026-10-21): deletion now has confirmed API/native/client
+controls and scoped server GET history/detail, including deleted associations.
+Actual server restart recovery passes without provider/write flags. Native saved-
+deletion GET readers now compile/pass eight focused tests and 14 affected checks.
+Client history/manual-ID UI now builds and passes focused Firefox simulated-IPC
+checks. Actual isolated Linux native deletion/app+server restart recovery now passes
+with one provider DELETE, identical API retry after a lost response, retained
+definition/deleted association and unchanged GET-only recovery without provider
+configuration or write flags. Read-only retained-definition recreation planning
+is now implemented with exact saved-YAML/hash binding and no provider request,
+reservation or enqueue. Schema-15 recreation storage now atomically retains
+source lineage and fresh confirmed provisioning with a distinct instance ID;
+focused restart/idempotency checks pass. Confirmed HTTP recreation enqueue
+and source-scoped GET detail now pass queue/retry/restart/refusal tests. The
+production recreation API/worker journey now also passes generated HTTPS
+clone-to-readiness, database-reopen and no-replay cases with two disk sizes.
+Source-bound live recreation preflight now passes generated-HTTPS and HTTP
+checks without writes/reservations. Native retained source/preflight review and
+clear commands now compile/pass focused HTTPS tests. Native confirmation,
+identical-key retry and source-scoped GET status now compile/pass too. Client
+deleted-row review/confirmation/status and SSH trust handoff now build and pass
+focused Firefox simulated-IPC checks. Actual isolated Linux recreation now
+passes native WebView/IPC/authenticated-server/worker/generated-HTTPS integration,
+including identical retry, six mutations, source retention and new guest readiness.
+Server source-scoped recreation history now passes bounded discovery/restart/
+isolation/corruption checks without provider/writes. Stateless native fixed GET
+history/detail readers now compile/pass focused HTTPS and affected retained
+workflow tests. Client saved-recreation history/manual-ID recovery now builds
+and passes focused Firefox simulated-IPC checks. Actual native Linux app/server
+saved recreation restart recovery now also passes with provider/catalog removed,
+all writes false and only GET recovery traffic.
+Real VM/platform/release gates remain open; the roadmap is not complete.
 
 
 Latest server slice adds read-only snapshot listing for registered instances,
@@ -79,8 +224,19 @@ absence observation passes three targeted HTTPS tests. Schema-14 atomic retireme
 now requires an opaque matching task/absence proof; retained deleted identities
 and client list compatibility pass local checks. Standalone fixed DELETE and
 no-replay executor now pass eight generated-HTTPS checks, including GET-only
-partial-cleanup recovery. Next: separate default-off deletion runtime capability
-and fair worker/process checks, then HTTP/native/UI integration.
+partial-cleanup recovery. The independent default-off deletion flag and fair
+production worker now pass actual isolated process, crash/restart and router
+checks. Full-scope confirmed deletion HTTP enqueue now passes five focused
+API tests and an actual authenticated server/generated-provider worker journey.
+Retained native deletion review/dual consent/same-key submit/status commands
+now compile and pass 14 focused HTTPS/contract tests; shared server hash and five
+affected native checks also pass. Explicit client deletion scope/dual consent/
+same-key retry/read-only status now builds and passes focused Firefox simulated-IPC
+checks, plus affected snapshot-create/restore checks. Scoped read-only server
+deletion history/detail now passes eight HTTP/SQLite tests and actual server
+restart recovery without provider/writes. Native saved-ID/history GET readers now
+compile/pass eight new plus 14 affected checks. Client saved-ID/history UI now
+builds/passes focused Firefox checks. Next: actual native deletion/restart journey.
 Snapshot creation/restore and real infrastructure testing remain open.
 
 Android SDK/emulator were stored under `/tmp/vmanyware-android-resume`, which is
@@ -4144,3 +4300,2093 @@ Next task: independently default-off deletion runtime config/capability and fair
 worker integration, with actual isolated server process checks. Follow with exact
 HTTP/native/client consent and recovery, recreation, real disposable-target review
 and remaining platform/deployment/release gates. Full roadmap remains active.
+
+
+## Production deletion capability and worker — 2026-10-21
+
+Previous work added the fixed one-shot executor; its interrupted runtime slice
+is now verified and complete. VMANYWARE_DELETIONS_ENABLED independently defaults
+to false, accepts exact true/false only and fails safely before DB creation for
+invalid input. The production service passes it to the router and worker; old
+constructors remain default-off. A full sequential round services existing read,
+lifecycle, provisioning, snapshot and restore queues before one deletion claim.
+Known-task reconciliation remains read-only with writes off. GET preflight reports
+the flag separately from prerequisites; no HTTP deletion submission exists yet.
+
+Verification: six new targeted checks pass: strict config/flag independence;
+invalid-startup/no-input-echo/no-database; actual worker with absent/false/true flag
+and all other write flags on; a round servicing read/lifecycle/snapshot/restore/
+delete without short-circuit starvation; actual generated-HTTPS DELETE/retirement
+plus forced process death during a running linked task and a second server's
+seven-GET completion with writes off; authenticated actual-router GET capability
+without operations or mutations. The last two interrupted test results had no
+recoverable process handle, so those exact filters were rerun and passed.
+
+Three affected checks pass: existing all-other-flags-on deletion preflight remains
+disabled through the legacy router, and both restore startup/production worker
+checks pass through the changed main/constructor call chain. Total nine distinct
+targeted tests. Rust format/diff checks pass. No schema/dependency/native/frontend
+change warranted broader storage/browser/Android or full-suite reruns. Owned
+processes, temporary SQLite, generated public CA and provider listeners are cleaned
+up by their fixtures. No real infrastructure, personal credential files, permission
+changes or real VM mutation was involved.
+
+Next task: confirmed deletion HTTP enqueue with retained path/target/full-plan/
+dual-consent/idempotency binding and independent capability checks; then native
+commands/UI and GET-only recovery, recreation and real acceptance. ADR 0062's local
+provider extension remains part of the requested scope; its proposed hypervisor/
+concrete-target choices are unchanged by this independent Proxmox slice. Remaining
+platform/deployment/release gates and the full roadmap remain open.
+
+
+## Full-scope confirmed deletion HTTP enqueue — 2026-10-21
+
+Previous goal turn completed the independent default-off production worker and
+actual process crash/restart evidence. This slice adds POST environments/{id}/delete
+with the complete retained target/digest/public cleanup plan and mandatory dual
+consent. It requires exactly one safe idempotency key, independent capability and
+matching provider scope. JSON is bounded to 64 KiB with unknown fields rejected.
+The handler makes no provider request: all review/write/absence calls remain in the
+worker. Same-key/full-input retries retain original operation/time, including after
+retirement. Changed input, competing mutations and new requests for retired
+identities conflict. Response 202 includes the provider-independent operation GET
+location. Diagnostic route labels stay static, without instance IDs/payloads.
+
+Verification: five new targeted HTTP/SQLite tests pass with an unreachable provider:
+full-scope persistence/key identity/unchanged expiry/GET result and retained instance;
+independent capability/provider/scope/saved-target/path refusal; consent, unsafe or
+unknown effects/fields, JSON syntax/shape/content-type/size; duplicate/unsafe/missing
+keys and auth before journaling; changed scope/media/snapshot/references and cross-
+mutation exclusion. Added the content-type case and reran only its focused filter.
+
+One actual authenticated server/generated-HTTPS-provider test passes HTTP ->
+journal -> worker -> single DELETE -> independent retirement. It verifies same-key
+retries before/after completion, exact approval hash/original confirmation time,
+known-ID GET recovery, one journal and precisely the executor's 30 requests (no
+handler provider reads). Auth refusal adds no journal/provider traffic. Six distinct
+new targeted tests pass. Formatting/diff checks pass. No dependency/schema/native/
+frontend or shared existing behavior changed, so unrelated suites were not rerun.
+Owned process/temp SQLite/public CA/provider listeners are cleaned by fixtures.
+No real provider/VM, personal credential files or production changes occurred.
+
+Limits: HTTP source/runtime acceptance is locally proven, not a native user journey
+or real backend cleanup. POST replay needs current capability/provider; known-ID
+GET reads do not. Scoped deletion recovery, unknown-ID history, client consent,
+recreation and infrastructure/platform/release acceptance remain open. ADR 0062's
+local provider extension remains pending its proposed choices/concrete test target.
+Next task: retained native deletion prepare/review, mandatory dual consent, same-key
+submission retry and exact known-operation status validation; then client UI and
+scoped GET-only recovery. Full roadmap remains active.
+
+
+## Retained native full-scope deletion consent — 2026-10-21
+
+Previous goal turn proved confirmed HTTP enqueue and actual server/worker deletion
+against a generated provider. This slice registers four native prepare/confirm/
+read/clear commands. Preparation binds a registered saved instance and fixed GET
+preflight to the current connection/revision. Typed bounded volume/reference/
+preservation/effect/check validation prevents incomplete passed reports and unsafe
+scope from becoming eligible. Confirmation takes the retained key and both explicit
+consents only; IPC cannot replace the plan/target. First submission expires after
+120 monotonic seconds. Unknown replies retain key/body and prohibit replacement;
+known IDs only read. Partial failures stay uncertain; native success requires the
+exact full approval hash and all absence/retirement/definition evidence. Disconnect
+clears local memory without cancelling server work; late prepare/submit/read replies
+cannot revive it. ADR 0063 records these decisions.
+
+A direct sha2 0.10 dependency now supplies the portable full-input hash use case.
+Cargo.lock changes only the native package's dependency edge; no new resolved
+package/version was introduced. Shared synthetic approval JSON/hash fixtures cover
+live/snapshot/fleecing/preserved scope and are independently checked by server/native
+code. Server production behavior and schema are unchanged; its obsolete module
+comment is corrected to describe the existing review/consent/evidence contracts.
+
+Verification: fourteen new native checks pass: full hash/JSON interoperability,
+fixed review/submit/read paths and complete body, mandatory dual consent/key,
+unknown identical retry, disabled/failed/expired review refusal, sixteen unsafe/
+inconsistent review variants, wrong scope/target/deleted identity, thirteen invalid
+success variants plus partial-task status consistency, stale preparation,
+disconnect in flight, auth/status/response-size bounds, actual socket loss,
+GET-only known partial recovery, late disconnected read and invalid local inputs.
+Initial two checks passed, then eight added checks passed; four final filters pass.
+After making generation/revision validation atomic, reran only its positive/stale
+preparation filters. The server golden-contract filter passes.
+
+Native state/handler registration and the direct dependency edge warranted five
+affected HTTPS checks: three workspace reads/disconnect tests and retained restore
+positive/disconnect tests; all pass. Total 15 new plus five affected checks. Linux
+native crate compiles/links with .lab/native-deps's verified package prefix.
+Formatting/diff checks pass. No GUI/native app launch, browser/Android/real provider
+or unrelated full suite was run or claimed. Generated listeners/requests are owned
+fixtures; no personal credential file, infrastructure or real VM mutation occurred.
+
+Next task: explicit remote-client deletion review, visible reviewed/preserved scope,
+fixed destructive effects, dual consent, same-key retry and read-only status/clear
+controls with stale-result guards. Then scoped GET-only deletion recovery, actual
+native/mobile journey, recreation and real/platform/release gates. ADR 0062's local
+provider extension remains in scope with its proposed choices/concrete target open.
+Full roadmap remains active.
+
+
+## Explicit client deletion review and status — 2026-10-21
+
+Previous goal turn compiled/verified retained native deletion commands. This slice
+adds remote registered-row selection and a dedicated React deletion form. Selection
+alone makes no preparation or submission. Native review displays the node/VMID,
+reviewed volume references/fleecing/snapshots, preserved media/observed extra images,
+fixed cleanup effects and retained definition/history. Two independent consents
+start unchecked; disabled/failed/stopped-target/unknown-effects guards prevent
+submission. Native consent is never replaced by a renderer-supplied plan.
+
+Unknown responses freeze consent and retain the key for explicit identical retry.
+Known IDs have read-only refresh, no further POST; partial cleanup remains uncertain
+and cannot be acknowledged away. Success additionally checks target/task/absence/
+retirement flags from native-validated result evidence. Old-identity mutation
+controls disappear after retirement; acknowledgement does not enable it again.
+Shared snapshot/restore/deletion selectors remain locked while work is retained.
+Disconnect remains available, clears local consent and suppresses late prepare/read
+replies without cancelling server work. No automatic localStorage consent/key restore.
+
+Verification: production frontend build passes. The new Firefox simulated-IPC
+scenario passes disabled/running/retargeted/unknown-effect refusal, scope/effect/
+preservation presentation, dual unchecked consent, selector exclusion, identical
+unknown retry, known-ID reads, failed-task uncertainty, invalid success refusal,
+retired controls, acknowledgement and late prepare/read after reconnect. Affected
+snapshot-create scenario passes. A parallel restore run timed out before selection;
+its exact sequential rerun passes, without a proven cause for the first failure.
+Run these browser modes sequentially; no concurrency-safety claim is made.
+
+Three distinct browser scenarios and the build are verified. JS syntax/diff review
+pass. No server/native/dependency/schema change justified repeating those suites or
+Android/full checks. Browser fixtures simulate IPC and contact no provider/VM; their
+owned browser/server/temp data are cleaned. Actual native GUI/mobile launch,
+provider cleanup, scoped saved-deletion recovery and real acceptance remain open.
+
+Next task: instance-scoped read-only deletion history/detail from the durable journal,
+including retained deleted associations and strict saved task/full-plan/result
+consistency, without provider access or runtime write capability. Then native/UI
+saved-ID recovery, actual native journey, recreation and infrastructure/platform/
+release gates. ADR 0062 local-provider scope/choices remain unchanged and open.
+Full roadmap remains active.
+
+
+## Instance-scoped read-only deletion recovery — 2026-10-21
+
+Previous goal turn implemented/tested explicit React deletion scope/dual consent/
+status. This slice adds GET deletion-operations history/detail for retained IDs,
+including deleted associations, independently of provider/write configuration.
+Readers resolve instance/kind before decoding, validate full saved approval/hash/
+target/qmdestroy/status/result consistency, and require retired association plus
+exact task/absence/definition evidence for success. Known failed destroy tasks stay
+uncertain; historical failed/interrupted attempts remain readable after a later
+retirement. New identities on a reused VMID never inherit the old history.
+
+Reads are transactional SELECTs only: no claim, enqueue, reconciliation, consent
+renewal or state change. Check persisted approval/result sizes before parsing
+(64 KiB/4 KiB), bound timestamp fields and reject extra result fields. History
+filters before its descending time/ID limit of 100 and returns compact summaries;
+detail returns saved target/digest/complete plan/hash/submission context, without
+consent flags, key or raw UPID. Saved digest/plan are for historical full-hash
+verification, not current target observation or new consent. ADR 0064 records this.
+
+Verification: eight targeted HTTP/SQLite tests pass: queued reopen with provider/
+flags absent and no forwarded consent/key; unchanged queued/running/unknown/known/
+partial-task-failure/interrupted/failed/refused states; cross-instance/kind privacy
+before corrupt decode; filtered 100-entry order and older detail; auth/empty/missing
+scope; 16 saved-result/task/hash/retirement/size consistency cases; old failed/deleted
+history alongside replacement VMID; and saved-target mismatch. Corruption tests
+verify operation rows and SQLite data version unchanged. Synthetic successful
+encodings test reader consistency only and are not provider-completion evidence.
+
+The affected actual authenticated server/generated-provider deletion scenario now
+also kills its completed first server and starts a new process on the same DB with
+all writes default-off and no provider settings. The retired association's scoped
+history/detail return the exact unchanged succeeded operation/full plan/hash and
+add no provider requests. The complete scenario passes. Nine distinct targeted
+checks and library compilation pass; formatting/diff checks pass. No new schema/
+dependency/native/frontend behavior justified unrelated suite reruns. Owned
+processes/listeners/temp SQLite/public CA are cleaned by fixtures. No personal
+credential files, real infrastructure or real VM mutations were involved.
+
+Next task: native fixed GET saved-deletion history/detail commands with independent
+saved-context/full-plan/hash/status validation, without preparing consent; then
+client history/manual-ID UI, actual native restart journey, recreation and real/
+platform/release gates. Local provider scope in ADR 0062 remains in the full roadmap
+with its proposed choices/concrete target unresolved. Goal remains active.
+
+
+## Native fixed GET saved-deletion recovery — 2026-10-21
+
+Previous goal turn proved scoped server recovery without provider/write flags,
+including actual server restart. This slice registers native deletion history and
+saved-detail GET commands with canonical IDs and no prepared intent. Saved detail
+validates target/digest/complete plan/full approval hash and exact operation/task/
+absence/retirement evidence, plus recorded dispatch consistency. Reuse of the native
+result validator keeps submission/status/recovery aligned. History validates <=100
+unique IDs, hashes, timestamps and permitted status/failure combinations. Known
+failed destroy tasks remain uncertain; terminal failed known-task records are refused.
+
+Typed approval reconstruction is internal deterministic hash verification only:
+it never installs native prepared state, returns consent flags/key or sends POST.
+Saved-context DTOs remain separate from live preflight/review. Reads check connection
+generation around validation, suppress old disconnected/reconnected replies, drop
+extraneous fields and return safe read-only errors without raw details or mutation
+retry guidance. No new schema or dependency is needed. ADR 0064 records this extension.
+
+Verification: eight new native checks pass: fixed authenticated GETs without intent;
+16 changed target/plan/hash/task/absence cases; 13 recorded status/dispatch/failure
+combinations; seven wrong/duplicate/oversized/inconsistent history cases; stale
+history/detail across disconnect/reconnect; sanitized extra fields/auth/status/
+response-size errors; invalid IDs before profile/network; and empty/partial history
+plus saved-detail reads without consent. Initial test compilation needed a test-only
+private-state getter and helper-name fix; corrected targeted run passes.
+
+The shared result/hash validation changed, so all 14 affected native deletion
+review/submit/status tests were rerun and pass. A mistyped intermediate filter
+selected zero tests and is not counted; the corrected module filter ran all 14.
+After final generation guards, only positive and stale-reader filters were repeated;
+both pass. Total eight new plus 14 affected checks. Linux native crate compiles/links
+using the existing verified .lab/native-deps prefix. Targeted format/diff checks
+pass. No frontend/server/dependency/schema behavior justified unrelated suites,
+browser/Android/full checks or GUI launches. Fixtures use owned generated HTTPS
+peers and synthetic tokens only; no personal credentials, infrastructure or real VM
+mutation occurred.
+
+Next task: explicit client saved-deletion history/manual-ID/refresh panel, available
+for registered and retired associations, with saved-versus-current wording, complete
+scope/evidence and stale-result guards, and no mutation command calls. Follow with
+actual native process/server restart journey, recreation, real disposable-target
+acceptance and remaining local-provider/platform/deployment/release gates. Full
+roadmap remains active; no real or cross-platform completion is claimed.
+
+
+## Client saved-deletion history/manual-ID recovery — 2026-10-21
+
+Previous goal turn compiled/verified native read-only saved-deletion readers.
+This slice adds a separate remote React panel for every retained association,
+including deleted rows. History, row/manual-ID inspection and refresh are explicit
+GET-reader commands only; no prepare/confirm/clear or consent restoration occurs.
+Saved cleanup volume references/effects/snapshots and excluded media/other images,
+recorded submission/task status and result evidence are visible. Wording separates
+historical absence from current VM/storage state and possible VMID reuse. Target/
+request/full result hash/task/absence/retirement checks prevent wrong success display.
+Partial and old failed records remain readable. Empty history differs from errors.
+Editing an ID or disconnecting invalidates pending replies; fresh connections have
+no restored ID/result/consent. Retiring a row does not remove the recovery panel.
+
+Verification: frontend production build passes. New Firefox simulated-IPC scenario
+passes explicit registered/retired history and empty states, row/manual-ID reads,
+saved reviewed/preserved/fixed-effect presentation, historical/current distinction,
+partial/failed outcomes, wrong target/result hash refusal, error/empty separation,
+stale edited-ID detail, disconnected history error and fresh-connection lookup.
+It explicitly asserts no mutation-intent commands. After adding fixed-effect copy,
+reran only its affected scenario and the build; both pass.
+
+The shared row mounting changed, so existing deletion submission and saved-restore
+browser scenarios were run sequentially; both pass. Total three distinct browser
+scenarios plus frontend build, JS syntax and diff review. No native/server/schema/
+dependency changes warranted those suites, Android or unrelated full checks.
+Browser IPC is simulated: no native application, provider or real VM was launched.
+Fixture-owned profiles/processes/listeners/temp data are cleaned by the runner.
+
+Next task: actual isolated Linux WebView -> production native deletion commands ->
+authenticated server -> generated HTTPS provider, then new application/server
+processes recovering the unchanged succeeded record with provider removed and
+writes off. Keep real infrastructure/platform/mobile acceptance separate. Recreation,
+local-provider choices/implementation and remaining deployment/release gates stay
+in the full roadmap. Goal remains active.
+
+
+## 2026-10-21 — Actual native deletion and restart recovery
+
+Scope: extend only the owned Linux native fixture with confirmed deletion and
+fresh app/server saved-result recovery. Acceptance passed against generated HTTPS
+infrastructure, not a real VM. Production UI/native/server commands are used.
+
+- Running-target refusal, cancel/re-review and independent target/data-loss consent
+  pass through actual WebKit/Tauri IPC.
+- The authenticated proxy deliberately loses the first accepted API response;
+  two identical path/key/body submissions produce exactly one fixed provider
+  DELETE with purge and bulk unreferenced-disk removal disabled.
+- Task and VM/reviewed-volume absence evidence succeed; the association becomes
+  deleted while the complete retained definition is unchanged.
+- A second app/server process recovers history, a copied operation ID and refresh
+  using GET only. All five write flags are false, Proxmox configuration is absent,
+  provider counters are unchanged and the complete saved operation is unchanged.
+- Embedded native example build, JS/Python syntax and Rust format checks pass.
+  The affected restore/restart scenario is checked because the launcher is shared.
+  Logs: `.lab/native-deps/deletion-recovery-ui-check.log` and
+  `.lab/native-deps/restore-recovery-ui-check.log`.
+
+No real VM operation, credential access or dependency change. Real cleanup,
+packaged/mobile validation and full roadmap acceptance remain open. Next slice:
+read-only recreation planning from a retained definition; a fresh association must
+have a new identity and independently reviewed target/creation consent.
+
+
+## 2026-10-21 — Retained-definition recreation preview
+
+Scope: read-only `POST /api/v1/environments/{id}/recreate-plan`, accepting only a
+bounded explicit target VMID. ADR 0065 records source identity and saved-definition
+semantics. The source must be deleted; its archived YAML must match its recorded
+hash. Current catalog planning is reused, without provider access or mutation.
+
+The response binds source ID/hash/revision and exact YAML, explicitly distinguishes
+fresh provisioning from old disk restoration and requires a new instance identity.
+Recreation/creation capabilities and live verification/reservation remain false.
+The prior VMID can be proposed but is not claimed available. No operation or new
+association is created, and repeated previews leave the source unchanged.
+
+Verification: targeted `cargo test --locked -p vmanyware-server --test recreation`
+covers deterministic saved-YAML planning without a provider, unchanged source and
+empty operation journal, active/unknown/malformed source refusal, invalid target,
+source-template VMID refusal, extra/replacement-YAML fields, missing catalog,
+Origin rejection, body limit and corrupted archived-definition hash refusal.
+All three focused tests pass. The initial corrupt-record fixture attempted to
+edit an already retired row and was correctly blocked by the existing retention
+trigger; it now installs the corrupt fixture before retirement. Source format/diff
+review is limited to this slice. No unrelated suites repeated.
+
+Limitations: planning alone does not recreate a VM. Live availability/preconditions,
+durable source lineage, fresh consent/idempotency, native/client flow and real
+infrastructure acceptance remain open. Next: durable recreation source lineage
+and confirmed submission through existing provisioning execution, allocating a
+new instance ID while retaining the deleted source and its history.
+
+
+## 2026-10-21 — Durable recreation source and fresh identity
+
+Scope: schema-15 immutable recreation lineage and an atomic storage entry point,
+reusing the ordinary provisioning journal/stages/executor. No HTTP mutation or
+provider transport was added. ADR 0066 records key/source and identity semantics.
+
+`enqueue_recreation` requires a deleted canonical source, explicit fresh approval
+and request key. It reads exact saved YAML/name/hash/revision and validates the
+current catalog plan before inserting a new association, operation/stages and
+source reference in one transaction. Same-key replay requires the same source
+and approval; normal creation/recreation cannot replay each other's keys. Target
+conflicts roll back without partial rows. Source/target definition identity and
+retired/distinct source status are guarded on insertion and job loading. SQL
+update/delete guards retain lineage. The existing worker can claim the ordinary
+provisioning job with its recorded source; no old task/consent is reused.
+
+Three focused storage tests pass: reopen/replay, distinct identity with prior VMID,
+unchanged source/YAML, lineage and ordinary-key conflicts, SQL immutability,
+worker claim, invalid/active/missing source, unconfirmed/mismatched approval and
+rollback. Because the schema and shared enqueue/read path changed, verification
+also covers the affected provisioning and migration/storage tests: 90 tests pass
+in total (3 recreation storage, 3 preview, 34 provisioning intent, 10 deletion,
+10 instances, 9 lifecycle, 11 restore and 10 snapshot storage). An explicit
+schema-14-to-15 upgrade preserves an ordinary provisioning job and foreign keys.
+Historical fixtures initially retained schema-15 triggers while rebuilding old
+operation tables; those fixtures now remove the new objects before downgrade.
+Production migration/retention guards remain enabled. Format/diff checks pass.
+
+Limitations: confirmed HTTP/native/client submission and saved-source recovery
+presentation remain pending; no real VM or generated provider was provisioned in
+this slice. Next: confirmed HTTP recreation enqueue and source-scoped GET recovery
+with current runtime/provider/catalog validation and the existing executor.
+
+
+## 2026-10-21 — Confirmed recreation HTTP enqueue and scoped saved detail
+
+Scope: `POST /api/v1/environments/{id}/recreate` and source-scoped saved operation
+GET, using existing schema-15 lineage and provisioning worker contracts. The body
+binds source ID to path and a fresh full provisioning approval. Exactly one request
+key, no Origin, explicit provisioning enablement, current provider scope/catalog,
+retired archived YAML/hash/plan match and supported minimal workflow are required.
+The handler performs no provider request; it only atomically queues the existing
+provisioning journal. 202 Location points to the source-scoped GET detail.
+
+GET reads the validated saved job/lineage, returning source ID, ordinary operation,
+retained plan and explicit fresh-identity/no-old-disk semantics. It exposes no
+request key, approval consent or raw task. Wrong-source and unrelated operations
+are hidden. Reopening the store with no provider/catalog or write capabilities
+returns unchanged saved detail without claiming or dispatching work.
+
+Four focused API tests cover same-key identity/consent-age retention, new instance,
+wrong-source refusal, unchanged archive and no partial records, restart/read-only
+recovery, runtime/provider/scope/catalog gates, source-path/plan/consent validation,
+Origin/duplicate/missing keys, active/missing source, auth/body bounds and minimal
+workflow refusal. Ordinary create tests are selected because the existing error
+mapping now serves both routes; preview tests cover adjacent routing. All 12
+selected tests pass (4 recreation API, 3 preview, 5 ordinary create), with
+source format and diff checks passing. No schema,
+dependency or provider transport changed in this slice.
+
+Limits: HTTP enqueue is not actual recreation/readiness. The read-only preview
+still grants no recreation capability. Dedicated live preflight, history discovery,
+generated-provider worker completion, native/client journey and real VM acceptance
+remain open. Next: generated HTTPS recreation enqueue-to-worker/result evidence
+with source preservation and a fresh target identity, reusing existing execution.
+
+
+## 2026-10-21 — Recreation API through production worker/generated HTTPS
+
+Scope: extend the existing owned creation integration fixture with recreation,
+sharing setup/worker assertions rather than copying the provider implementation.
+No product source, dependency or database change. A retired source is constructed
+in the fixture; no deletion or real VM is performed.
+
+The actual recreation router queues a fresh identity from the archived definition.
+The production worker executes clone, resource/optional-disk configuration,
+Cloud-Init/seed regeneration, start and clean simulated guest/IP readiness over
+verified generated HTTPS. The clone marker must contain the new identity, never
+the source. Source YAML/hash/revision and current definition remain exact. Both
+8 GiB/no expansion and 40 GiB/one expansion complete with all stages succeeded.
+Provider request authentication, exact mutation counts and no unexpected mutation
+are asserted. A separate inventory operation still completes fairly.
+
+SQLite reopens after clone and after completion preserve journal progress and
+lineage. Completed HTTP replay returns the same operation and the worker remains
+idle with no provider traffic. Source-scoped GET recovery without provider/catalog
+or write flags returns the unchanged succeeded operation/source and does not
+contact the provider. Exactly one new instance and provisioning operation remain.
+
+Verification: focused `cargo test --locked -p vmanyware-server --lib
+proxmox::tests::create_flow` covers recreation plus the affected ordinary creation
+helper, each with the two disk-size cases. Format and diff review cover only this
+slice. Evidence is in-process Rust router/worker plus real local TLS transport,
+not actual server-process/native/mobile or real Proxmox/guest acceptance.
+
+Next: dedicated source-bound live recreation preflight so the native client can
+review exact saved definition/current target checks before fresh confirmation.
+Native/client review, saved-history discovery and real infrastructure gates remain
+open; the full roadmap is not complete.
+
+
+## 2026-10-21 — Source-bound live recreation preflight
+
+Scope: `POST /api/v1/environments/{id}/recreate-preflight`, accepting only bounded
+targetVmid, reusing exact retired-source/YAML/hash and current-catalog validation
+from the offline preview. The existing four-GET provisioning preflight observes
+template/storage/network/available VMID and returns matching-plan-hash checks.
+No operation, association, reservation or provider mutation is created. Offline
+preview keeps its prior behavior and cannot grant execution capability.
+
+The live response binds source ID/hash/revision and saved YAML to the current
+endpoint-scoped plan. Runtime/minimal-workflow capability flags remain distinct
+from check results; an occupied target fails a check even if capability is on.
+Denied reads are unknown and redacted. Template revision, write permissions and
+actual guest readiness remain unknown. The worker still revalidates before write.
+
+Verification: three focused generated-HTTPS tests pass, covering both runtime
+flags, exact source/plan binding, four GETs only, unchanged source/empty journal,
+busy VMID and redacted denied reads. Four HTTP preview/preflight tests and four
+affected recreation enqueue/recovery tests cover routing/shared source validation.
+No dependency/schema/provider transport change. Format/diff review is scoped here.
+
+Limits: current source template/permission/real guest acceptance remains open;
+this is read-only review, not actual allocation or consent. Next: native retained
+recreation prepare/confirm/read/clear with exact source/plan and new-instance
+validation, followed by client review and isolated native journey.
+
+
+## 2026-10-21 — Native retained recreation review
+
+Scope: read-only native prepare/clear commands, registered in the production
+Tauri handler. ADR 0067 records exact source/plan/check and cancellation semantics.
+Preparation GETs the selected retired instance, then POSTs targetVmid only to its
+fixed preflight path, through current authenticated verified HTTPS. It never sends
+an approval or replacement YAML. Existing ordinary creation plan validation and
+bounded authenticated response reading are reused through module-scoped helpers.
+
+The native review binds saved ID/YAML/hash/revision to the returned supported plan,
+requested VMID and preflight hash. Fresh identity/no-old-disk semantics, ten unique
+check codes/statuses, coherent capability and no-reservation flags are checked.
+Disabled/failed/unknown results remain displayable without granting confirmation.
+Server check messages/unknown fields are discarded. One preparation read runs at
+a time; clear requires the retained key and increments the review epoch. Disconnect
+clears state and late replies cannot install a review on another connection.
+
+Verification: five generated-HTTPS native tests pass (fixed paths/auth/body,
+retain/clear, changed source/plan/check/semantic fields, disabled/failure display,
+invalid/active source, missing auth marker, disconnect). Native crate compiles and
+links with `.lab/native-deps`. A test-fixture call initially used the wrong gate
+signature and was corrected before these passes. The affected ordinary creation
+prepare test is selected because its shared plan/response helpers are exposed to
+the new sibling module. Format/diff checks are scoped to this slice.
+
+Limits: no confirmation/status command or client button yet; native compilation
+and local HTTPS tests are not a WebView/mobile or real infrastructure proof.
+Next: native fresh confirmed submission with retained-review eligibility, same-key
+unknown-response retry and source-scoped GET status/new-instance validation.
+
+
+## 2026-10-21 — Native fresh recreation confirmation and status
+
+Scope: production native confirm/status commands using the retained recreation
+review, plus submitted-state clear/replace guards. Existing ordinary creation
+approval reconstruction and readiness validator are reused via sibling helpers.
+No client UI, dependency or schema change. ADR 0067 records exact state semantics.
+
+Fresh consent requires enabled capability, first seven metadata checks passed,
+no explicitly failed checks and review age at most 120 seconds. Native constructs
+source/full approval from retained data and marks submitted before dispatch. Errors
+or invalid responses keep the original key/body; an explicit identical retry is
+possible even after expiry. Once an operation ID is known, only scoped GET status
+is offered; IDs must keep a distinct new instance and the same source/plan/result
+scope. Success must include clean guest readiness. Active/unknown requests cannot
+be cleared/replaced, in-flight submissions cannot duplicate, and disconnect drops
+late replies without cancelling server work. Pending unsubmitted review reads can
+still be cancelled with epoch invalidation.
+
+Server saved recreation detail now sets the returned plan scope from its durable
+approval, needed to bind native recovery when current provider config is absent.
+Four focused API tests and two production-worker/generated-HTTPS journeys pass,
+including restart/saved scope and both disk-size variants of create/recreate.
+Twelve native focused tests pass across the retained workflow; expiry/additional
+failed-check gates are specifically rerun after tightening eligibility. The
+existing ordinary creation readiness validator test covers its shared contract.
+Native Linux crate builds/links using `.lab/native-deps`; format/diff review is
+scoped here. No unrelated suites repeated.
+
+Limits: these are native command HTTPS tests, not actual GUI/mobile or real VM
+acceptance. Stateless saved-source recovery/history and full client UX remain open.
+Next: React deleted-row recreation target/source review, explicit confirmation,
+unknown same-key retry, GET status and handoff to the new instance/SSH flow.
+
+
+## 2026-10-21 — Client recreation review, confirmation and new-guest handoff
+
+Scope: deleted-row selection and a single retained recreation form. No mutation is
+caused by selecting a source. An explicit target VMID is required before native
+review. The UI displays source identity/YAML/hash/revision and current template,
+resources/storage/network/guest user/key count, with check/capability and fresh-
+disk/no-old-snapshot semantics. Source/hash/target/preflight mismatch is refused.
+
+Consent starts unchecked. Known metadata checks must pass with no explicit failed
+check; disabled/occupied/unknown prerequisites cannot submit. Cancel/review resets
+consent. Shared mutation selectors and ordinary creation are locked during review
+or submission. Unknown replies offer only identical-key confirmed retry, while
+known operations offer GET status. Uncertain work remains retained; false readiness
+or reuse of the old instance cannot display success/SSH. Matching completion hands
+the new guest to existing SSH host-trust setup without accepting its key. Terminal
+acknowledgement and reconnect drop old review/consent. Generation guards suppress
+late replies. No credential, key or consent is automatically persisted.
+
+Verification: TypeScript/production frontend build passes. Focused Firefox
+`--recreation` passes actual React controls with simulated IPC, including disabled/
+occupied/changed-source refusals, exact retry, status/partial work, false success,
+new identity, SSH trust handoff, acknowledgement and stale reply suppression.
+Affected `--deletion` and `--snapshot-restore` modes cover shared selector/locking
+changes; runs are sequential. No Rust/server/provider code changed in this slice.
+JS syntax and diff review cover this slice rather than unrelated suites.
+
+Limits: browser simulated IPC is not native command/WebView integration, deployment,
+fresh mobile or real VM evidence. Stateless saved-source recreation history and
+full roadmap gates remain open. Next: actual isolated Linux WebView -> production
+native -> authenticated server/worker -> generated HTTPS recreation journey.
+
+
+## 2026-10-21 — Actual native retained-definition recreation
+
+Scope: extend the owned native lifecycle fixture with `--recreation`; no product
+behavior, dependency or schema change. The example registers production recreation
+commands and embeds the real UI driver. A small Node adapter reuses the existing
+Android generated HTTPS provider rather than copying its protocol implementation.
+Source retirement is fixture setup only; this mode performs no deletion or real VM
+operation. It uses a public demonstration key, not a personal/private identity.
+
+Actual React/WebKit -> Tauri IPC -> verified HTTPS proxy -> authenticated Axum
+process/production worker -> generated HTTPS provider passes. The UI reviews the
+retired source and target, cancels/reviews with unchecked consent, explicitly
+confirms, encounters a deliberately lost accepted HTTP response, retries identical
+path/key/body, reads the scoped operation to guest-ready success, and prepares SSH
+host trust for the new guest. No SSH session/key acceptance is claimed.
+
+Independent assertions require one succeeded provisioning operation/all stages,
+a new distinct registered instance, unchanged source YAML/hash/definition and
+immutable source lineage. The provider requires the expected resources/key/seed/
+start order and exactly six mutations, without clone/seed/start replay. Both app
+and server exit successfully; the generated provider report/input/listeners and
+all owned processes are closed. TLS, WebKit sandbox and X11 authentication remain.
+
+Verification: current server binary and embedded native example build; the actual
+`--recreation` journey passes, log `.lab/native-deps/recreation-ui-check.log`.
+Initial fixture failure was a demo-key comment mismatch (production strips SSH
+comments correctly); the adapter now expects its canonical public form. A report
+pipe cleanup timeout was fixed by explicitly closing/destroying the owned stdin.
+No product workaround or verification bypass. Shared deletion/restart fixture
+also passes because the launcher/remote bootstrap/proxy condition changed.
+JS/Python syntax, Rust format and diff review pass for this slice. The existing
+module declaration order was normalized after format review; no behavior changed.
+
+Limits: no real Proxmox/template/guest/SSH, normal packaged/mobile startup or live
+provider crash/restart proof. Separate worker tests cover SQLite reopen; native
+saved-source history/recovery remains open. Next: source-scoped saved recreation
+history discovery/recovery without provider or write capabilities.
+
+
+## 2026-10-21 — Bounded saved-source recreation discovery
+
+Scope: server GET history for one retired source, alongside the existing scoped
+saved detail. ADR 0068 records discovery and historical-evidence semantics. No
+schema, dependency or provisioning-execution behavior changes.
+
+The reader selects exactly the latest 100 source-linked operations, creation time
+and ID descending, and validates each through the existing provisioning/source
+reader after bounding saved approval/plan/catalog/definition/result payloads.
+It returns only source ID and operation/new-instance/status/time summaries. Other
+sources and ordinary creation are excluded. Active/missing/invalid sources are
+404, valid empty history is explicit, and corrupt selected journals fail safely
+rather than silently disappearing. No provider/catalog/write capability is needed;
+GET never claims, dispatches, renews consent or changes source/journal state.
+
+Verification: seven focused recreation HTTP tests pass (three new history cases,
+four affected enqueue/detail cases), including exact newest-100 over 103 source
+jobs, unrelated ordinary creation, reopen without provider/writes, source isolation,
+empty versus missing, active source/auth refusal, unchanged operation/source and
+queued dispatch state, corrupt approval hash and oversized plan rejection. Tests
+use isolated local SQLite only, no credentials or provider. Format/diff review is
+limited to this slice; unrelated native/browser/worker suites were not repeated.
+
+Limits: this is server discovery, not native/client reconnection acceptance or a
+current VM/guest read. Next: stateless fixed native history/detail GET readers,
+without preparing/restoring consent, before client lookup and native restart proof.
+
+
+## 2026-10-21 — Stateless native recreation history/detail recovery
+
+Scope: two fixed GET commands registered in the production native bridge,
+without restoring prepared review/key/consent. History uses the exact source path;
+detail validates the selected retired source/archive first, then its scoped saved
+operation. Current authenticated verified HTTPS and bounded response reads apply.
+
+History rejects wrong source, duplicate or reused source/new-instance identities,
+unsupported statuses, oversized lists, invalid timestamps and wrong ordering.
+Saved detail binds source/archive definition identity to plan and operation ID,
+requires a distinct new instance and fresh-identity/no-old-disk semantics, and
+validates recorded success with the existing guest/scope/plan evidence checks.
+Nonterminal/failed records and disabled execution remain readable. Unknown raw
+key/consent fields are dropped. Late replies after disconnect cannot be accepted;
+no recovery call installs any review, request key or submission state.
+
+Verification: eight focused native generated-HTTPS recovery/history cases pass,
+plus twelve affected retained recreation workflow tests and the shared ordinary
+creation readiness validation test. The initial tests attempted direct access to
+private sibling state; a test-only empty-state observer now verifies no recovery
+state is installed without exposing mutable production state. Native Linux crate
+compiles/links using `.lab/native-deps`. Format/diff review is scoped here; no
+unrelated server/browser/worker checks repeated. No dependency/schema change.
+
+Limits: native HTTP tests are not actual WebView/client recovery or server restart
+acceptance, and do not observe present VM/guest/SSH readiness. Next: explicit React
+saved-source history, manual operation-ID lookup and read-only refresh with clear
+historical wording; then actual app/server restart recovery without provider/writes.
+
+
+## 2026-10-21 — First local Linux server delivery artifact
+
+Scope: actual release server archive, service/config/template files, copy-only
+staging installer and operational documentation. ADR 0069 records boundaries.
+No runtime crate, server behavior, real credential or provider mutation changed.
+
+`cargo build --locked --release -p vmanyware-server` passes. Allowlisted packager
+produces `.lab/packages/vmanyware-server-0.1.0-linux-x86_64.tar.gz` plus SHA-256
+companion. The archive contains the optimized ELF, systemd/sysusers configuration,
+root-only environment example with all writes false, template example, install
+script, licenses/build metadata/manifest and INSTALL.md. It contains no local
+state or credentials. Build-host architecture/libc is recorded; no portable Linux
+baseline, signature or release-candidate claim is made.
+
+The installer only copies files to an explicit root. It does not create users,
+replace actual server.env, change database state, create credentials, enable/start
+a service or install/configure TLS. Docs cover reviewed host installation,
+loopback/authenticated startup, HTTPS proxy/client connection, provider/catalog
+preparation, stopped backups/upgrades/rollback, troubleshooting and retaining data
+on uninstall. systemd/Caddy examples were checked against official documentation.
+
+The targeted package check passes outer/inner checksums, fresh staging/reinstall
+with existing config/state intact, file permissions, systemd-analyze syntax using
+staged ExecStart, shell preflight refusal without a token, actual packaged process
+health/authentication and clean termination, exact saved definition after restart,
+redacted logs and invalid-token rejection before DB creation. All processes and
+state are temporary/owned; no real unit/account/firewall/provider changed.
+Syntax/diff checks apply only to this slice. Application/native/browser suites
+were not rerun because no application behavior changed.
+
+Limitations: actual systemd-manager/sandbox and HTTPS deployment on a selected host
+remain open, so full service installation acceptance is not marked complete. Mobile
+artifact distribution, real template/ACL/VM/SSH and other-platform/release gates
+remain open. Next: rebuild/package a testable Android client artifact for the
+mobile allocation/SSH milestone; recreation-history UI remains queued.
+
+
+## 2026-10-21 — Current Android test APK delivery
+
+Scope: restore an owned build toolchain, build current ARM64/x86_64 debug APKs and
+verify/copy manually installable artifacts. ADR 0070 records exact-artifact versus
+historical runtime evidence. No application behavior/dependency/version or tracked
+Android project configuration changed.
+
+The old `/tmp` SDK/JDK prefix was absent. Official HTTPS JDK 21.0.2 and SDK package
+archives were downloaded/verified into the owned persistent prefix
+`/home/moha/.local/share/vmanyware/android-build-20261021`. SDK 36/build-tools 36.0.0,
+NDK 28.2.13676358 and platform tools are present; NDK symlinks restored correctly.
+Public download URLs/checksums are in that prefix's verified-downloads.json. SDK/
+signing/Gradle caches are outside the repo, ANDROID_USER_HOME is owned and no
+personal key/HOME override was used. Reuse paths in `.lab/android-toolchain/env.sh`.
+Build log: `.lab/android-toolchain/apk-build.log`. Owned Gradle daemon was stopped.
+
+The normal Tauri Android build completed fresh TypeScript/Vite embedding and both
+Rust/JNI targets, then produced both single-ABI APKs. `scripts/package-android.py`
+verifies each signature, package dev.vmanyware.client, version 0.1.0, debuggable
+flag, API 24/36 declarations and expected ABI. The actual embedded native library
+must equal its current target-build hash. Public metadata includes signer/APK/
+native hashes; no private signing material is copied. Both use the same owned
+development signer. A new aapt2 output label (`minSdkVersion`) was accommodated
+without changing the required API value.
+
+Deliverables: `.lab/packages/android/vmanyware-0.1.0-android-arm64-v8a-debug.apk`
+(243784580 bytes), x86_64 variant (247953121 bytes), artifacts.json, SHA256SUMS and
+INSTALL.md. Both copied APK checksums pass. `make package-android` reproduces the
+build/package with explicit owned tool paths; script syntax/diff checks are scoped
+to this slice. No unrelated application/server/native/browser suites repeated.
+
+Limits: these are debug-symbol-bearing development artifacts, not signed release
+or fresh runtime/physical-device proof. Historical emulator/create/SSH reports do
+not apply automatically to their new hashes; runtimeValidatedForTheseApks is false.
+No device/app data, provider, real VM or host service was changed. Next: fresh
+exact-APK Android 15 x86_64 owned-emulator native launch/create/readiness/SSH proof
+against generated infrastructure, before approved real-target testing.
+
+
+## 2026-10-21 — Fresh Android runtime prerequisites, target approval pending
+
+Scope: prepare the exact-artifact runtime bench, without touching any unrelated
+QEMU process/device or real Proxmox VM. Previous artifact-build turn made progress;
+this turn restored actual emulator/image tools and current host fixture evidence.
+
+Qualified ADB query on port 5047 found no emulator-5580; no device/app was changed.
+An unrelated QEMU process was left untouched. Google stable emulator 37.2.12.0
+(build 16428233) and Android 15/API 35 google_apis x86_64 image r09 were downloaded,
+checked against official repository checksums and extracted into the existing owned
+persistent SDK. Public URLs/checksums are in its verified-emulator-downloads.json.
+No AVD was created or launched. Dedicated console/gRPC ports 5580/5581/8558 were
+available, and `/dev/kvm` is accessible. Current android_ssh_fixture compiles with
+the existing verified native prefix; no unrelated tests repeated.
+
+The concrete plan is `.lab/android-toolchain/emulator-plan.json`: AVD
+vmanyware-native-smoke, 2 CPU, 2048 MiB RAM, 2 GiB data, owned ADB 5047/serial
+emulator-5580, JWT gRPC 8558, current x86_64 APK, app changes restricted to
+`dev.vmanyware.client`. Production control-plane release binary and generated HTTPS
+provider/localhost SSH fixture will be used; no real Proxmox mutation is proposed.
+
+AGENTS.md explicitly requires approval of concrete VM targets/operations. A user
+approval question is pending for creation/start of this Android VM plus app
+installation/reset in it. SDK/image downloads and compilation are complete; no
+approval is inferred from tool acceptance or elapsed time. The goal stays active,
+not paused or complete. Other source work (saved-recreation UI, release/security
+and platform gates) remains open independently.
+
+Next: after actual target approval, create/start only this disposable AVD, verify
+its name/QEMU marker/serial, install the exact current APK and execute native
+verified HTTPS -> generated allocation/readiness -> strict SSH using the existing
+direct host-alias mode. No fresh-APK runtime claim is made yet.
+
+
+## 2026-10-21 — Client saved recreation history and manual lookup
+
+Scope: read-only saved-source recreation panel for deleted rows. Android VM target
+approval remains pending and no emulator/device/VM operation was performed. This
+independent source work advances reconnection recovery without crossing that gate.
+
+The panel explicitly lists history, selects saved rows or accepts a copied canonical
+operation ID and refreshes only the saved record. It binds source/definition/name,
+operation/new-instance identity and recorded guest/scope/plan success evidence.
+Historical/current-state wording prevents recorded initialization being offered as
+current SSH readiness. No checkbox, prepared consent/key or direct SSH action is
+restored; no creation/confirmation/clear command is used. Failed/uncertain records
+remain visible. Editing an ID/reconnecting invalidates late replies, and errors
+remain distinct from valid empty history.
+
+Verification: production frontend/TypeScript build passes; Firefox
+`--recreation-recovery` passes actual React controls with simulated IPC, including
+explicit empty/history reads, row/manual ID, invalid IDs, wrong source/false success,
+uncertain evidence, stale edited-ID/history replies, reconnect and read-only command
+assertions. Affected `--recreation` and `--deletion-recovery` scenarios are selected
+for parent retired-row rendering. Runs are sequential. JS syntax/diff checks are
+scoped to this slice; no Rust/server/Android suite repeated.
+
+The delivered APK files and their metadata/checksums were not changed; they are
+build snapshots before this new history panel, not proof of the updated source UI.
+No fresh APK runtime or actual native restart claim is made. Next independent
+slice: isolated Linux app/server saved-recreation restart recovery with provider
+removed and writes off. The explicit Android emulator creation/app reset approval
+question remains unanswered; automatic continuations do not grant it.
+
+
+## 2026-10-21 — Actual native saved-recreation restart recovery
+
+Scope: combined owned Linux `--recreation-recovery` fixture. No product behavior,
+source UI, schema, dependency, emulator or real VM change. Explicit Android target
+approval is still pending and was not inferred from automatic continuation.
+
+The first real native UI completes the existing recreation journey with retained
+review/consent, a deliberately lost accepted reply and identical retry. Before
+restart the runner snapshots the succeeded operation, source/target and the live
+generated provider's complete request/error lists. The actual server is restarted
+on the same database with all five writes false and provider/catalog configuration
+removed. A second app process begins without restored token, operation ID or intent.
+
+Production native GET commands and the real history panel pass explicit history,
+row selection, copied-ID lookup and refresh. Historical evidence is labelled and
+no consent/form or direct historical SSH action appears. The proxy requires GET
+only. Full saved operation and source/target identities remain unchanged; provider
+request/error lists match the pre-restart snapshot, with six original mutations
+only. Node provider snapshot/report lifecycle stays owned and closes on completion.
+All app/server/fixture processes are cleaned up; TLS and sandbox stay enabled.
+
+Verification: server and embedded-example builds pass; actual combined native
+recreation/restart recovery passes, log
+`.lab/native-deps/recreation-recovery-ui-check.log`. Shared deletion/restart also passes for changed launcher/recovery branching
+(`.lab/native-deps/deletion-recovery-ui-check.log`). JS/Python syntax, Rust example
+format and diff checks are scoped here; unrelated application suites were not run.
+
+Limits: clean isolated Linux app/server restarts are proven, not live-provider
+crash recovery, installed startup, current real guest/SSH state or fresh Android
+runtime. Existing delivered APKs are unchanged snapshots preceding the source
+history panel. Next independent slice: rebuild/package updated Android snapshots
+with the completed source UI while exact-emulator execution awaits actual approval.
+
+
+## 2026-10-21 — Updated Android delivery snapshots
+
+Scope: rebuild and package both Android debug architectures from the latest
+source, including saved-recreation history/manual-ID UI. No VM, app installation,
+credential, dependency or production configuration change.
+
+`make package-android` passes with the isolated owned SDK/JDK/NDK/signing cache.
+The frontend build transforms 59 modules; both native targets and Gradle APK
+packaging finish successfully. The packager verifies signatures, matching public
+signer, package/version, SDK declarations, architecture and each embedded native
+library against its current target build. APKs, INSTALL.md, artifacts.json and
+SHA256SUMS are refreshed in `.lab/packages/android/`. Build log:
+`.lab/android-toolchain/apk-update-build.log`.
+
+ARM64 APK SHA-256:
+`1be13a590527ab2997de9389bde0ce1bf5595c0acfdbe5df38995accb7cf1b5d`
+(480318228 bytes). x86_64 APK SHA-256:
+`331ef9b4dbe5a1ff7bb18b24f58c6ed45344c252ba3240237e082d14df5a691c`
+(488664689 bytes). These development packages are large and retain native symbols;
+size optimization is not release acceptance. Frontend assets are embedded in the
+native Tauri library, not standalone APK JavaScript entries.
+
+No runtime claim: metadata still records runtimeValidatedForTheseApks=false and
+releaseCandidate=false. Earlier APK runtime evidence does not validate these hashes.
+Next task: execute the exact x86_64 artifact allocation/SSH journey on the explicitly
+approved owned Android target. Emulator creation/start approval remains pending;
+real infrastructure and other-platform roadmap gates remain open.
+
+
+## 2026-10-21 — Bounded production HTTP admission
+
+Scope: phase-6 request admission, production wiring and API documentation. No new
+runtime dependency, provider/VM operation, credential or deployment change.
+Monotonic token bucket (burst 120, refill 20/second) and 32 handler permits share
+bounded state across all connections. Limits wrap authentication; refused work
+returns safe HTTP 429 plus Retry-After: 1 without entering route handlers.
+No forwarding-header trust, per-client map or excess-request queue is introduced.
+
+Verification: three focused request_limits unit/router tests pass, covering timed
+refill/cap, shared admission/handler refusal and release, auth/fallback ordering.
+All four affected auth integration tests and production entrypoint compilation
+pass; see `.lab/request-limits-check.log` and `.lab/request-limits-auth-check.log`.
+An actual debug-binary subprocess on temporary SQLite with no provider also passes:
+180 rapid unauthenticated health reads produce 120 HTTP 401 and 60 HTTP 429;
+all rejections have the safe code and Retry-After: 1. After a 1.1-second refill,
+a read reaches authentication again (401). The owned process is terminated and
+temporary state removed; log `.lab/request-limits-process-check.log`.
+Changed Rust formatting and diff checks pass. API notes and ADR 0071 explain
+process restart resets, global exhaustion, response-header concurrency scope and
+remaining proxy/network protections. Phase-6 overall size/rate/deployment acceptance
+is not closed by this slice. The previous Linux release archive is now a historical
+snapshot; next task is rebuilding/rechecking that delivery artifact. Android binaries
+and their pending exact-artifact runtime gate are unchanged.
+
+
+## 2026-10-21 — Refreshed server delivery with request admission
+
+Scope: rebuild the optimized Linux server archive, extend exact-package verification
+for admission/refill, and include operator capacity notes. No host installation,
+service/account change, provider call or VM mutation.
+
+`make package-server` passes. Packaging is repeated after the installation notes
+change so the archive includes the current documented request policy. Exact archive:
+`.lab/packages/vmanyware-server-0.1.0-linux-x86_64.tar.gz` (5345000 bytes), SHA-256
+`1b7782eee64c193bb84ca39688baa9d3d62205df1b4d7d07ebd44df4e8a58aab`. Its companion checksum and internal hashes pass.
+
+`make check-server-package SERVER_PACKAGE=/absolute/path/to/archive.tar.gz` passes:
+isolated copy-only staging/reinstallation preserves configuration and state; staged
+unit syntax and token prestart guard pass; the exact packaged optimized process
+passes authentication, definition persistence across two clean process starts,
+unauthenticated-burst 429/Retry-After/safe error and successful authenticated read
+after refill, plus invalid-token refusal before database creation. Temporary process
+and files are cleaned up. Python syntax and diff checks pass. Logs:
+`.lab/server-package-update.log`, `.lab/server-package-update-check.log`.
+
+Limits: no service-manager sandbox/startup, real deployment TLS, real provider,
+Android runtime or release-candidate acceptance. Android snapshots are unchanged.
+Next independent source task: phase-6 threat-model/trust-boundary review against
+current API/native/provider implementation; the exact Android journey continues
+to require the already-requested owned-emulator approval.
+
+
+## 2026-10-21 — Current-source threat model review
+
+Scope: phase-6 documentation review of assets, attackers and trust boundaries.
+`docs/security.md` maps ten boundaries to current source, existing contract tests,
+actual recorded evidence, residual risks and remaining release work. It explicitly
+distinguishes passphrase-encrypted application SSH keys from OS-backed key storage,
+static bearer authority from separate identity/expiry, checksums from publisher
+trust, provider readiness from SSH host authentication, and admission limits from
+proxy/connection protection. Route diagnostics do not cover outer auth/429 refusals.
+No credential file, private key, provider or VM was accessed.
+
+The threat-model review checkbox is completed with this review artifact; other
+security/platform/deployment gates remain open. Verification is document link,
+content and diff review only; no unmodified application suites were repeated.
+Existing server/Android artifacts are unchanged and retain their recorded evidence.
+Next independent task: audit custom native-command exposure and release permissions,
+then address demonstrated gaps with a small implementation slice. Exact-current
+Android execution still awaits the already-requested owned-emulator approval.
+
+
+## 2026-10-21 — Enforced custom native-command window permissions
+
+Scope: current native command audit and demonstrated permission gap. Tauri's default
+custom-command exposure was not restricted by the core-only main capability.
+`build.rs` now enrolls 68 reviewed commands from app_commands.rs in AppManifest;
+the explicitly selected default capability grants their generated permissions only
+to local main. No wildcard/remote/extra WebView grant is enabled. Generated output
+is ignored. Handler behavior and confirmation/trust policies are unchanged.
+
+Owned example reporting/host rotation has a separate permission, ungranted and
+unregistered in production, dynamically granted only by owned example setup.
+`scripts/check-command-permissions.py` checks handler/manifest/grant drift and
+production configuration. ADR 0072 and docs/security.md record the boundary and
+its limits. Main-window compromise still carries the main window's authority.
+
+Verification: production/native library and lifecycle/command-ACL example builds
+pass with the verified native prefix. The new actual Linux two-window WebKit/IPC
+fixture passes: main gets runtime_platform, untrusted gets a permission refusal.
+The affected full native recreation/app+server restart fixture also passes through
+real IPC, authenticated server, worker and generated HTTPS provider. No other
+application suites repeated. Logs: `.lab/native-deps/command-acl-ui-check.log`,
+`.lab/native-deps/command-acl-recreation-check.log`, and command-acl build logs.
+The first lifecycle build needed the Manager trait call qualified for example-only
+dynamic grants; that compile error is fixed and the subsequent build/run passes.
+
+Limits: this is Linux runtime evidence, not other-platform or release acceptance.
+No VM/provider/credential changes, no real key-store access. Current Android APK
+snapshots now predate this native ACL source change; next task is rebuilding and
+packaging both architectures. Exact Android runtime still awaits the previously
+requested explicit owned-emulator creation/start approval. The Linux server package
+is unaffected by this client-only slice.
+
+
+## 2026-10-21 — Android snapshots include explicit command ACL
+
+Scope: rebuild/package both Android debug targets after ADR 0072. No VM/emulator
+creation/start, app installation, credential access or real provider operation.
+
+`make package-android` passes with the isolated owned SDK/JDK/NDK/signing prefix.
+The frontend build and both native target/Gradle builds pass; package verification
+checks signatures, shared public signer, manifests/SDK/ABI and each exact native
+library hash. The generated default capability matches the reviewed source grants,
+is local-main only and has no remote grant. All 68 declared permission identifiers
+are present in each target library. This is compilation/content evidence, not
+Android runtime enforcement proof. The existing Linux two-window native acceptance
+remains the only new runtime evidence for this ACL.
+
+arm64-v8a APK: 480915012 bytes, SHA-256
+`ec17d953c34ea5bd4eaf7029c0f061d59b0cfb4f67c3a5c455810f2ec2fbe45d`.
+x86_64 APK: 489206593 bytes, SHA-256
+`1a04fbfe7de6b01e507968a059cfcf0af313f6d60a8e1828ad9b74ff8976a57d`.
+
+Artifacts, public metadata, SHA256SUMS and installation notes are refreshed in
+`.lab/packages/android/`. Build log `.lab/android-toolchain/apk-acl-build.log`.
+The metadata retains releaseCandidate=false and runtimeValidatedForTheseApks=false.
+Checksum verification and scoped diff review pass; no unrelated suites repeated.
+A one-off binary inspection initially used Python mmap membership instead of byte
+substring search; corrected find() assertions pass without rebuilding anything.
+
+Next independent source task: review platform secret-storage support/decision and
+address a demonstrated gap in a bounded slice. The exact Android allocation/SSH
+journey still awaits the previously requested owned-emulator approval; no automatic
+continuation grants it. Server package and its recorded evidence are unaffected.
+
+
+## 2026-10-21 — Remove unused Android sharing authority
+
+Scope: review Android private-data/backup boundary and remove the demonstrated
+unused broad FileProvider/path resource inherited from the scaffold. The manifest
+already disabled backups and excluded cloud/device-transfer data, so those rules
+are retained. No real key/credential file, VM, app install or provider was accessed.
+No OS Keystore/Keychain completion is claimed.
+
+The provider was unexported and no URI-sharing product call was found; this is
+removal of unnecessary potential authority, not evidence of an existing leak.
+ADR 0073 records the decision. The packager now checks each compiled manifest for
+provider absence, disabled backup flags and extraction-rule reference, and rejects
+the former broad path resource. It rejects the previous actual APK before copying
+its first output. Fresh `make package-android` succeeds for both architectures,
+including signature/ABI/SDK/native-library checks and the new manifest checks.
+The updated installation notes are recopied by the verified packager afterward.
+
+arm64-v8a artifact: 480914944 bytes; SHA-256
+`062372dfe0fe537adf127439af647305ddf2945ba35e6d2ed7e49e3dae9b6657`.
+x86_64 artifact: 489206525 bytes; SHA-256
+`f559bebb9f9d89f36a34f5652f7e76857a7e91d9ca46869672534b224722e2a5`.
+
+Evidence logs: `.lab/android-toolchain/storage-policy-old-apk.log` (expected refusal),
+`.lab/android-toolchain/apk-storage-build.log`,
+`.lab/android-toolchain/apk-storage-package.log`. Python syntax, checksum and diff
+checks pass; no unrelated application suites repeated. Public metadata keeps
+releaseCandidate=false and runtimeValidatedForTheseApks=false. Server archive is
+unchanged. No fresh runtime/backup-transfer evidence is implied.
+
+Next independent task: improve client handling of the new server's HTTP 429 so
+capacity refusal gives an actionable wait/retry message without clearing retained
+mutation scope, identity or idempotency. Android exact-artifact runtime continues
+to await the previously requested owned-emulator approval.
+
+
+## 2026-10-21 — Actionable native remote capacity errors
+
+Scope: phase-5 actionable operation errors for the new server admission contract.
+The four remote HTTP response decoders (ordinary reads, creation/recreation,
+snapshot/restore, deletion/recovery) now recognize 429 before requiring the bearer
+response marker. Admission is outside authentication, so a genuine capacity refusal
+has no marker. A fixed message asks the operator to wait at least one second and
+retain the same mutation key or read the known operation. This is not authentication
+proof, an upstream-body display, a parsed arbitrary retry instruction or automatic
+retry. No state transition or endpoint/permission changes were introduced.
+
+Verification: two focused native HTTPS tests pass, including all four decoders
+with/without the auth marker and private/malformed upstream content; a refused
+creation preserves plan/key/submitted state, blocks replacement and accepts an
+explicit identical-key/body retry. Affected auth-marker/status/oversize refusal
+checks, existing creation-error retention and known-operation-only status checks
+also pass. Logs `.lab/native-deps/client-capacity-check.log` and
+`.lab/native-deps/client-capacity-affected-check.log`. Rust formatting/diff pass.
+No unrelated server/browser/platform suites repeated; UI already renders native
+errors. No VM, real provider, credential or app installation operation.
+
+Limits: Linux native HTTPS tests, not new Android runtime proof. Existing APK
+snapshots now predate this client-source message change; server archive is unchanged.
+Next task: refresh Android delivery snapshots with this completed native diff, then
+execute exact-artifact acceptance after the already-requested owned-emulator approval.
+The rest of the roadmap, OS-backed key storage and real target gates remain open.
+
+
+## 2026-10-21 — Android delivery includes capacity refusal handling
+
+Scope: refresh both Android debug APKs for the completed native 429 diff. No new
+application behavior, dependencies, VM/emulator operation or app installation.
+`make package-android` passes: frontend, both native targets and APK assembly,
+shared signature/version/ABI/SDK/current embedded-native checks, compiled backup
+policy and unused-file-sharing-provider absence. Both native libraries contain the
+new fixed wait/retry message. SHA256SUMS verifies the exact delivered APKs.
+
+arm64-v8a: 480919344 bytes; SHA-256
+`9f8bc7401fa93331e38018fc5c8c0fb19e8eb0075fb8427e2e37520a2f65f201`.
+x86_64: 489215789 bytes; SHA-256
+`250be0b64cde070b2c17ae9e8e06bbad8e0a3ee9c1f440cfa81895c8d5d75491`.
+
+Artifacts/metadata/instructions are in `.lab/packages/android/`; log:
+`.lab/android-toolchain/apk-capacity-build.log`. Scoped diff review passes. No
+unmodified application tests repeated. Metadata still records releaseCandidate=false
+and runtimeValidatedForTheseApks=false: compilation/content does not establish
+Android behavior. Existing Linux native HTTPS evidence remains separately recorded.
+Server package is unchanged.
+
+Next independent task: exercise the documented server database backup/restore
+procedure against the current packaged process and isolated temporary state.
+Exact-current Android allocation/SSH runtime still awaits the previously requested
+owned-emulator creation/start approval, which automatic continuation does not grant.
+
+
+## 2026-10-21 — Exact-package stopped backup and restore acceptance
+
+Scope: extend the package fixture to execute the documented stopped-state copy and
+restore using three actual packaged processes. No product source/dependency, VM,
+provider, host account/service or credential change; no APK rebuild is needed.
+
+The first process creates a definition and an actual inventory-refresh operation
+through authenticated HTTP. With no provider configured, the worker records the
+expected provider_not_configured failure. After clean SIGTERM/exit, the fixture
+copies the complete temporary runtime directory to a private backup, including
+SQLite/lock files and an extra retained-file sentinel. The second process reads
+identical definition/operation/history and creates a later definition. After another
+clean exit the entire runtime directory is replaced by the backup. Before startup,
+all copied files match byte-for-byte and directory mode remains 0700.
+
+The third process reads the original definition and exact terminal operation/history,
+returns 404 for the post-backup definition, and returns the same terminal operation
+for its original idempotency key without creating another history entry. The extra
+retained file is restored; a post-backup file is absent. All owned processes and
+temporary files are cleaned up. Existing package hashes, staging/reinstall,
+authentication, unit syntax, admission/refill and invalid-token checks still pass
+as part of this changed package fixture, not unrelated application suites.
+
+Verification: `make check-server-package` with the current Linux archive passes;
+`.lab/server-backup-restore-check.log`. Python syntax and diff review pass. An initial
+fixture assertion expected a failure object rather than the actual serialized enum;
+corrected to the real string contract before the passing run. The release archive
+and APK hashes are unchanged. The archive already contains the tested stopped-copy
+instructions; source installation notes now add the precise evidence/limits.
+
+Limits: current-version state under the current OS user, not secret-config backup,
+service-account ownership/systemd sandbox, live backup, prior-version upgrade,
+uncertain provider mutation or VM recovery. Next task: previous-schema upgrade with
+the exact packaged server on a disposable database. Exact Android runtime remains
+pending the previously requested owned-emulator approval.
+
+
+## 2026-10-21 — Previous-schema migration in the packaged process
+
+Scope: opt-in `--previous-schema` package fixture, not product schema/source changes.
+The fixture constructs schema 14 with the actual checked-in migrations and inserts
+one saved definition (revision 3, exact YAML/hash) and terminal inventory operation.
+Other old tables exist but are empty; this does not cover populated mutation journals.
+A stopped pre-upgrade copy is saved before the first packaged process starts.
+
+The actual current archive migrates the database to schema 15 on startup. Across
+three processes (including the stopped-copy backup/restore scenario), old rows are
+retained exactly, legacy definition/API/hash/revision and terminal operation agree,
+original idempotency key returns the same operation, SQLite integrity/foreign keys
+pass, recreation_sources starts empty and its three triggers exist. An invalid
+lineage insert is rejected by validate_recreation_source and rolled back. The
+pre-upgrade copy's hash remains unchanged. Existing package staging/auth/admission
+checks run within this affected fixture and pass; no unrelated suites repeated.
+
+Verification: `python3 scripts/check-server-package.py <current archive> --previous-schema`
+passes; log `.lab/server-previous-schema-check.log`. Python syntax and diff review
+pass. No host unit/account, credentials, real provider, VM or Android changes.
+All temporary processes/files are cleaned up. Archive/APK hashes are unchanged.
+
+Limits: SQL fixture -> current packaged binary, not an actual older binary upgrade,
+populated provisioning/snapshot/restore/deletion journals, supported release matrix,
+service account migration or app upgrade. The phase-6 upgrade item stays open.
+Next task: current package must refuse a future schema without modifying its logical
+data/version; verify that failure mode on a separate disposable fixture. Exact
+Android runtime still awaits the previously requested owned-emulator approval.
+
+
+## 2026-10-21 — Future-schema fail-closed package acceptance
+
+Scope: opt-in `--future-schema-only` exact-package check, separate from the normal
+backup/restore and previous-schema modes. No application behavior, dependency,
+artifact, credential, service or VM changes.
+
+After existing archive/staging/unit checks, the fixture creates an owned schema-16
+SQLite database with an application ID, witness table and full-byte-range BLOB.
+Two actual current packaged-process starts both exit 1 with only the fixed
+server_failed/database_unavailable event and no token output. Exact database bytes,
+user_version, application_id, schema and witness rows remain unchanged; SQLite
+integrity passes and no rollback journal remains. Both failures reach the same
+storage check (the service lock is released), and the selected port can still be
+bound afterward. The companion lock pathname may be created; no claim is made
+that absolutely no filesystem entry changes.
+
+Verification: `python3 scripts/check-server-package.py <archive> --future-schema-only`
+passes; `.lab/server-future-schema-check.log`. Python syntax and diff review pass.
+Normal process/backup/previous-schema scenarios were not rerun: the new mode exits
+before those branches and does not change their behavior. No live configuration,
+private key, real provider or Android access. All temporary state is cleaned up;
+existing archive/APK hashes remain unchanged.
+
+Limits: synthetic future schema, not an actual later application release, concurrent
+writer or corrupt-database recovery. The full upgrade/security/platform roadmap is
+still open. Next task: reconcile remaining roadmap requirements with recorded
+source/artifact/runtime evidence and identify actual unfinished product work versus
+external acceptance gates. Exact-current Android runtime still awaits the already-
+requested owned-emulator approval; automatic continuation does not supply it.
+
+
+## 2026-10-21 — Roadmap readiness review identifies missing remote controls
+
+Scope: compare product/MVP/phase/security/testing requirements with current source
+and recorded evidence, without rerunning unmodified suites or declaring completion.
+`docs/roadmap-status.md` maps every §8 MVP outcome, phases 0–6 and additional
+schema/API/security/platform/local-provider obligations to evidence and open work.
+No percentage or closure based on counts is used.
+
+The primary demonstrated product gap is remote existing-VM start/shutdown:
+RemoteConnection renders no lifecycle action, and LifecycleActions/control_plane
+uses a local port/loopback rather than the retained HTTPS profile. Remote rows also
+lack explicit live status/detail and existing-VM SSH handoff. These are prioritized
+ahead of secondary refinements and unchanged artifact rebuilds. Server lifecycle
+API/executor and local native tests already provide a working contract to reuse.
+Other actual gaps include rejected package/automatic-snapshot declarations,
+OS-backed secret storage/platform implementation and recorded local-provider scope.
+Real endpoint/guest/storage, exact APK, other-platform and installed service gates
+remain separate and open. Conditional/unimplemented definition update/delete API
+proposals are explicitly tracked rather than silently counted complete.
+
+Verification: inspected current RemoteConnection/LifecycleActions/control_plane,
+server minimum-create gate, lifecycle API, roadmap, platform evidence, phase-0 and
+ADR 0062; document content/path and diff review only. No credential, provider, VM,
+artifact or product source change. Next slice: native retained remote lifecycle
+preflight/clear with fixed scoped HTTPS paths and validation, no provider mutation.
+Follow with confirmed same-key submission/status/recovery and remote UI; the full
+roadmap is retained. Existing emulator approval question is still pending.
+
+
+## 2026-10-21 — Native remote lifecycle preparation and clear
+
+Scope: first functional remote start/shutdown slice, fixed GET review only.
+Adds lifecycle.rs native module, retained connection state, two main-only commands,
+manifest/capability grants and tests. No server/API/provider mutation, UI or dependency
+change. Selected target/action/request key are validated before network access.
+Fixed registered-instance detail and lifecycle-preflight reads bind definition hash,
+instance/scope/node/VMID/marker/digest; five unique known checks and power/QMP-derived
+aggregates must agree. Failed/unknown/disabled reports remain review evidence, not
+consent. Untrusted server check messages are stripped.
+
+Monotonic preparation time is retained for the next confirmation slice. Wrong-key
+clear is refused; matching clear invalidates outstanding reads; reconnect/disconnect
+resets state. Concurrent preparation is refused. Generation/epoch/key checks after
+the first response prevent continuation after clear/disconnect, and final checks
+prevent stale evidence from reappearing. No arbitrary path/URL or write command.
+
+Verification: five native HTTPS tests pass, covering fixed GETs, validation/refusals,
+blocked states, retention/clear and overlapping/disconnect races. One shared capacity
+regression passes. Logs `.lab/native-deps/remote-lifecycle-review-check.log` and
+`.lab/native-deps/remote-lifecycle-shared-check.log`. Native library compilation,
+70-command main-only permission drift, changed Rust formatting and diff review pass.
+No unrelated server/browser/Android suites repeated. ADR 0074 records the contract.
+
+Limits: Linux native protocol evidence only; no actual UI/native-window/Android or
+real target behavior for these new commands. Existing delivered APKs predate this
+slice and remain snapshots; avoid rebuilding before the complete lifecycle flow.
+Next slice: explicit fresh-review confirmation, retained same-key/body retry and
+matching known-operation GET status. Then remote UI/recovery/native integration.
+The full roadmap and earlier pending Android emulator/real-target approvals remain.
+
+
+## 2026-10-21 — Native confirmed remote lifecycle and status
+
+Scope: add explicit confirmation and known-operation status to retained remote
+start/shutdown review. Reuses local LifecycleApproval/LifecycleOperation validation
+through narrowly crate-visible fields/functions, avoiding another operation schema.
+Shared bounded response transport is reused and its interrupted-action wording is
+made generic. Two commands join the main-only ACL (72 total).
+
+First submission requires consent, enabled/passed selected action and review age
+under 120 monotonic seconds. The complete approval is built from retained target/
+definition/digest/action and sent with the retained key to fixed start/shutdown POST.
+Unknown replies preserve submitted scope and permit only explicit same-key/body
+retry; review replacement and nonterminal clear are blocked. Once ID is known,
+confirmation/status issue GET only. Matching ID/action/instance/task/result/power
+validation uses the existing local validator, with an additional impossible-queued-
+provider-task guard. Uncertain and known-task interruption stay retained; safe
+terminal evidence permits clear. Inflight overlap and stale disconnected replies
+are refused without restoring state. No auto retry or real provider mutation.
+
+Verification: nine native HTTPS lifecycle tests pass, including both actions,
+malformed reply after complete request receipt, identical retry, GET-only confirmation
+and explicit status reads, fresh/consent/capability refusal, result mismatch and
+submission/disconnect races. Three affected local lifecycle and two shared capacity
+checks pass. Logs `.lab/native-deps/remote-lifecycle-confirm-check.log` and
+`.lab/native-deps/remote-lifecycle-confirm-affected.log`. Native library compilation,
+permission drift, changed Rust formatting and diff review pass; no unrelated suites.
+
+Limits: Linux native protocol tests only. UI, saved operation recovery after losing
+native state, actual native window/worker and Android/real-target acceptance remain
+open. Existing server/APK archives are unchanged; APKs predate this unfinished feature.
+Next slice: remote lifecycle review/confirmation/status UI with explicit target/action,
+mutation lock, same-request retry and separate power-vs-readiness wording. Then add
+saved recovery and actual native integration before Android artifact refresh.
+
+
+## 2026-10-21 — Remote workspace lifecycle controls
+
+Scope: remote start/graceful-shutdown selection and React retained review/consent/
+retry/status flow. Adds RemoteLifecycle and mounts one selected action beside existing
+remote workflows. Selection itself makes no request; only registered rows expose the
+buttons. Reviews bind target/action/hash/digest/marker/observation, show known check
+labels and disabled/unknown prerequisites, and start with unchecked consent.
+
+Review/inflight/submitted state locks competing lifecycle/snapshot/restore/delete/
+recreate/create controls. Submission IPC carries only connection ID, retained key
+and explicit consent; unknown replies retain the same request and disable clearing.
+A known operation removes retry and exposes explicit status reads. Matching ID/kind/
+instance and task/result/scope/power evidence are required before success; uncertain
+or known-task interrupted work cannot be acknowledged. Power state never implies
+guest/SSH readiness, and graceful shutdown warns about unsaved work. No SSH handoff
+is added from power-state evidence. Terminal acknowledgement clears consent/key.
+
+Fixed native pre-submission expiry/blocked errors reset unsubmitted/unchecked state
+so cancellation/review remains possible; unknown transport/server errors stay retained.
+Cleanup/generation guards discard stale replies after selection/disconnect/reconnect.
+
+Verification: frontend build passes; focused Firefox --remote-lifecycle simulated-IPC
+flow passes both actions, capability/unknown/target refusals, expiry before submission,
+unchecked consent, cross-action target lock, identical unknown retry, known reads,
+unrelated success refusal, uncertain retention, terminal acknowledgement and stale
+reconnect. Shared parent --recreation and --snapshot-create checks also pass, selected
+because target clearing/locks changed. Logs `.lab/remote-lifecycle-ui-build.log`,
+`.lab/remote-lifecycle-browser-check.log`, and remote-lifecycle-parent-*-check.log.
+JS syntax and diff review pass. No unrelated Rust/server/platform suites repeated.
+
+Limits: simulated IPC in Firefox, not native-window/server/worker/provider or Android
+runtime for the new controls. Existing APK snapshots are unchanged and predate this
+feature. Next slice: actual Linux native remote start/shutdown against the generated
+HTTPS provider with same-key loss recovery and matching power evidence. Saved native
+lifecycle recovery remains open; refresh APKs after integrated acceptance. No real
+VM/provider operation or credential access; earlier emulator/real-target approvals
+remain pending and are not inferred from continuation.
+
+
+## 2026-10-21 — Actual remote lifecycle native integration
+
+Scope: new --remote-lifecycle mode in the owned Linux fixture and its native driver.
+No product behavior/schema/dependency, host installation, real VM or credential
+change. The example registers the four production remote lifecycle commands and
+loads the embedded real React frontend. Existing owned TLS/Xvfb/sandbox/process
+cleanup remains in use; no IPC or local control-plane command substitutes for the
+remote workflow.
+
+The UI connects with verified generated HTTPS/CA and bearer authentication, loads
+the workspace, selects start, reviews/cancels/reviews, confirms, receives a deliberately
+lost accepted reply and explicitly retries. It then reads known operation status and
+acknowledges success before repeating for graceful shutdown. Each retry has identical
+API path/key/body, and the two distinct actions use distinct keys. Only four action
+HTTP POSTs occur (two per key); known operation GETs are observed independently.
+Exactly one provider start and one graceful shutdown occur, with bounded shutdown
+options and no force stop. Two persisted succeeded jobs show known successful tasks,
+matching instance/scope/node/VMID and requested running/stopped states. The instance
+association remains unchanged. Power never claims guest/SSH readiness.
+
+Verification: embedded native example builds and actual --remote-lifecycle passes;
+logs `.lab/native-deps/remote-lifecycle-ui-build.log` and
+`.lab/native-deps/remote-lifecycle-ui-check.log`. The shared --snapshot-restore proxy
+scenario also passes because the accepted-response loss branch now handles one
+lost reply per lifecycle action; log
+`.lab/native-deps/remote-lifecycle-shared-proxy-check.log`. JS/Python syntax, example formatting and diff review
+are scoped to the fixture. No unrelated browser/Rust/server suites repeated.
+
+Limits: isolated Linux/generated-provider proof, not a real VM, Android runtime,
+installed startup or saved lifecycle recovery after native state loss. Current APK
+snapshots remain unchanged and predate the feature. Next slice: saved lifecycle
+GET recovery with no restored consent, then include the completed flow in Android
+artifacts. Previously requested emulator/real-target approvals remain pending.
+
+
+## 2026-10-21 — Server saved lifecycle history and detail
+
+Scope: instance-scoped server/store GET history/detail for recorded start/shutdown.
+No provider, native/UI, schema, dependency or VM behavior change. History resolves
+registered/archived instance scope, filters lifecycle kinds before newest-100 limit,
+sorts by created_at/id descending and validates each job. Detail resolves matching
+instance/kind before parsing intent; corrupt unrelated data returns the same 404.
+Returns original saved target/action, public operation and dispatch-started marker;
+never restores confirmation, request key or task identifier. Provider configuration
+and all write flags may be absent.
+
+Durable lifecycle job validation is reused. Saved approval JSON is now capped at
+4096 bytes in SQL before loading, matching the API contract and affecting worker/
+job-reader callers too. Success requires matching saved action/instance/scope/task/
+power/target and typed result serialization strips unexpected fields. Matching
+corruption/oversize yields fixed 503 without journal content; history fails closed.
+Queued/running/uncertain evidence is read unchanged and never claimed or enqueued.
+
+Verification: six focused HTTP-router/SQLite tests pass, including reopened saved
+start/shutdown on an archived fixture, no-provider/write-off reads, unchanged jobs,
+wrong instance/kind/ID and wrapped-auth refusal, pre-limit filtering/order/bounds,
+corruption/oversize isolation, result sanitization and wrong-power refusal. Nine
+shared lifecycle storage tests pass for the bounded job-reader change. Logs:
+`.lab/lifecycle-recovery-api-check.log`, `.lab/lifecycle-recovery-storage-check.log`.
+Rust formatting/diff review passes; no unrelated suites repeated. Initial test
+corruption used invalid JSON and hit SQLite's existing CHECK, so the fixture was
+corrected to valid-but-damaged JSON without disabling constraints. Initial result
+decoding compilation needed Deserialize on the typed evidence; fixed before passes.
+
+Limits: router/store reopen, not actual binary/app restart, native recovery, Android
+or real-provider evidence. Existing server archive now predates these GET endpoints;
+APK snapshots also predate the remote lifecycle feature. Next slice: stateless native
+fixed history/detail GET readers and validation; then recovery UI and actual restart
+integration before refreshing delivery artifacts. All earlier emulator/real-target
+approval requirements remain pending.
+
+
+## 2026-10-21 — Stateless native saved lifecycle readers
+
+Scope: fixed history/detail HTTPS commands through the retained remote profile.
+Adds lifecycle_recovery module and two local-main grants (74 production commands).
+Neither reader mutates retained lifecycle state or constructs approval/consent.
+Input IDs are canonical before network access; generation checks discard stale
+responses. History validates selected instance, latest-100 bound, unique IDs,
+sorted metadata, typed action/status, failure allowlist and basic outcome coherence.
+Detail validates saved target shape/definition hash/instance/known operation/action,
+dispatch-task consistency and matching task/power result. Historical provider scope
+is retained rather than replaced with current configuration. Unknown work remains
+historical evidence; no live-state, readiness or SSH claim is introduced.
+
+Existing local/remote lifecycle approval validation now delegates outcome matching
+to a pure target/action evidence function; native recovery reuses that function
+without fabricating confirmation/digest fields. Failure allowlisting is likewise
+shared. Existing submission callers retain their original approval checks.
+
+Verification: six focused native generated-HTTPS tests pass for exact GET paths,
+no request-key/consent exposure, history bounds/duplicates/order/status, unrelated
+result refusal, uncertainty/extra-field sanitization, auth/marker/capacity/size
+refusal, and disconnected response suppression. Three affected local lifecycle
+and nine affected remote lifecycle tests pass for the shared-validator extraction.
+Logs `.lab/native-deps/lifecycle-recovery-native-check.log` and
+`.lab/native-deps/lifecycle-recovery-native-affected.log`. Native library compilation,
+command-grant drift, changed Rust formatting and diff review pass. No unrelated
+server/browser/Android suites repeated; no VM, provider or credential access.
+
+Limits: Linux native protocol only; recovery UI and actual app/server restart are
+not proven yet. Server archive/APKs unchanged and predate the unfinished recovery
+feature. Next slice: explicit lifecycle history/manual-ID/refresh UI with historical
+wording, no consent/SSH action and stale-response guards. Then actual restart
+integration before delivery refresh. Earlier emulator/real-target approvals remain
+pending and are not inferred from continuation.
+
+
+## 2026-10-21 — Saved lifecycle recovery UI
+
+Scope: RemoteLifecycleRecovery panel on registered and archived remote rows, plus
+focused browser fixture. Explicit history/list entry/manual-ID/refresh commands only;
+no write, consent, retry-action, SSH action or persistence. Historical target/action/
+status are displayed separately from current runtime truth. Recorded success requires
+matching instance/action/kind/known task/target/scope/power evidence; uncertain work
+never becomes successful. Errors remain distinct from empty history.
+
+The UI validates target/IDs and result consistency, discards detail after edited ID,
+and invalidates history/detail on cleanup/reconnect. No operation ID or confirmation
+is automatically restored. Unique form labels support multiple environment panels.
+
+Verification: frontend build passes; --lifecycle-recovery real React/Firefox with
+simulated IPC passes registered/archived controls, explicit reads, history-empty/error
+separation, saved target context, no consent/retry/SSH, uncertainty, wrong-instance/
+false-success refusal, invalid ID blocking, historical shutdown evidence, edited-ID
+stale reply and reconnect reset. Logs `.lab/lifecycle-recovery-ui-build.log`,
+`.lab/lifecycle-recovery-browser-check.log`. Shared parent --remote-lifecycle and
+--recreation-recovery scenarios also pass for the changed environment list; logs
+`.lab/lifecycle-recovery-parent-action-check.log` and
+`.lab/lifecycle-recovery-parent-history-check.log`.
+JS syntax/diff review is scoped here; no unrelated Rust/server/Android suites.
+
+Limits: simulated IPC, not new actual native-window/app-server restart or Android
+runtime evidence. Existing server/APK archives unchanged and predate this recovery
+path. Next slice: actual isolated Linux app/server restart recovery with provider
+removed, all write flags false, GET-only reads and unchanged operation/identity/provider
+counters. Then refresh the server/Android delivery artifacts. Earlier emulator and
+real-target approvals remain pending.
+
+
+## 2026-10-21 — Actual native lifecycle app/server restart recovery
+
+Scope: --lifecycle-recovery owned integration mode and second-app driver. No product
+behavior/schema/dependency, real VM, credential or host service change. The first
+actual native app uses the already-proven remote lifecycle journey: one provider
+start/shutdown each, lost accepted API replies and identical-key/body retries.
+The fixture snapshots both full operations and provider counters, then cleanly
+restarts the actual server on the same DB/new port with all five writes false and
+provider/catalog absent. A different native app process begins without token, ID,
+review or consent; it explicitly connects and loads recorded lifecycle history.
+
+Both historical action details, manual copied-ID lookup and refresh pass through
+production native HTTPS commands and the actual recovery panel. Recovery proxy
+traffic is GET only. Both full operation records, saved instance and definition,
+and provider read/power/task/write/running/task-reference counters stay unchanged.
+No confirmation or SSH action appears in the history panel. Recorded start/running
+is labelled historical while the current power state remains unobserved by recovery.
+
+Verification: current server and embedded native example builds pass; combined
+actual --lifecycle-recovery passes. Logs `.lab/native-deps/lifecycle-recovery-server-build.log`,
+`.lab/native-deps/lifecycle-recovery-native-build.log`,
+`.lab/native-deps/lifecycle-recovery-ui-check.log`. Shared --recreation-recovery is
+also passes because the restart launcher now supports two lifecycle jobs as well as
+single-job recovery; log `.lab/native-deps/lifecycle-recovery-shared-restart-check.log`. JS/Python syntax, example formatting and diff review are scoped
+here; no unrelated suites repeated. Owned processes/temp state are cleaned up and
+TLS/WebKit sandboxing remain enabled.
+
+Limits: clean isolated Linux/generated-provider restart, not crash/real infrastructure,
+Android runtime, installed startup or whole-roadmap completion. Server/APK archives
+remain unchanged snapshots predating the recovery feature. Next slice: refresh the
+Linux server and Android delivery artifacts with this integrated feature and exact
+package checks. Exact Android execution/real target writes still require the earlier
+pending concrete approvals, which continuation does not grant.
+
+
+## 2026-10-21 — Deliver remote lifecycle and saved recovery artifacts
+
+Scope: refresh optimized Linux server archive and both Android debug APKs after the
+complete remote lifecycle/history/restart feature. No new application behavior,
+dependency, VM, credential, host service or app installation change.
+
+`make package-server` succeeds. The exact archive passes staging/reinstall/state
+preservation, unit syntax/token guard, actual packaged authentication/admission/
+refill, restart/persistence, stopped-directory backup/restore/history and invalid-token
+refusal. The package fixture additionally verifies that authenticated missing-scope
+requests reach both new lifecycle recovery handlers (their specific 404 contract)
+without a provider. This binds the endpoints to this artifact; actual native remote
+start/shutdown/restart evidence remains the separately recorded generated-provider
+Linux debug-process journey, not a new real infrastructure or optimized-worker claim.
+
+Server archive: 5375491 bytes; SHA-256
+`72d3c5fef4cf58fab9c7fd865719b4d65cc19b290ce95306b8036eaa7a3aaedb`.
+
+`make package-android` succeeds for ARM64/x86_64. Packager checks both signatures,
+shared signer, manifest/ABI/SDK, backup/sharing policy and embedded native hashes
+against the current target builds. Generated capabilities match source: local main
+only, all 74 command permission identifiers present in both native libraries.
+arm64-v8a: 482803600 bytes; SHA-256
+`12d0f26c4a4c5279440dc238c85ac33c4870be613912b696e48efb54ec937e99`.
+x86_64: 491117869 bytes; SHA-256
+`e8baa50b834500791d409a2e456a89bef163e020ccaaec4a7e1315a10c54a33a`.
+
+Artifacts/public instructions/checksums are refreshed in `.lab/packages/` and its
+android subdirectory. Logs `.lab/lifecycle-delivery-server-build.log`,
+`.lab/lifecycle-delivery-server-check.log`,
+`.lab/android-toolchain/lifecycle-delivery-android-build.log`. Exact checksum,
+permission drift, Python syntax and diff checks pass. No unrelated application
+suites repeated. Metadata remains releaseCandidate=false and, for APKs,
+runtimeValidatedForTheseApks=false. Earlier APK runtime evidence does not transfer.
+
+Limits: no exact-current Android execution, real target/provider/guest proof, systemd
+sandbox/deployment TLS or release signing. Next source slice: explicit scoped live
+status/detail read for an existing remote VM, without inferring guest/SSH readiness
+from power. Current emulator creation/start and real-target write approvals remain
+pending; automatic continuation supplies neither.
+
+
+## 2026-10-21 — Native scoped remote instance power read
+
+Scope: explicit native read for existing registered remote target, reusing the
+lifecycle Target shape through parent-module visibility rather than another model.
+Adds one main-only command (75 total) and fixed InstanceStatus read path with a
+4096-byte response cap. Server source/API is unchanged. The returned instance ID,
+provider scope, node and VMID must match selection; power/QMP states are bounded
+to the existing server vocabulary. Extra fields such as guestReady are stripped.
+No prepared intent, consent, key, lifecycle state or observation job is installed.
+
+Verification: five focused native generated-HTTPS tests pass for exact GET/no request
+key, running/stopped/paused/unknown semantics without readiness inference, target/
+state mismatch, invalid inputs before transport, 401/429/404/503/missing marker/
+response-size refusal without body/token echo, and stale disconnected response.
+Log `.lab/native-deps/remote-instance-status-check.log`. Native library compilation,
+75-command main-only grant drift, changed Rust formatting and diff review pass.
+No unrelated application suites repeated; no VM/provider/credential change.
+
+Limits: Linux native protocol only, no new UI/native-window/Android/real VM evidence.
+Power read does not attest ownership marker, guest initialization/IP, SSH access or
+host trust. Existing server archive is unchanged; Android snapshots predate this
+in-progress feature. Next slice: explicit read/refresh UI on registered remote rows,
+show observation time and possible staleness, clear prior result on errors/reconnect,
+and never infer SSH readiness. Then actual native integration before APK refresh.
+All earlier real-target/emulator approvals remain pending.
+
+
+## 2026-10-21 — Explicit remote power observation UI
+
+Scope: RemoteInstanceStatus on registered remote rows only; no backend/native/
+dependency changes. Loading workspace makes no status request. Explicit read/refresh
+passes the selected instance/scope/node/VMID and validates the returned target,
+power and normalized QMP before display. Shows local read-completion ISO time and
+possible staleness; no ownership/guest/SSH readiness inference or automatic action.
+The old unconditional live-state-not-checked row text is replaced by registered
+plus the panel's actual observed/unobserved qualification.
+
+A new read clears old evidence. Failed/wrong-target replies leave power unobserved.
+Connection/target cleanup and mutation-review lock transitions invalidate pending
+and displayed results; replies from before an action review cannot reappear after
+cancellation. Archived rows have history but no live-read control.
+
+Verification: frontend build and --remote-power real React/Firefox simulated-IPC
+scenario pass for explicit reads, binding, running/paused/unknown distinction,
+time/staleness, error clearing, wrong-target rejection, mutation-review race,
+reconnect suppression and no write/SSH. Logs `.lab/remote-power-ui-build.log`,
+`.lab/remote-power-browser-check.log`. Shared --remote-connection and --remote-lifecycle
+also pass for environment-row/qualification/lock changes; logs
+`.lab/remote-power-parent-connection-check.log` and
+`.lab/remote-power-parent-lifecycle-check.log`. JS syntax/diff review
+is scoped here; no unrelated Rust/server/Android suites repeated.
+
+Limits: browser/simulated IPC, not new actual native-window/provider or Android proof.
+Existing delivery artifacts unchanged and predate this in-progress power-read feature.
+Next slice: actual Linux native HTTPS/status/provider read integration before APK
+refresh, checking explicit post-action refresh and unchanged provider mutation count.
+All real-target/emulator approvals remain pending.
+
+
+## 2026-10-21 — Actual native explicit power observation
+
+Scope: extend the owned remote lifecycle native driver with three explicit status
+reads and the production status command registration; no product/server/dependency
+change. The actual WebView/native HTTPS/server/provider path reads stopped before
+any action, running after acknowledged start, and stopped after acknowledged graceful
+shutdown. Relay asserts exact instance/scope/node/VMID and sequence. The UI shows
+read completion time, staleness and no-readiness/ownership semantics; action review
+removes old power evidence and disables reads. Reads do not add mutations: exactly
+one provider start/one shutdown and four same-key-paired API POSTs remain.
+
+Verification: embedded native example build and actual --remote-lifecycle pass;
+logs `.lab/native-deps/remote-power-native-build.log` and
+`.lab/native-deps/remote-power-native-ui-check.log`. --lifecycle-recovery also passes
+for the shared driver, proving newly mounted power controls do not contact the
+provider during GET-only historical recovery with writes/provider off; log
+`.lab/native-deps/remote-power-restart-check.log`. JS/Python
+syntax, example formatting and diff review are scoped here. No unrelated suites.
+
+Limits: isolated Linux/generated-provider proof, not real VM/guest/SSH identity,
+Android runtime or deployed service. Existing archives unchanged: server product
+code is unaffected; APKs predate this completed client power-read feature. Next
+slice: rebuild/package Android snapshots only, with exact native/permission/manifest
+checks; no reason to rebuild the unchanged server. All pending emulator/real-target
+approval requirements remain unchanged.
+
+
+## 2026-10-21 — Android delivery includes explicit remote power reads
+
+Scope: rebuild/package both Android debug targets for the completed scoped power
+read/refresh feature. No new product behavior, VM/emulator, installation, credential,
+server build or dependency change. `make package-android` succeeds with the owned
+SDK/JDK/NDK/signing prefix. Both APKs pass signature/shared signer, package/version/
+ABI/SDK, backup/sharing manifest policy and exact embedded native-library checks.
+Generated capability equals reviewed source (local main only), and all 75 command
+permission identifiers occur in both native libraries.
+
+arm64-v8a: 482823920 bytes; SHA-256
+`296893d8fc7574778c6e7c039330e0367390c214d0c9707e079c254abe2e871d`.
+x86_64: 491267029 bytes; SHA-256
+`0c3f0b83f920c0e21e3749dfae5c0b5b6037bd2f066536a6154839faf81c2c07`.
+
+Artifacts/metadata/checksums/instructions are refreshed in `.lab/packages/android/`.
+Log `.lab/android-toolchain/power-delivery-build.log`. Exact checksums, command
+permission drift and scoped diff review pass; no unrelated application tests rerun.
+The unchanged Linux server archive still hashes to
+`72d3c5fef4cf58fab9c7fd865719b4d65cc19b290ce95306b8036eaa7a3aaedb`.
+
+Limits: compilation/content only for these APKs. Metadata keeps releaseCandidate=false
+and runtimeValidatedForTheseApks=false; earlier Android runtime evidence does not
+transfer. The latest feature's actual Linux native evidence remains separately
+recorded. Exact Android runtime, real provider/guest/deployment and release gates
+remain open. Next source slice: retained definition/detail inspection for an existing
+remote instance, binding its exact YAML/hash/identity to the selected row without
+claiming live resources or SSH readiness. Pending emulator/real-target approvals
+are unchanged.
+
+
+## 2026-10-21 — Native retained remote instance detail
+
+Scope: one fixed stored-instance GET command, no server/schema/dependency change.
+Reuses lifecycle Target and the existing Environment read path. Selected instance/
+provider scope/node/VMID/name are validated before transport and against detail.
+Registered and archived associations are supported. Positive revision, nonempty
+YAML up to 64 KiB UTF-8 bytes and exact SHA-256/hash equality are required. Only
+typed public detail fields return; original YAML bytes are preserved and damaged
+content is not echoed in errors. No provider read, plan, consent or mutation is
+created by this detail command. Generic saved-instance read errors now describe
+that read rather than lifecycle prerequisites.
+
+Verification: five focused native generated-HTTPS tests pass for active/archived
+exact path/YAML/hash/revision, metadata/target/status/content mismatch, byte bounds
+including multibyte text, input rejection before network, 401/429/404/503/missing
+marker/size refusal without private content echo, extra-field stripping and stale
+disconnect. Log `.lab/native-deps/remote-instance-detail-check.log`. Native library
+compilation, 76-command main-only grant drift, changed Rust formatting and diff
+review pass; no unrelated suites repeated. No VM/credential/real-provider access.
+
+Limits: native verifies stored byte/metadata consistency, not YAML schema validity
+independently, current resource equality, current archived-VM absence, ownership
+or guest/SSH readiness. UI and actual native-window/Android integration are still
+open. Existing delivered APKs remain unchanged snapshots preceding this in-progress
+feature; server archive is unaffected. Next slice: explicit saved-detail/YAML UI,
+escaped literal display, revision/hash and desired-versus-observed distinction;
+then native integration before Android refresh. Pending target approvals remain.
+
+
+## 2026-10-21 — Retained definition inspection UI
+
+Scope: RemoteInstanceDetail for registered and archived remote rows, explicit read/
+refresh/hide. Displays definition revision/hash, saved association state/target and
+literal YAML. React text children prevent HTML-looking YAML from becoming markup;
+code wraps and scrolls within a bounded height. Desired declaration is explicitly
+separate from observed current resources/existence/guest/SSH state. No editing,
+consent, submission or SSH flow is attached to the panel.
+
+UI guards selection/metadata/status/revision/byte bounds. Exact YAML SHA-256 checking
+remains native. New reads clear previous evidence; errors, target/association rebind
+or connection cleanup discard stale results. Hide clears local content only. Loading
+a workspace does not fetch detail automatically. No new dependency or server change.
+
+Verification: frontend build and --remote-detail real React/Firefox simulated-IPC
+scenario pass for active/archived reads, literal HTML-looking YAML, revision/hash,
+desired/observed qualification, failed refresh, target/revision/hash-shape refusal,
+workspace rebind/reconnect suppression, hide and no mutation. Logs:
+`.lab/remote-detail-ui-build.log`, `.lab/remote-detail-browser-check.log`.
+Adjacent --remote-power and --recreation-recovery also pass for shared row changes;
+logs `.lab/remote-detail-parent-power-check.log` and
+`.lab/remote-detail-parent-history-check.log`.
+JS syntax/diff review is scoped; no unrelated native/server/Android suites repeated.
+
+Limits: mock IPC does not prove this UI's actual native command/hash/server path.
+APK snapshots unchanged and predate this in-progress feature; server code/archive
+unaffected. Next slice: actual native/server detail inspection, exact retained YAML/
+hash/revision and no provider access, including archived/no-provider contexts where
+appropriate. Then Android delivery refresh. Pending external target approvals remain.
+
+
+## 2026-10-21 — Actual native retained-definition inspection
+
+Scope: production detail command in the owned native example and shared acceptance
+helper invoked by lifecycle/recreation second-app recovery. Adds a public instance-ID
+DOM attribute to scope selection when archived/new associations reuse a VMID. No
+server/dependency/VM/credential change; frontend rebuilt for that attribute.
+
+Each second actual app runs against the restarted real server with provider/catalog
+absent and five write flags false. The helper explicitly reads and refreshes the
+selected registered association (lifecycle) or archived source (recreation), checks
+literal YAML bytes/hash/revision/name/status against the original stored record,
+verifies desired-versus-observed wording and absence of consent/SSH, then hides it.
+Production native SHA-256 validation runs on the actual server response, not IPC
+mocks. GET-only recovery, unchanged full operation/instance/definition and provider
+read/task/power/write counters still pass. Drivers are confined to the owned example.
+
+Verification: frontend and embedded native example builds pass; both augmented
+actual --lifecycle-recovery and --recreation-recovery pass. Logs:
+`.lab/native-deps/instance-detail-frontend-build.log`,
+`.lab/native-deps/instance-detail-native-build.log`,
+`.lab/native-deps/instance-detail-active-ui-check.log`,
+`.lab/native-deps/instance-detail-archived-ui-check.log`. JS/Python syntax, example
+formatting and diff review pass; no unrelated suites repeated. All owned processes
+and temporary state cleaned up; TLS/SSH policies and WebKit sandbox unchanged.
+
+Limits: isolated Linux/restarted-service/generated infrastructure, not Android or
+real VM/guest resources/ownership. Existing delivered APKs unchanged and predate this
+completed client feature; server archive unaffected. Next slice: rebuild/package
+both Android targets with exact artifact checks, without rebuilding the unchanged
+server. Earlier emulator/real-target approvals remain pending.
+
+
+## 2026-10-21 — Android delivery includes retained definition inspection
+
+Scope: rebuild/package Android ARM64/x86_64 after the completed definition/detail
+feature. No server build, new behavior/dependency, VM/emulator operation, credential
+access or app installation. `make package-android` succeeds with the owned toolchain.
+Signatures/shared signer, manifests/ABI/SDK, backup/sharing policy and exact embedded
+native-library hashes pass. Generated local-main capability matches source; all 76
+command permission identifiers are present in both target libraries.
+
+arm64-v8a: 483360840 bytes; SHA-256
+`db832f81e5e9bec225485d572c66fe0d548f0323b8617ee62419c0cf9ac4c7ed`.
+x86_64: 491610029 bytes; SHA-256
+`ce49dbdea95d0d2394f0f17fc5f2008efcc110a090b4334dfa1d45edf0214d83`.
+
+Artifacts/public metadata/checksums/instructions are refreshed in `.lab/packages/android/`.
+Log `.lab/android-toolchain/detail-delivery-build.log`. Checksums, command-grant drift
+and diff review pass; no unrelated tests rerun. The unchanged server archive still
+has SHA-256 `72d3c5fef4cf58fab9c7fd865719b4d65cc19b290ce95306b8036eaa7a3aaedb`.
+Metadata remains releaseCandidate=false and runtimeValidatedForTheseApks=false;
+compilation/content is not fresh Android runtime proof. Earlier Linux native/server
+inspection evidence is separately recorded.
+
+Next source slice: allow explicit SSH preparation from an existing registered remote
+row using a manually supplied reachable address/account and the existing strict
+host-trust flow. Do not infer guest address/identity/readiness from power or saved
+YAML, and do not auto-connect or unlock an identity. Real target and exact-current
+Android acceptance still await the earlier pending concrete approvals.
+
+
+## 2026-10-21 — Manual SSH entry for existing remote associations
+
+Scope: existing registered-row Prepare SSH control and selected-association context
+in RemoteConnection, reusing SshHostTrust. No native/server/dependency change.
+Endpoint/account begin empty; port defaults to editable 22. The UI explicitly says
+address/readiness are not discovered from power/YAML and the association does not
+verify the operator-supplied endpoint. Selection does not inspect, trust, unlock,
+authenticate or open a shell. Existing endpoint-scoped strict host trust is required.
+
+Manual reselection creates a fresh trust component/context. Existing cleanup cancels
+pending challenges and discards late replies; prior account/auth state is not reused.
+A successful workspace refresh clearing/archiving/rebinding the selected row resets
+manual context. Explicit disconnect/reconnect resets it. A failed workspace read
+alone does not close a direct SSH context. Mutation-review locks disable selection.
+Creation/recreation handoffs retain their existing prefilled ready-guest path.
+
+Verification: frontend build and --existing-ssh real React/Firefox simulated-IPC
+flow pass for registered-only entry, empty endpoint/account, explicit port, no auto
+handshake/login, invalid URL, independent unknown-key confirmation/fresh inspection,
+changed-key refusal, reselection/stale cancellation, archival cleanup and reconnect.
+No identity unlock, authentication or session is invoked by this preparation test.
+Logs `.lab/existing-ssh-ui-build.log`, `.lab/existing-ssh-browser-check.log`.
+--remote-connection and --recreation handoff scenarios also pass for shared target
+state/rendering; logs `.lab/existing-ssh-create-handoff-check.log` and
+`.lab/existing-ssh-recreation-handoff-check.log`. JS syntax/diff review is scoped here; no unrelated native/server/
+Android suites rerun. ADR 0078 records trust/context semantics.
+
+Limits: simulated IPC only; no actual native host handshake, guest or Android proof
+for this entry. Existing artifacts unchanged and predate the feature. Next slice:
+actual native manual host-trust UI against an owned generated SSH peer, with no
+personal keys/agent, no VM, no automatic login and explicit fingerprint consent.
+Then appropriate full terminal/Android delivery work; earlier concrete approvals
+remain pending.
+
+
+## 2026-10-21 — Actual existing-instance manual native host trust
+
+Scope: --manual-ssh owned native fixture, production SSH host command wiring and
+manual preparation driver. No product/server/dependency change. The example includes
+the existing generated SSH fixture with PTY/OS shell disabled, an independently
+supplied fingerprint and fresh temporary trust directory. No agent or identity/
+authentication/session handlers are registered. Production capability queries replace
+older example stubs; Linux agent support remains false. Other modes use the owned
+XDG application path for their unused host manager.
+
+Actual React remote-row selection begins with blank endpoint/account, uses the
+explicit loopback host/port and production inspect/confirm/cancel commands. Unknown
+key requires checkbox confirmation; a fresh inspection enables account selection;
+owned key rotation then produces changed-key refusal with no trust/login control.
+Peer auth/channel/event counters are zero, all probes close and the saved public
+trust bytes equal their pre-rotation bytes. Generated peer/temp trust are shut down/
+removed. Provider read/task/write counts remain zero; no real VM, personal key,
+agent socket or credential configuration is accessed.
+
+Verification: native example builds and actual --manual-ssh passes; logs
+`.lab/native-deps/manual-ssh-native-build.log`, `.lab/native-deps/manual-ssh-ui-check.log`.
+Shared --recreation-recovery also passes for the changed native launcher/capability
+wiring; log `.lab/native-deps/manual-ssh-shared-recovery-check.log`. JS/Python syntax, example formatting and diff review are scoped here; no
+unrelated suites. Build setup initially exposed a misplaced module doc comment and
+Tauri macro collisions with old capability stubs; both were resolved by restoring
+the doc position and using production capability functions before the passing run.
+
+Limits: Linux native host preparation only, no login/terminal/real VM/Android proof.
+Current APKs unchanged and predate the existing-instance entry. Next slice: owned
+native SSH authentication/terminal integration through that entry, with strict trust,
+generated temporary identity/agent only and no personal files. Real-target/emulator
+approvals remain pending; no automatic continuation grants them.
+
+
+## 2026-10-21 — Existing-instance native application-key terminal
+
+Scope: extend the owned --manual-ssh driver through existing production identity/
+session commands. No product dependency, API or VM change. Fresh encrypted app
+identity and trust live in an owned temporary directory; only its generated public
+key is authorized for the generated peer's fixture account. An explicit nonexistent
+owned agent socket prevents personal agent discovery. Account/passphrase/consent/
+identity selection remain explicit in React, followed by actual native PTY/OS shell.
+
+Verification: targeted native example build and --manual-ssh pass. xterm input
+executes a command and displays its stdout; stty rows match resized renderer;
+terminal disconnect closes connections. Peer asserts one channel and PTY/shell/
+resize events. Subsequent key rotation is refused and saved trust bytes remain
+unchanged. Provider reads/tasks/writes remain zero. Logs:
+`.lab/native-deps/manual-ssh-terminal-build.log`,
+`.lab/native-deps/manual-ssh-terminal-check.log`.
+The initial run clicked the workspace Disconnect because the driver selected the
+first label match; its selector now targets the terminal and the rerun passes.
+Earlier verified dirty-worktree slices were retained. No unrelated suites rerun.
+
+Limits: Linux owned endpoint only, not actual guest/Android acceptance. Android
+artifact refresh now passes as recorded below.
+Next: exact-current Android execution after existing concrete emulator approval;
+otherwise advance declared provisioning source work. Full roadmap remains open.
+
+
+## 2026-10-21 — Android delivery includes existing-instance manual SSH
+
+Scope: rebuild ARM64/x86_64 debug APKs to include the current registered-row manual
+SSH entry; no device installation, emulator start or real VM mutation. Existing
+native terminal integration above passes before delivery. `make package-android`
+passes frontend typecheck/build, both native target builds and Gradle packaging;
+packager verifies signatures, manifest policies, ABI and exact embedded native
+library hashes. Log `.lab/android-toolchain/manual-ssh-package.log`.
+
+Current files under `.lab/packages/android/`:
+- `vmanyware-0.1.0-android-arm64-v8a-debug.apk` SHA-256 `c9aa77f8b6fe5c1750f8cdfbcf2f486c22cceb09534dee5fdf46b3c47ef9dbb1`.
+- `vmanyware-0.1.0-android-x86_64-debug.apk` SHA-256 `67f68cd5ab36e12345a32f965456e84c5729eb517f6ec399c363c69590123eeb`.
+
+`artifacts.json`, SHA256SUMS and INSTALL.md are refreshed. These are debug test
+artifacts: releaseCandidate=false and runtimeValidatedForTheseApks=false. Earlier
+Android execution cannot validate these new files. The packaged Linux server is
+unchanged. No unrelated server suites rerun for this client-only delivery.
+
+Next task: execute this exact APK on the previously proposed owned Android target
+after its concrete VM-operation approval. While that external gate remains open,
+implement the declared package provisioning/post-provision snapshot workflow.
+
+
+## 2026-10-21 — Declared package provider transport
+
+Scope: fixed Debian package request/dispatch/PID observation using the existing
+clone/readiness target guard. No API admission or worker behavior changes yet;
+nonempty packages and snapshotAfterProvisioning remain explicitly rejected.
+No dependency, VM, personal credential or host package mutation was introduced.
+
+The request validates bounded unique package declarations, refuses option/shell/
+removal selectors, and keeps every declaration in a separate positional argument.
+A fixed timeout/noninteractive apt update/install script forbids removals and
+checks literal installed state/exact requested versions with dpkg-query. Only the
+generated guest would execute it. Raw package output is suppressed. Observations
+return typed pending/completed/failed and verify marker/digest/power/no-pending
+before and after. Dispatch never retries; caller durability remains mandatory.
+ADR 0079 specifies the required journal/deadline/PID and final-snapshot integration.
+
+Next task: implement the durable package stage and wire it into the provisioning
+worker, with one dispatch, retained PID/deadline, uncertain-response/restart behavior
+and explicit failure. Then integrate optional snapshot and open admission only
+for the fully supported workflow. Android exact-artifact and real-guest gates stay
+open; no full roadmap completion is claimed.
+
+Verification for this package slice: `cargo test --locked -p vmanyware-server
+proxmox::tests::packages --lib` passes all five tests; log
+`.lab/packages-adapter-tests.log`. Tests check validated declarations, fixed bounded
+POST body and read-only shell syntax, scoped PID/status, clean completion/failure,
+malformed/leaking replies, identity mismatch and one POST after lost reply. Initial
+command assertion had a wrong argv index; corrected to inspect the script argument.
+The quote escaping was reviewed before the passing run. Changed files pass rustfmt
+and diff whitespace review. The library compilation covers affected callers; no
+unrelated suites or artifact rebuilds run for this inactive provider-stage addition.
+No actual guest installation has been demonstrated yet.
+
+
+## 2026-10-21 — Durable declared-package worker
+
+Scope: package stage claim/dispatch/PID/read/finish in the sequential production
+worker and SQLite journal. No API admission, snapshot, client, dependency or real VM
+change. Older journals omit the new optional packages field and still deserialize.
+Current public admission still rejects nonempty packages and final snapshot requests.
+
+The first claim retains startedAt/deadline=startedAt+960. First submission requires
+creation enabled, current matching catalog/approval and same provider scope. Its
+stage marker is committed before the single fixed POST, and PID is retained before
+status reads. Known-PID restart recovery reads only, without catalog/write flags.
+Marker-without-PID never resubmits or contacts the provider; lost replies remain
+uncertain through the fixed deadline. Timeout stays uncertain and stops automatic
+polling. Nonzero/signal exits fail explicitly; only confirmed success stores the
+scoped installed/packageCount proof. The operation completes only after the last
+planned stage; pending final snapshots cannot be skipped. Saved readiness is never
+replaced by a mere process-accepted response. Reader validation rejects malformed
+PID/deadline/proof, and transactional updates prevent PID rebinding/forged completion.
+
+Verification: all six package worker tests pass in
+`.lab/packages-worker-tests.log`; two affected durable readiness tests pass in
+`.lab/packages-affected-readiness-tests.log`; the affected seed-regeneration restart
+test passes in `.lab/packages-affected-seed-tests.log`. The earlier five package
+transport tests also passed during this slice's initial library compilation
+(`.lab/packages-worker-compile.log`). No unrelated suite or artifact rebuild ran.
+New tests initially referred to Failure as a wrapper rather than the existing enum;
+that compile error was corrected before the passing runs. Scoped formatting and
+diff review pass. Earlier dirty-worktree changes are retained.
+
+Limitations: owned HTTPS/SQLite evidence only; public API/native workflow activation,
+optional snapshot, actual guest packages and current Android execution remain open.
+Next task: implement the optional post-provision snapshot using a retained one-time
+submission/task journal and independent snapshot gate, then integrate API/client
+admission/result validation for the complete supported package/snapshot workflow.
+Full roadmap, real-target and platform gates remain open.
+
+
+## 2026-10-21 — Optional final provisioning snapshot worker
+
+Scope: final provisioning snapshot stage/storage/executor and independent gate
+propagation through the sequential production queue. No public admission, client,
+dependency, schema or real infrastructure change. YAML declares the stage already;
+it now waits for all earlier stages and valid guest/package evidence. Names and
+metadata bind the exact operation/definition/plan. Both creation/snapshot gates and
+current catalog/approval are required only before first dispatch. Existing scoped
+preflight verifies storage/name/tree/marker/digest/pending state.
+
+The snapshot marker and digest are committed before one fixed disk-only POST; only
+a matching qmsnapshot task can be linked. The optional private seed snapshotDigest
+field retains the initial digest without changing the resource-only SQL column.
+One task read occurs per round. Known task restart reconciliation is GET-only with
+write flags off and catalog absent. Unknown/lost task replies never redispatch.
+Success requires completed task plus exact disk-only snapshot metadata and valid
+retained VM identity, and only then completes provisioning. Reader corruption and
+forged completion are rejected. Existing readiness result is retained for consumers.
+ADR 0080 records consistency/backup and external acceptance limits.
+
+Verification: six new scoped tests pass in `.lab/provisioning-snapshot-tests.log`.
+Additional digest/evidence corruption assertions pass in the changed completion
+test only (`.lab/provisioning-snapshot-integrity.log`). Six affected package-worker
+tests pass (`.lab/provisioning-snapshot-affected-packages.log`); existing confirmed
+create API/worker/restart journey passes (`.lab/provisioning-snapshot-affected-create.log`);
+standalone snapshot queue scheduling/gate test passes
+(`.lab/provisioning-snapshot-affected-scheduling.log`). The latter checks are warranted
+by shared reader/seed journal and worker gate propagation. Scoped formatting and
+diff review pass. No unrelated suite or artifact rebuild ran. Earlier dirty slices
+remain untouched except the required shared journal/worker wiring. The first run
+exposed the SQL resource-only digest constraint; the implementation was corrected
+to use the private journal before the passing runs. Existing fixture helpers now
+accept explicit YAML and keep their default behavior; snapshot test operation IDs
+are normalized in owned SQLite before claims/dispatch for exact metadata assertions.
+
+Limits: source/owned-provider evidence only. Current public admission still rejects
+nonempty packages and snapshotAfterProvisioning=true. Current APK/server artifacts
+predate these inactive additions. Real guest installation/snapshot and exact-current
+Android execution remain open. Next task: integrate API preflight/admission and
+native create/recreate/recovery validation/UI for the full declared package/snapshot
+workflow, then prove its authenticated end-to-end generated-provider path. Keep the
+full roadmap and concrete external approval gates open.
+
+
+## 2026-10-21 — Declared workflow API admission and real initial tag
+
+Scope: creation/recreation admission/plan capability, shared package validation and
+fresh clone resource tag, with complete API/worker/generated-provider journeys.
+Supported declarations are admitted; snapshotAfterProvisioning additionally needs
+the independent snapshot flag or returns 403 without reservation. Invalid package
+selectors return 422, and image-default user attestation stays required. Enqueue
+still does not contact Proxmox. No client/schema/dependency/real VM change.
+
+The integration exposed a real source mismatch: creation stored the description
+marker but strict lifecycle/snapshot reads require the instance tag. The existing
+stopped-clone/digest-bound resource PUT now sets/verifies vmanyware-<instance-id>.
+This replaces inherited tags only on that freshly created clone, adds no separate
+write and does not repair/replay existing uncertain jobs. Generated fixtures now
+record the field actually submitted rather than fabricating lifecycle identity.
+ADR 0081 records behavior and real ACL/old uncertain-job limitations.
+
+Verification: two bearer-protected API/worker HTTPS tests exercise twelve declared
+workflows (create/recreate × package-only/snapshot-only/both × disks 8/40GiB), all
+passing with complete stages/proofs, mutation counts, restart, same-key retry and
+retained-source recovery. Log `.lab/declared-provisioning-flow.log`. Six create and
+seven recreation API checks pass (`.lab/declared-provisioning-admission.log`),
+including explicit plan capability/403-without-reservation. Seven affected resource
+checks pass, including absent/foreign tags (`.lab/declared-provisioning-resources.log`).
+Two existing no-feature API/worker journeys pass
+(`.lab/declared-provisioning-existing-flow.log`). The first admission run had an old
+422 expectation for snapshot-disabled; it now correctly expects 403 before passing.
+Checks were broadened only for the shared resource-write contract/API handlers.
+Earlier dirty work is retained; no unrelated suites or artifact rebuilds ran.
+
+Limits: generated-provider PID/exit/snapshot evidence, not actual guest apt or real
+storage/restore proof. Native create/recreate plan validation and the create form
+still restrict these features. Current packaged server/APKs predate this source.
+Next task: native/UI integration of declared packages and final snapshot, including
+review/result/recovery validation and a complete native generated-provider journey.
+Keep actual guest/Android/platform acceptance and concrete VM-operation approvals open.
+
+The five focused package transport/validation checks also pass after admission
+reused their validator (`.lab/declared-provisioning-package-validation.log`).
+Generated provider JS syntax, scoped Rust formatting and diff whitespace review pass.
+
+
+## 2026-10-21 — User delivery/checkpoint request
+
+The user authorized committing/pushing accumulated roadmap work and updating the
+README and public project status in ../devutils-org.github.io. This explicit request
+overrides the usual no-sibling-edit restriction only for that website repository.
+The user also authorized continued autonomous source/artifact work; the home Proxmox
+host is unavailable for now. No real VM/production/credential operation is inferred.
+
+README/public copy now distinguish implemented provider/native paths, API-only
+package/final-snapshot support, debug artifacts and actual infrastructure/platform
+acceptance. Next implementation task remains native package/final-snapshot support.
+Commit/push results will be reported after the actual commands complete.
+
+Checkpoint verification: staged source passes diff whitespace review; ignored lab,
+SDK, artifacts and generated permission files are excluded. Private-key material
+scan found only the explicit invalid key rejection fixture (literal "fixture"),
+not a private key. Website synchronization incorporates upstream TypeScript/French
+changes instead of replacing them. Its current build/type/targeted-render results
+and actual push outcomes are recorded in the session delivery report.

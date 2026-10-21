@@ -71,6 +71,8 @@ impl Store {
             completed: None,
             power: None,
             readiness: None,
+            packages: None,
+            snapshot_digest: None,
         };
         tx.execute(
             "INSERT INTO provisioning_seed_regeneration VALUES (?1,?2)",

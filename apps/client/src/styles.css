@@ -174,3 +174,6 @@ input[type="checkbox"], input[type="radio"] { width: auto; padding: 0; accent-co
 .mobile-terminal-controls button { min-height: 2.4rem; padding: .4rem .65rem; font-size: .8rem; }
 .mobile-terminal-controls .connection-fields { gap: .35rem; margin-top: .4rem; }
 .mobile-terminal-controls .connection-fields > button { flex: 1 1 auto; min-height: 2.75rem; }
+
+.remote-instance-detail code { overflow-wrap: anywhere; }
+.remote-instance-detail pre { white-space: pre-wrap; overflow-wrap: anywhere; max-height: 24rem; overflow: auto; }

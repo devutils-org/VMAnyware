@@ -45,6 +45,23 @@ and avoid logging it. Do not put tokens in URLs. The native client now has a sep
 connection. Other VM controls still use local mode. Authentication does
 not replace explicit target/action confirmation for writes.
 
+## Request admission limits
+
+The production binary shares one request budget across all connections and routes,
+including failed authentication: burst 120, refill 20 requests/second, at most 32
+concurrent handlers until response headers. Excess requests return HTTP 429 with
+`error.code=request_limit_exceeded` and `Retry-After: 1`, before the handler runs.
+Wait before retrying. Preserve the original idempotency key/body for an uncertain
+mutation; use saved-operation reads when the operation ID is known. A global limit
+can also delay health checks. Forwarded IP headers do not grant separate quotas.
+State resets on service restart; proxy connection/time/size limits remain necessary.
+The current native remote client recognizes HTTP 429 even without the authenticated
+response marker, since admission runs before authentication. It displays a fixed
+wait/retry instruction without reflecting upstream bodies or arbitrary Retry-After
+values. It does not automatically retry mutations or clear their retained request
+key/plan/operation. This status is a capacity error, not authentication proof.
+See [ADR 0071](decisions/0071-process-wide-request-admission.md).
+
 ## Read-only inventory
 
 `GET /api/v1/provider/inventory` reads the configured Proxmox provider and returns:
@@ -283,3 +300,213 @@ retain definition, YAML snapshot, provider reference and operation history; they
 must not be used to address a replacement VM on the same VMID. New operations and
 live target resolution refuse deleted identities. A replacement has a new instance
 ID. This schema-14 retention contract does not enable deletion submission.
+
+Deletion runtime capability uses independent `VMANYWARE_DELETIONS_ENABLED=true`
+(default false; exact lowercase true/false only). The GET delete-preflight report
+reflects this flag while prerequisite checks remain separate. The production
+worker services retained deletion intents and can reconcile known tasks with the
+flag off. HTTP deletion submission and client consent are not connected yet;
+query parameters never enable dispatch or purge.
+
+### Confirmed VM deletion
+
+`POST /api/v1/environments/{id}/delete` journals an explicit deletion intent and
+returns `202` plus `Location: /api/v1/operations/{operationId}`. It never contacts
+Proxmox; the sequential worker independently revalidates consent before its single
+provider DELETE. Require configured provider, matching provider scope and independent
+`VMANYWARE_DELETIONS_ENABLED=true`. Production bearer authentication applies.
+
+Send exactly one valid `Idempotency-Key`, JSON content type and at most 64 KiB.
+Top-level approval fields are `instanceId`, `providerScopeId`, `definitionHash`,
+`node`, `vmid`, `configDigest`, `plan`, `confirmed`, `acknowledgeDataLoss`.
+The instance ID must equal the path. Build `plan` from the reviewed preflight's
+`scopeHash`, `volumes`, `snapshots`, `preservedMedia`, `preservedOwnedVolumes`,
+`effects`, without dropping or changing fields. Both consent flags must be true.
+Unknown fields, unverified ownership, unsafe volume references or changed fixed
+effects are rejected; purge and unreferenced-disk destruction are not options.
+
+The same key with exactly the same full approval returns the original operation
+and confirmation time, including after completion/association retirement. Changed
+inputs or competing mutations return `409`. Retry does not renew dispatch expiry.
+POST still requires current runtime capability/provider configuration; use the
+returned GET operation location for reads without preparing another intent.
+No definition or association is deleted during enqueue. Failed/uncertain work and
+independent successful retirement are reported through the operation journal.
+
+Safe errors: `400` invalid approval/key/path binding, `401` unauthorized, `403`
+disabled, `404` missing instance, `409` scope/target/key/operation conflict, `413`
+body too large, `415` non-JSON content type, `422` malformed JSON shape and `503`
+missing provider/storage. Malformed JSON syntax returns `400`. Errors do not echo
+supplied payloads or provider details. A queued response does not mean the VM was
+deleted or that storage cleanup succeeded.
+
+### Saved deletion recovery
+
+- `GET /api/v1/environments/{id}/deletion-operations`: newest 100 deletion summaries
+  for exactly that retained instance, ordered by creation time then ID descending.
+- `GET /api/v1/environments/{id}/deletion-operations/{operationId}`: saved operation,
+  target, `configDigest`, complete `plan`, `approvalHash` and `submissionStarted`.
+
+These are authenticated reads, including for deleted associations. They need no
+provider or write capability and never claim/re-enqueue/reconcile work or renew
+consent. Summary entries contain ID, status, safe failure code, provider-task-known
+flag, approval hash and creation time; large plans appear only in detail. No consent
+flags, request key or raw provider UPID are returned. Saved scope/digest/evidence
+describe the recorded operation, not current infrastructure or a new approval.
+
+Missing instances/history or out-of-scope/wrong-kind operation IDs return `404`;
+a known instance without deletion records returns an empty `200` history. Unknown
+or contradictory saved evidence returns safe `503`, without partial history or
+raw fields. Successful detail requires a retired association and matching full
+approval/task/absence/definition evidence. Earlier failed records remain readable
+after retirement. An unrelated damaged record stays `404` outside its instance.
+
+## Retired-definition recreation preview
+
+`POST /api/v1/environments/{id}/recreate-plan` accepts bounded JSON
+`{"targetVmid":203}`. Browser Origin headers are refused; configured whole-API
+bearer authentication applies. The source must be a deleted association.
+
+Returns `sourceInstanceId`, `sourceDefinitionHash`, `sourceDefinitionRevision`,
+`definitionYaml` and an ordinary provisioning `plan` from the exact saved YAML
+and current template catalog. `requiresNewInstanceIdentity` is true;
+`restoresPreviousDiskContents` and `recreationEnabled` are false. The embedded
+plan retains false `liveVerified`, `vmidReserved` and `creationEnabled` flags.
+A configured provider contributes only its endpoint scope hash, with no network
+request. No provider is required for this preview; a template catalog is required.
+
+Unknown/malformed source IDs return 404, active sources 409, invalid target/image/
+disk plans 422 and missing catalog 503. Caller-supplied YAML/extra fields are
+rejected. This route performs no mutation, reservation or enqueue. Later live
+preflight, fresh confirmation and durable recreation submission remain pending.
+See ADR 0065.
+
+Recreation storage now supports fresh confirmed provisioning with immutable source
+lineage (schema 15, ADR 0066). Confirmed submission is now exposed as documented below; the read-only
+preview's `recreationEnabled` remains false. Existing
+ordinary creation approvals and operation wire formats are unchanged.
+
+### Confirmed recreation submission and saved detail
+
+`POST /api/v1/environments/{id}/recreate` accepts at most 4096 bytes of JSON:
+
+```json
+{
+  "sourceInstanceId": "0123456789abcdef0123456789abcdef",
+  "approval": {
+    "definitionName": "kernel-lab",
+    "definitionHash": "<reviewed retained definition hash>",
+    "providerScopeId": "<reviewed current endpoint scope hash>",
+    "planHash": "<reviewed current catalog plan hash>",
+    "targetNode": "pve-test",
+    "targetVmid": 203,
+    "sourceVmid": 9000,
+    "storage": "local-lvm",
+    "bridge": "vmbr0",
+    "confirmed": true
+  }
+}
+```
+
+All fields are required, extra fields are refused and `sourceInstanceId` must
+match the canonical source path ID. Exactly one `Idempotency-Key` is required;
+Origin-bearing requests are refused. Configured whole-API bearer authentication
+applies. `VMANYWARE_PROVISIONING_ENABLED=true`, a matching configured provider
+scope, a current catalog and the supported minimal provisioning workflow are
+required. The handler reads the retired source's saved YAML, verifies its hash and
+rebuilds/matches the approved plan before atomic enqueue. No provider network
+request is made by the handler. A current live preflight and later worker
+revalidation are still necessary; enqueue is not readiness or VMID reservation.
+
+Returns 202 and the ordinary `vm_provision` operation with a new instance ID.
+`Location` points to
+`/api/v1/environments/{sourceId}/recreation-operations/{operationId}`. Same-key
+replay retains the same source, operation, identity, consent age and stages.
+Changed source/approval or a conflicting active target is refused. An ordinary
+creation key cannot be reused for recreation, or conversely. Runtime/scope/catalog
+checks apply to HTTP retries too; changing configuration can refuse a retry even
+when the original operation remains saved and readable.
+
+The scoped GET returns `sourceInstanceId`, `operation`, the saved `plan`,
+`restoresPreviousDiskContents:false` and `requiresNewInstanceIdentity:true`.
+It validates the saved lineage/archive/target through the provisioning reader.
+Unknown/wrong-source/non-recreation operations return 404. No approval/consent,
+request key or raw provider task is returned. This read works without a configured
+provider/catalog or enabled write flags, never claims work and leaves the journal
+unchanged. Results describe historical recorded evidence, not a current VM read.
+Source-scoped history discovery and live preflight are described below.
+
+Generated-provider recreation acceptance now exercises this enqueue route through
+the production worker/executor, including optional disk expansion, clean simulated
+guest readiness, database reopen after clone, identical completed-request replay
+without new provider traffic, and saved GET recovery after another reopen with
+provider/catalog/write capabilities absent. The source association is a retired
+fixture; this is not a real delete/recreate VM or a server-subprocess proof.
+
+### Source-bound live recreation preflight
+
+`POST /api/v1/environments/{id}/recreate-preflight` accepts the same bounded
+`{"targetVmid":203}` body as the read-only preview. It performs the same source
+retirement/archive-hash/current-catalog validation before observing the provider.
+The caller cannot supply replacement YAML. A configured provider is required;
+write execution may remain disabled. No operation or VMID reservation is created.
+
+The response preserves the preview's source identity/hash/revision/YAML, target
+plan and fresh-identity/no-old-disk semantics, and adds `preflight`, using the
+ordinary provisioning report. Its `planHash` matches the returned plan. Four fixed
+provider GETs observe template configuration, storage, network and target VMID
+availability, within the existing overall deadline. Failed/denied reads produce
+unknown checks without raw provider errors. Known occupied VMIDs fail the target
+check. Template image revision, execution permissions and actual guest readiness
+remain explicitly unknown; metadata reads cannot prove those gates.
+
+`recreationEnabled`, embedded `plan.creationEnabled` and report `creationEnabled`
+reflect current provisioning opt-in, provider scope and supported minimal workflow.
+They are capability flags, not a claim that all checks passed or authorization to
+skip fresh confirmation. `vmidReserved` remains false, and plan `liveVerified`
+remains false. The later worker independently revalidates before dispatch. The
+offline `recreate-plan` route still reports execution disabled and makes no provider
+request. Whole-API authentication, Origin refusal and the 1024-byte body limit
+apply to both read-only POST routes.
+
+
+Saved recreation detail now fills `plan.providerScopeId` from the original durable
+provisioning approval. It describes the recorded endpoint scope even without a
+current provider configuration, allowing native source/plan/result matching.
+Native retained prepare/confirm/read/clear commands are implemented and locally
+HTTPS-tested; the explicit client recreation UI remains pending (ADR 0067).
+
+### Source-scoped recreation history
+
+`GET /api/v1/environments/{sourceId}/recreation-operations` returns
+`{"sourceInstanceId":"…","operations":[{"id":"…","instanceId":"…","status":"queued","createdAt":"…"}]}`.
+The retained source must be deleted. Its most recent 100 recreations are ordered
+by creation time descending, then operation ID descending. Ordinary creation and
+other-source jobs are excluded. A valid source with no recreations returns an
+empty array; active/malformed/unknown sources return 404. Selected corrupted or
+oversized journals return a safe 503 storage error, not partial/empty history.
+
+Provider/catalog/write capabilities are unnecessary. The route does not claim,
+renew, submit or reconcile work and makes no provider request. Whole-API bearer
+authentication applies. Summary fields expose no key, consent, YAML or raw task.
+Choose an operation explicitly before reading its existing scoped detail. Status
+is recorded historical state, not an observation of the replacement VM today.
+See ADR 0068. Native fixed history/detail GET commands now compile and pass
+focused HTTPS tests; client history/restart integration remains pending.
+
+## Saved lifecycle operation recovery
+
+`GET /api/v1/environments/{id}/lifecycle-operations` returns `instanceId` and up to
+100 recorded start/shutdown summaries, newest `createdAt` then ID first. Summaries
+contain ID, action, status, failure, providerTaskKnown and createdAt. The instance
+may be registered or archived. `GET .../lifecycle-operations/{operation_id}` returns
+`operation`, historical `action`, historical `target` (instanceId/providerScopeId/
+definitionHash/node/vmid), and `submissionStarted`.
+
+These reads require no configured provider/catalog or write flag and install no
+consent. They do not read live power/guest state, replay a mutation or return a
+confirmed flag, request key or provider task identifier. Retain historical versus
+current-state wording in clients. When authentication is configured it covers both
+routes. Missing/invalid/unrelated IDs return 404 `lifecycle_operation_not_found`;
+a matching damaged journal returns 503 `lifecycle_recovery_unavailable`, including
+history containing a damaged entry. See [ADR 0075](decisions/0075-read-only-lifecycle-recovery.md).

@@ -259,3 +259,17 @@ keys, rather than ADB text/key-event injection. The rest of the SSH scenario sti
 uses injected commands. This is a deliberately fixed-layout experiment, not a
 portable keyboard automation API. Initial-focus key-grid visibility,
 Unicode/composition, other keyboards and physical devices remain open.
+
+## Current deliverable APKs (2026-10-21)
+
+The current sources build for ARM64 and x86_64 using the restored owned toolchain.
+`make package-android` builds both variants and verifies/copies them to
+`.lab/packages/android/` with public metadata/checksums and installation instructions.
+It requires explicitly configured owned JAVA_HOME/ANDROID_HOME/NDK_HOME,
+ANDROID_USER_HOME and GRADLE_USER_HOME. The package step does not install anything.
+See [manual Android testing](../../docs/install-android.md) and ADR 0070.
+
+The artifact verifier checks actual signatures, package/version/ABI/SDK declarations
+and exact embedded-native-library equality to the current target build. Historical
+launch/create/SSH reports elsewhere in this document do not validate these new APK
+hashes. Fresh exact-artifact runtime and physical ARM64 acceptance remain open.

@@ -9,6 +9,7 @@ pub struct CloneRequest {
     pub(super) storage: String,
     name: String,
     pub(super) marker: String,
+    tag: String,
 }
 impl CloneRequest {
     pub(crate) fn new(
@@ -47,7 +48,7 @@ impl CloneRequest {
         {
             return Err(Error::Configuration);
         }
-        Ok(Self { source, target, storage: storage.into(), name: name.into(),
+        Ok(Self { source, target, storage: storage.into(), name: name.into(), tag: format!("vmanyware-{instance_id}"),
             marker: format!("VMAnyware instance {instance_id}\ndefinition-sha256: {definition_hash}\nplan-sha256: {plan_hash}") })
     }
 }
@@ -203,6 +204,7 @@ impl Proxmox {
                 .append_pair("cpulimit", "0")
                 .append_pair("memory", &request.memory_mib.to_string())
                 .append_pair("balloon", "0")
+                .append_pair("tags", &request.clone.tag)
                 .finish();
             let mut url = self.endpoint.clone();
             url.path_segments_mut()
@@ -247,6 +249,7 @@ impl Proxmox {
                 .await?;
             let target = self.observe_full_clone(&request.clone).await?;
             if config.get("digest").and_then(|v| v.as_str()) != Some(target.config_digest.as_str())
+                || config.get("tags").and_then(|v| v.as_str()) != Some(request.clone.tag.as_str())
                 || config.get("sockets").and_then(|v| v.as_u64()) != Some(1)
                 || config.get("cores").and_then(|v| v.as_u64()) != Some(u64::from(request.cpu))
                 || config.get("vcpus").and_then(|v| v.as_u64()) != Some(u64::from(request.cpu))

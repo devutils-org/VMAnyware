@@ -6,7 +6,7 @@ use serde_json::{json, Value};
 use tower::ServiceExt;
 use vmanyware_server::{
     definition::Definition, provisioning::Catalog, proxmox::Proxmox, router_with_execution,
-    store::Store,
+    router_with_snapshots, store::Store,
 };
 fn inputs(attested: bool, packages: bool) -> (Catalog, Definition, Proxmox, Value) {
     let mut yaml = include_str!("../../examples/templates.yaml").to_owned();
@@ -105,8 +105,11 @@ async fn create_rejects_disabled_unconfigured_changed_or_unsupported_inputs_with
     ] {
         let (catalog, mut definition, provider, mut approval) =
             inputs(variant != "attestation", variant == "packages");
-        if variant == "snapshot" {
-            definition.spec.lifecycle.snapshot_after_provisioning = true;
+        if variant == "packages" || variant == "snapshot" {
+            if variant == "packages" {
+                definition.spec.provisioning.packages = vec!["git-".into()];
+            }
+            definition.spec.lifecycle.snapshot_after_provisioning = variant == "snapshot";
             let plan = catalog.plan(&definition, 202).unwrap();
             approval["definitionHash"] = json!(plan.definition_hash);
             approval["planHash"] = json!(plan.plan_hash);
@@ -149,7 +152,7 @@ async fn create_rejects_disabled_unconfigured_changed_or_unsupported_inputs_with
         }
         let response = app.oneshot(req).await.unwrap();
         let expected = match variant {
-            "disabled" | "origin" => StatusCode::FORBIDDEN,
+            "disabled" | "origin" | "snapshot" => StatusCode::FORBIDDEN,
             "provider" | "catalog" => StatusCode::SERVICE_UNAVAILABLE,
             "hash" | "scope" => StatusCode::CONFLICT,
             "confirmation" | "duplicate" => StatusCode::BAD_REQUEST,
@@ -271,4 +274,59 @@ async fn create_worker_rechecks_disabled_capability_before_any_provider_request(
         .stages
         .iter()
         .all(|s| !s.dispatch_started));
+}
+
+#[tokio::test]
+async fn declared_package_snapshot_plan_and_enqueue_obey_independent_snapshot_gate() {
+    for (snapshot, enabled) in [(false, false), (true, false), (true, true)] {
+        let (catalog, mut definition, provider, mut approval) = inputs(true, true);
+        definition.spec.lifecycle.snapshot_after_provisioning = snapshot;
+        let plan = catalog.plan(&definition, 202).unwrap();
+        approval["definitionHash"] = json!(plan.definition_hash);
+        approval["planHash"] = json!(plan.plan_hash);
+        let store = Store::memory().unwrap();
+        store.create(&definition).unwrap();
+        let app = router_with_snapshots(
+            Some(provider),
+            store.clone(),
+            Some(catalog),
+            false,
+            true,
+            enabled,
+        );
+        let response = app
+            .clone()
+            .oneshot(
+                Request::post("/api/v1/provisioning/plan")
+                    .header("content-type", "application/json")
+                    .body(Body::from(
+                        json!({"yaml":definition.canonical_yaml().unwrap(),"targetVmid":202})
+                            .to_string(),
+                    ))
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+        assert_eq!(response.status(), StatusCode::OK);
+        let plan = json_body(response).await;
+        assert_eq!(plan["creationEnabled"], !snapshot || enabled);
+        assert_eq!(
+            plan["packages"],
+            json!(definition.spec.provisioning.packages)
+        );
+        assert_eq!(plan["snapshotAfterProvisioning"], snapshot);
+        let response = app.oneshot(request(approval)).await.unwrap();
+        assert_eq!(
+            response.status(),
+            if snapshot && !enabled {
+                StatusCode::FORBIDDEN
+            } else {
+                StatusCode::ACCEPTED
+            }
+        );
+        if snapshot && !enabled {
+            assert!(store.recent_operations().unwrap().is_empty());
+            assert!(store.recent_instances().unwrap().is_empty());
+        }
+    }
 }

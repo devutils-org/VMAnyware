@@ -1,0 +1,5 @@
+# Not granted by the production capability. Only owned example setup grants this.
+[[permission]]
+identifier = "owned-fixture-report"
+description = "Allow owned smoke examples to report and rotate their generated host."
+commands.allow = ["smoke_report", "smoke_rotate_host"]

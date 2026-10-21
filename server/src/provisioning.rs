@@ -359,9 +359,14 @@ impl Plan {
 }
 
 impl Plan {
-    pub(crate) fn minimum_create_issue(&self) -> Option<(&'static str, &'static str)> {
-        if !self.packages.is_empty() || self.snapshot_after_provisioning {
-            Some(("provisioning_features_unsupported","Initial creation requires an empty packages list and snapshotAfterProvisioning=false."))
+    pub(crate) fn minimum_create_issue(
+        &self,
+        snapshots_enabled: bool,
+    ) -> Option<(&'static str, &'static str)> {
+        if !crate::proxmox::PackageRequest::valid_declarations(&self.packages) {
+            Some(("package_declarations_unsupported","Use bounded unique Debian package declarations with optional exact versions; removal, shell and release selectors are unsupported."))
+        } else if self.snapshot_after_provisioning && !snapshots_enabled {
+            Some(("snapshot_disabled","The declared final snapshot requires snapshot execution to be enabled on this control plane."))
         } else if self.source.image_default_user.is_none() {
             Some((
                 "template_user_attestation_required",
@@ -370,5 +375,20 @@ impl Plan {
         } else {
             None
         }
+    }
+}
+
+impl Plan {
+    /// Fixed package inputs only. Does not authorize dispatch or bypass admission.
+    pub fn package_request(
+        &self,
+        instance_id: &str,
+        network: &str,
+        digest: &str,
+    ) -> Result<crate::proxmox::PackageRequest, crate::proxmox::Error> {
+        crate::proxmox::PackageRequest::new(
+            self.readiness_request(instance_id, network, digest)?,
+            &self.packages,
+        )
     }
 }

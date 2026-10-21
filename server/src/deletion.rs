@@ -1,4 +1,4 @@
-//! Deletion target/volume review only. Destructive dispatch is not implemented.
+//! Deletion review, full-scope consent and durable execution evidence.
 use crate::{
     instance::{ObservationError, Summary},
     lifecycle::{Check, Status},
@@ -292,4 +292,32 @@ pub enum Outcome {
     Succeeded(crate::proxmox::DeletionCompletion),
     Failed(crate::operation::Failure),
     Uncertain(crate::operation::Failure),
+}
+
+/// Saved journal context only; these reads never prepare replacement consent.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Recovered {
+    pub operation: crate::operation::Operation,
+    pub target: crate::snapshot::RecoveryTarget,
+    pub config_digest: String,
+    pub plan: Plan,
+    pub approval_hash: String,
+    pub submission_started: bool,
+}
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct History {
+    pub instance_id: String,
+    pub operations: Vec<HistoryEntry>,
+}
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HistoryEntry {
+    pub id: String,
+    pub status: crate::operation::Status,
+    pub failure: Option<crate::operation::Failure>,
+    pub provider_task_known: bool,
+    pub approval_hash: String,
+    pub created_at: String,
 }

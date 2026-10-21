@@ -115,3 +115,116 @@ fresh-connection lookup with no mutation commands. Run
 `node experiments/instances-browser/check.mjs --restore-recovery`. It uses no native
 profile, actual server, provider or VM; actual restart evidence requires the native
 fixture separately. Existing creation-history checks remain `--snapshot-recovery`.
+
+`--deletion` exercises the actual React deletion review with simulated native IPC:
+explicit instance selection, disabled/running/changed-target/unknown-effect refusal,
+reviewed volumes/snapshot references/fleecing and preserved scope, fixed cleanup
+wording, independently unchecked target/data-loss consent and shared mutation
+selection lock. It compares unknown-response retry arguments, requires known-ID
+tracking to use read commands, retains partial failure, refuses success missing
+volume absence and removes active controls for retired identities. It also checks
+acknowledgement, fresh-connection consent reset and late preparation/status
+suppression. Run `node experiments/instances-browser/check.mjs --deletion` after
+building the frontend. No native command, actual server, provider or VM is used.
+
+Run browser modes sequentially. An isolated profile is not evidence that concurrent
+Vite/browser runs are independent: a parallel restore run timed out before snapshot
+selection on 2026-10-21; its exact sequential rerun passed, with cause unconfirmed.
+
+`--deletion-recovery` checks the separate saved-deletion React panel with simulated
+read-only IPC. It covers explicit empty/history requests, registered and retired
+rows, scoped row/manual-ID reads, saved cleanup/effect/preserved scope, historical
+versus current-state wording, partial/failed records, wrong target/hash refusal,
+error versus empty history, stale edited-ID detail, disconnected history errors
+and fresh-connection lookup without restored consent. It asserts no preparation,
+confirmation or clear command is invoked. Run
+`node experiments/instances-browser/check.mjs --deletion-recovery` sequentially
+after building the frontend. No native profile, actual server/provider or VM is used.
+
+`--recreation` exercises the deleted-row recreation UI with simulated IPC. It
+requires an explicit target VMID, source/archived-definition/target review and
+unchecked confirmation. Disabled execution, occupied target and changed source are
+refused. Cancel/review resets consent; active reviews lock mutation selectors and
+ordinary creation. A lost-response fixture permits only identical-key/consent retry;
+known operations expose status reads only. Uncertain work remains retained, false
+guest readiness and old-instance reuse cannot offer SSH, and verified completion
+hands the new guest to existing SSH host-trust setup. Acknowledgement, disconnect
+and late replies must not restore source review/consent/key. Run:
+
+```sh
+node experiments/instances-browser/check.mjs --recreation
+```
+
+This is actual React/Firefox interaction with simulated IPC, not native Tauri,
+server/provider execution or real VM acceptance. Run modes sequentially.
+
+`--recreation-recovery` exercises explicit retired-source history, row/manual-ID
+lookup and saved refresh using only the two native read commands. It covers empty
+versus error history, historical target/new identity/definition details, fresh-disk
+semantics, uncertain status, wrong-source/false-success refusal, invalid IDs,
+edited-ID stale replies and reconnect with no restored ID/consent. No checkbox,
+mutation command or SSH handoff is offered from historical evidence. Run modes
+sequentially:
+
+```sh
+node experiments/instances-browser/check.mjs --recreation-recovery
+```
+
+This is actual React/Firefox interaction with simulated IPC; current native/server
+restart and exact updated-APK acceptance are separate evidence.
+
+## Remote lifecycle workspace
+
+`node experiments/instances-browser/check.mjs --remote-lifecycle` exercises the
+actual React remote workspace with simulated IPC only. It covers explicit start/
+graceful-shutdown selection, no action on selection, disabled/unknown/mismatched
+reviews, initially unchecked consent, expiry before submission, target exclusion,
+identical retry after an unknown reply, known-operation reads, unrelated success
+refusal, uncertain-state retention, power-versus-SSH wording, terminal acknowledgement
+and stale reconnect responses. It never contacts a provider or executes native IPC.
+Affected recreation and snapshot-create scenarios cover the shared parent selection
+and mutation lock. Actual native UI/provider integration remains separate.
+
+## Saved lifecycle recovery
+
+`node experiments/instances-browser/check.mjs --lifecycle-recovery` tests explicit
+history/manual-ID/refresh on registered and archived rows. Real React with simulated
+IPC verifies empty/error separation, historical target/action/power wording, no
+consent/retry/SSH control, uncertain evidence, wrong-instance/false-success refusal,
+invalid ID blocking, edited-ID stale detail and reconnect stale history suppression.
+Only the two fixed lifecycle recovery IPC commands may be invoked by the panel.
+This is not native HTTP, restart or real VM acceptance. Shared parent action/history
+flows are checked with --remote-lifecycle and --recreation-recovery.
+
+## Explicit remote power reads
+
+`node experiments/instances-browser/check.mjs --remote-power` exercises registered-
+only explicit read/refresh, exact selected target, running versus paused QMP,
+local read-completion time and possible-staleness wording. It checks that failed/
+wrong-target reads clear prior evidence, mutation review invalidates in-flight
+observations, missing QMP remains unknown, reconnect drops late replies, and no
+mutation/SSH command follows from power. This is React with simulated IPC, not
+native/provider evidence. --remote-connection and --remote-lifecycle cover the
+shared environment-row integration and the revised registration qualification.
+
+## Retained remote instance definition
+
+`node experiments/instances-browser/check.mjs --remote-detail` exercises explicit
+registered/archived definition reads, selected target/name, revision/hash display,
+literal YAML (including HTML-looking text), desired-versus-observed wording,
+failed-refresh clearing, malformed metadata refusal, target replacement/reconnect
+stale-result rejection and hide. No mutation or provider/native operation runs.
+Hash byte validation is tested in the native command suite; this browser fixture
+supplies mock verified native data and tests rendering/selection guards. Adjacent
+--remote-power and --recreation-recovery flows cover the shared environment rows.
+
+## Existing-instance manual SSH entry
+
+`node experiments/instances-browser/check.mjs --existing-ssh` tests registered-row
+selection into the existing host-trust UI, with blank address/account and an explicit
+port. Simulated IPC covers no automatic inspection/login, invalid URL blocking,
+independent unknown-key consent and fresh reinspection, changed-key refusal,
+reselection/stale inspection cancellation, association archival cleanup and reconnect
+reset. It does not authenticate, unlock an identity or open a session. Existing
+--remote-connection and --recreation scenarios protect their ready-guest SSH handoffs.
+This is UI/selection evidence, not actual native SSH or endpoint-to-VM attestation.

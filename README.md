@@ -10,32 +10,60 @@
   <a href="https://github.com/devutils-org">devutils</a>
 </p>
 
+## Linux server package
+
+`make package-server` creates a local release-binary archive with a systemd unit,
+root-only configuration example, template example, checksums and staging installer
+in `.lab/packages/`. It never installs or starts a host service. See the
+[installation, HTTPS, upgrade and recovery guide](docs/install-server.md).
+A packaged-process auth/restart check is available with
+`python3 scripts/check-server-package.py <archive>`; actual systemd host acceptance
+and mobile/release gates remain open.
+
+Current Android test APKs can be produced with `make package-android` after
+configuring an owned SDK/JDK/NDK and isolated Android/Gradle caches. The packager
+verifies signatures, ABI/version and current native-library content; it installs
+nothing. See [Android installation and test instructions](docs/install-android.md).
+These debug artifacts still require fresh runtime/device acceptance.
+
 ## Overview
 
-- Edit, validate and store reusable YAML environment definitions locally.
-- Inspect Proxmox nodes/templates and preview provisioning without creating VMs.
-- Try the native macOS SSH terminal prototype with verified host trust.
+VMAnyware combines a native Tauri client, a self-hosted Rust API and an explicit
+Proxmox template catalog. Environment definitions outlive individual VMs.
 
-In development: confirmed provisioning and lifecycle workflows pass local fixture
-checks. Android debug builds and native emulator smoke checks pass; the latest
-mobile keyboard adapter still needs runtime validation. Real-host provisioning
-and the complete mobile journey remain unverified. See [current evidence](STATE.md).
+Implemented, with local/generated-provider evidence:
 
-To preview provisioning, configure `VMANYWARE_TEMPLATES` with your explicit
-[image-to-template catalog](docs/provisioning-plan.md), enter a candidate VMID
-and click **Preview provisioning**. The offline plan never reserves or creates
-a VM. **Check against Proxmox** performs read-only preflight checks when a
-provider is configured, reporting passed, failed and unknown observations.
-The opt-in confirmed create API and sequential worker now pass a complete local
-HTTPS fixture journey, including disk expansion and guest checks. The remote form now has creation review, explicit confirmation and status refresh;
-its native HTTPS and browser checks pass separately. Native/mobile runtime and
-real-host validation remain pending. See the
-[create API contract](docs/provisioning-plan.md#confirmed-minimum-create-api). For the upcoming
-test PC, follow the [Debian Cloud-Init template guide](docs/debian-template.md).
+- Strict YAML definitions, canonical hashes and SQLite persistence.
+- Verified remote HTTPS, bearer authentication and read-only inventory/preflight.
+- Confirmed clone, CPU/memory/disk configuration, Cloud-Init and guest readiness.
+- Remote start/shutdown, explicit power reads and retained definition inspection.
+- Snapshot creation/restore, deletion and retained-definition recreation.
+- Durable operations, idempotent requests and read-only restart recovery.
+- SSH host trust, encrypted application identity and an interactive native terminal.
+- API/worker execution of declared packages and an optional final disk-only snapshot.
+
+The package/final-snapshot workflow passes all create/recreate combinations against
+an owned generated HTTPS provider. Its native form/plan/review integration is next;
+the current create form still sends empty packages and no final snapshot.
+
+**Development status:** this is not a release candidate. Linux native integration,
+server package checks and Android compilation/signature/content checks have evidence.
+The exact-current APK journey, real guest provisioning/packages/snapshot restoration,
+real deployment, OS credential-store integration and full platform acceptance remain
+open. Fixtures are not proof of a working home Proxmox deployment.
+See [current state](STATE.md), [remaining work](docs/roadmap-status.md) and the
+[platform matrix](docs/platforms.md); no audited completion percentage is claimed.
+
+The next product slice is client support for declared packages/final snapshots,
+followed by native integration and refreshed installable artifacts. A home Proxmox
+host will later need an explicitly mapped Debian template, storage/network, verified
+TLS, least-privilege token and an approved disposable target. Start with the
+[template preparation guide](docs/debian-template.md) and
+[Proxmox setup](docs/proxmox-setup.md).
 
 ## Install
 
-Development checkout only; no packaged installers yet. Requires Node.js 22.12+,
+For a development checkout, use Node.js 22.12+,
 Rust 1.99.1 and [native prerequisites](https://v2.tauri.app/start/prerequisites/).
 
 ```sh
@@ -54,9 +82,10 @@ make server     # local API on 127.0.0.1:8080
 make dev        # native Tauri client
 ```
 
-Android debug APKs and an Android 15 emulator native bridge/key-persistence smoke
-now pass. See the [Android build and owned-emulator procedure](experiments/android-native/README.md).
-Actual mobile SSH/create journey, physical devices and release packaging remain open.
+Historical owned Android integration is recorded separately from current APKs.
+See the [Android build and owned-emulator procedure](experiments/android-native/README.md).
+Current debug artifacts require their own runtime acceptance; physical devices,
+iOS/Windows parity and production release packaging remain open.
 
 ## Repository
 
@@ -72,11 +101,11 @@ Registered definition/VM associations and read-only monitoring are described in
 `make check-instances-browser` target exercises React with disposable Firefox and
 simulated IPC; it does not replace native Tauri validation.
 
-The workspace contains the client and server crates. The server implements
-local liveness, read-only provider inventory and definition storage; see
-[API behavior and verification](docs/api.md). Do not create
-empty domain, storage or SSH crates in advance. No app signing, installers or
-mobile projects are generated yet. The local bundle identifier is provisional.
+The workspace contains the client and server crates, migrations, owned fixtures,
+operator documentation and packaging scripts. See
+[API behavior and verification](docs/api.md). Linux server archives and signed debug
+Android APKs can be built locally; production signing/distribution and supported
+installation/upgrade environments remain to be validated.
 
 [Setup and workflows](REFERENCE.md) · [Definitions](docs/definitions.md) ·
 [Provisioning previews](docs/provisioning-plan.md) ·

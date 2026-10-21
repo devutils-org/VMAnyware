@@ -156,6 +156,8 @@ mod smoke {
                 smoke_rotate_host
             ])
             .setup(move |app| {
+                // Example-only reporting; the production application never grants this.
+                app.add_capability(r#"{"identifier":"owned-smoke-report","windows":["main"],"permissions":["owned-fixture-report"]}"#)?;
                 let handle = app.handle().clone();
                 tauri::async_runtime::spawn(async move {
                     tokio::time::sleep(std::time::Duration::from_secs(45)).await;

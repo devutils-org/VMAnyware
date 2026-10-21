@@ -65,6 +65,28 @@ pub(super) fn read(connection: &Connection, id: &str) -> Result<Option<Job>, Pro
     {
         return Err(ProvisioningError::Unavailable);
     }
+    let recreated_from: Option<String> = connection
+        .query_row(
+            "SELECT source_instance_id FROM recreation_sources WHERE operation_id=?1",
+            [id],
+            |r| r.get(0),
+        )
+        .optional()
+        .map_err(unavailable)?;
+    if let Some(source_id) = &recreated_from {
+        let source = super::instances::read(connection, source_id)
+            .map_err(unavailable)?
+            .ok_or(ProvisioningError::Unavailable)?;
+        if source.summary.status != crate::instance::Status::Deleted
+            || source.summary.id == instance.summary.id
+            || source.summary.definition_hash != instance.summary.definition_hash
+            || source.summary.definition_revision != instance.summary.definition_revision
+            || source.summary.definition_name != instance.summary.definition_name
+            || source.definition_yaml != instance.definition_yaml
+        {
+            return Err(ProvisioningError::Unavailable);
+        }
+    }
     let definition = Definition::parse(&instance.definition_yaml).map_err(unavailable)?;
     let catalog = Catalog::parse(&catalog_yaml).map_err(unavailable)?;
     let plan = catalog
@@ -110,6 +132,10 @@ pub(super) fn read(connection: &Connection, id: &str) -> Result<Option<Job>, Pro
                 let bound = match kind.as_str() {
                     "full_clone" => task.matches_clone(&source),
                     "expand_disk" => task.matches_resize(
+                        &VmReference::new(&approval.target_node, approval.target_vmid)
+                            .map_err(unavailable)?,
+                    ),
+                    "snapshot_after_provisioning" => task.matches_snapshot(
                         &VmReference::new(&approval.target_node, approval.target_vmid)
                             .map_err(unavailable)?,
                     ),
@@ -206,6 +232,7 @@ pub(super) fn read(connection: &Connection, id: &str) -> Result<Option<Job>, Pro
         return Err(ProvisioningError::Unavailable);
     }
     let job = Job {
+        recreated_from,
         operation,
         approval,
         confirmed_at,
@@ -266,6 +293,72 @@ pub(super) fn read(connection: &Connection, id: &str) -> Result<Option<Job>, Pro
             return Err(ProvisioningError::Unavailable);
         }
     }
+    if let Some(packages) = job.seed_journal.as_ref().and_then(|j| j.packages.as_ref()) {
+        let stage = job
+            .stages
+            .iter()
+            .find(|s| s.kind == "install_declared_packages")
+            .ok_or(ProvisioningError::Unavailable)?;
+        if job.guest_readiness().is_none()
+            || job.definition.spec.provisioning.packages.is_empty()
+            || packages.started_at <= 0
+            || packages.started_at.checked_add(960) != Some(packages.deadline)
+            || packages.pid.is_some_and(|p| p == 0 || p > i32::MAX as u32)
+            || (packages.pid.is_some() && !stage.dispatch_started)
+            || (stage.status == Status::Succeeded && job.installed_packages().is_none())
+        {
+            return Err(ProvisioningError::Unavailable);
+        }
+    } else if job
+        .stages
+        .iter()
+        .any(|s| s.kind == "install_declared_packages" && s.dispatch_started)
+    {
+        return Err(ProvisioningError::Unavailable);
+    }
+    if let Some(stage) = job
+        .stages
+        .iter()
+        .find(|s| s.kind == "snapshot_after_provisioning")
+    {
+        let digest = job
+            .seed_journal
+            .as_ref()
+            .and_then(|j| j.snapshot_digest.as_ref());
+        if stage.dispatch_started != digest.is_some()
+            || digest.is_some_and(|d| {
+                !valid_digest(d)
+                    || job
+                        .regenerated_seed()
+                        .is_none_or(|seed| seed.config_digest != *d)
+            })
+            || (stage.dispatch_started && !job.final_snapshot_prerequisites())
+            || (stage.status == Status::Succeeded
+                && (!stage.dispatch_started
+                    || stage.task.is_none()
+                    || stage
+                        .result
+                        .as_ref()
+                        .and_then(|v| {
+                            serde_json::from_value::<crate::snapshot::ResultEvidence>(v.clone())
+                                .ok()
+                        })
+                        .is_none_or(|p| !job.valid_final_snapshot(&p))))
+        {
+            return Err(ProvisioningError::Unavailable);
+        }
+    }
+    if job
+        .seed_journal
+        .as_ref()
+        .is_some_and(|j| j.snapshot_digest.is_some())
+        && !job
+            .stages
+            .iter()
+            .any(|s| s.kind == "snapshot_after_provisioning")
+    {
+        return Err(ProvisioningError::Unavailable);
+    }
     if job
         .disk_dispatch
         .as_ref()
@@ -306,6 +399,34 @@ impl Store {
         approval: &Approval,
         catalog: &Catalog,
     ) -> Result<Operation, ProvisioningError> {
+        self.enqueue_provisioning_source(key, approval, catalog, None)
+    }
+
+    /// Fresh confirmation of the archived definition; never resumes the old identity.
+    pub fn enqueue_recreation(
+        &self,
+        key: &str,
+        source_id: &str,
+        approval: &Approval,
+        catalog: &Catalog,
+    ) -> Result<Operation, ProvisioningError> {
+        if source_id.len() != 32
+            || !source_id
+                .bytes()
+                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+        {
+            return Err(ProvisioningError::InvalidApproval);
+        }
+        self.enqueue_provisioning_source(key, approval, catalog, Some(source_id))
+    }
+
+    fn enqueue_provisioning_source(
+        &self,
+        key: &str,
+        approval: &Approval,
+        catalog: &Catalog,
+        source_id: Option<&str>,
+    ) -> Result<Operation, ProvisioningError> {
         if !crate::operation::valid_request_key(key) || !approval.valid() {
             return Err(ProvisioningError::InvalidApproval);
         }
@@ -326,13 +447,41 @@ impl Store {
             if kind != "vm_provision" || old_hash.as_deref() != Some(hash.as_str()) {
                 return Err(ProvisioningError::Conflict);
             }
+            let saved_source: Option<String> = transaction
+                .query_row(
+                    "SELECT source_instance_id FROM recreation_sources WHERE operation_id=?1",
+                    [&id],
+                    |r| r.get(0),
+                )
+                .optional()
+                .map_err(unavailable)?;
+            if saved_source.as_deref() != source_id {
+                return Err(ProvisioningError::Conflict);
+            }
             return Ok(read(&transaction, &id)?
                 .ok_or(ProvisioningError::Unavailable)?
                 .operation);
         }
-        let record = super::read(&transaction, &approval.definition_name)
-            .map_err(unavailable)?
-            .ok_or(ProvisioningError::DefinitionNotFound)?;
+        let record = if let Some(source_id) = source_id {
+            let source = super::instances::read(&transaction, source_id)
+                .map_err(unavailable)?
+                .ok_or(ProvisioningError::DefinitionNotFound)?;
+            if source.summary.status != crate::instance::Status::Deleted {
+                return Err(ProvisioningError::Conflict);
+            }
+            super::Record {
+                name: source.summary.definition_name,
+                yaml: source.definition_yaml,
+                hash: source.summary.definition_hash,
+                revision: source.summary.definition_revision,
+                created_at: source.summary.created_at.clone(),
+                updated_at: source.summary.created_at,
+            }
+        } else {
+            super::read(&transaction, &approval.definition_name)
+                .map_err(unavailable)?
+                .ok_or(ProvisioningError::DefinitionNotFound)?
+        };
         let definition = Definition::parse(&record.yaml).map_err(unavailable)?;
         if definition.hash().map_err(unavailable)? != record.hash {
             return Err(ProvisioningError::Unavailable);
@@ -365,6 +514,9 @@ impl Store {
                     params![id, position as u32, step],
                 )
                 .map_err(unavailable)?;
+        }
+        if let Some(source_id) = source_id {
+            transaction.execute("INSERT INTO recreation_sources(operation_id,source_instance_id) VALUES (?1,?2)", params![id,source_id]).map_err(constrained)?;
         }
         let job = read(&transaction, &id)?.ok_or(ProvisioningError::Unavailable)?;
         transaction.commit().map_err(unavailable)?;

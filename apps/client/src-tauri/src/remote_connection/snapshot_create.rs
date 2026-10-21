@@ -242,6 +242,9 @@ impl Profile {
         accepted: bool,
     ) -> Result<T, String> {
         let mut response=request.header(reqwest::header::AUTHORIZATION,self.authorization.clone()).send().await.map_err(|_|"Snapshot request interrupted. If confirmed, retain the same request key and retry only that request.")?;
+        if response.status().as_u16() == 429 {
+            return Err(super::RATE_LIMITED.into());
+        }
         if response.status().as_u16() == 401 {
             return Err("The server rejected the access token.".into());
         }

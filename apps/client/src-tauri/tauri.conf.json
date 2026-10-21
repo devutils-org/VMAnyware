@@ -12,6 +12,7 @@
   "app": {
     "windows": [{ "label": "main", "title": "VMAnyware", "width": 960, "height": 680 }],
     "security": {
+      "capabilities": ["default"],
       "csp": "default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src ipc: http://ipc.localhost; img-src 'self' data:"
     }
   },

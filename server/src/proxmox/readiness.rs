@@ -10,6 +10,9 @@ pub struct ReadinessRequest {
     digest: String,
 }
 impl ReadinessRequest {
+    pub(super) fn target(&self) -> &super::VmReference {
+        &self.clone.target
+    }
     pub(crate) fn new(clone: CloneRequest, network: &str, digest: &str) -> Result<Self, Error> {
         let mac = super::cloud_init::network_parts(network)
             .ok_or(Error::Configuration)?
@@ -159,7 +162,10 @@ fn cloud_clean(status: &ProcessStatus) -> Result<bool, Error> {
     Ok(true)
 }
 impl Proxmox {
-    async fn readiness_guard(&self, request: &ReadinessRequest) -> Result<String, Error> {
+    pub(super) async fn readiness_guard(
+        &self,
+        request: &ReadinessRequest,
+    ) -> Result<String, Error> {
         let target = &request.clone.target;
         let config = self.template_config(target.node(), target.vmid()).await?;
         let digest = config

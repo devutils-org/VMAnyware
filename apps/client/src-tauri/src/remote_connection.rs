@@ -1,6 +1,22 @@
 //! In-memory HTTPS connection; no token persistence or generic request passthrough.
 #[path = "remote_connection/create.rs"]
 pub(crate) mod create;
+#[path = "remote_connection/deletion.rs"]
+pub(crate) mod deletion;
+#[path = "remote_connection/deletion_recovery.rs"]
+pub(crate) mod deletion_recovery;
+#[path = "remote_connection/instance_detail.rs"]
+pub(crate) mod instance_detail;
+#[path = "remote_connection/instance_status.rs"]
+pub(crate) mod instance_status;
+#[path = "remote_connection/lifecycle.rs"]
+pub(crate) mod lifecycle;
+#[path = "remote_connection/lifecycle_recovery.rs"]
+pub(crate) mod lifecycle_recovery;
+#[path = "remote_connection/recreation.rs"]
+pub(crate) mod recreation;
+#[path = "remote_connection/recreation_recovery.rs"]
+pub(crate) mod recreation_recovery;
 #[path = "remote_connection/restore_recovery.rs"]
 pub(crate) mod restore_recovery;
 #[path = "remote_connection/snapshot_create.rs"]
@@ -18,6 +34,7 @@ use reqwest::{
 };
 use serde::{Deserialize, Serialize};
 use std::{sync::Mutex, time::Duration};
+const RATE_LIMITED: &str = "The server is busy or limiting requests. Wait at least one second before retrying. For confirmed actions, retry only the same request key or read the known operation.";
 const INVALID:&str="Enter an HTTPS server address without credentials, path, query or fragment, and a valid access token.";
 fn connection_ca(pem: Option<&str>) -> Result<Option<reqwest::Certificate>, String> {
     let Some(pem) = pem.map(str::trim).filter(|pem| !pem.is_empty()) else {
@@ -99,12 +116,19 @@ impl Profile {
             .map_err(|_| {
                 "Cannot reach the server. Check its address, network and TLS certificate."
             })?;
+        if response.status().as_u16() == 429 {
+            return Err(RATE_LIMITED.into());
+        }
         if response.status().as_u16() == 401 {
             return Err("The server rejected the access token.".into());
         }
         if !response.status().is_success() {
             return Err(match path {
                 ReadPath::Health => "The server rejected the connection check.",
+                ReadPath::Environment(_) => "Cannot read the saved instance. Check its registration and server availability.",
+                ReadPath::Lifecycle(_) => "Cannot review lifecycle prerequisites. Check target, provider and server access.",
+                ReadPath::LifecycleHistory(_) | ReadPath::LifecycleOperation(_, _) => "Cannot read saved lifecycle evidence. Check the instance, operation and server journal.",
+                ReadPath::InstanceStatus(_) => "Cannot observe this instance. Check its registration, provider scope, access and availability.",
                 ReadPath::Images => {
                     "Cannot load templates. Check the server catalog and access configuration."
                 }
@@ -156,11 +180,23 @@ enum ReadPath<'a> {
     Images,
     Environments,
     Snapshots(&'a str),
+    Environment(&'a str),
+    Lifecycle(&'a str),
+    InstanceStatus(&'a str),
+    LifecycleHistory(&'a str),
+    LifecycleOperation(&'a str, &'a str),
 }
 impl ReadPath<'_> {
     fn path(self) -> String {
         match self {
             Self::Health => "api/v1/health".into(),
+            Self::Environment(id) => format!("api/v1/environments/{id}"),
+            Self::Lifecycle(id) => format!("api/v1/environments/{id}/lifecycle-preflight"),
+            Self::InstanceStatus(id) => format!("api/v1/environments/{id}/status"),
+            Self::LifecycleHistory(id) => format!("api/v1/environments/{id}/lifecycle-operations"),
+            Self::LifecycleOperation(id, operation) => {
+                format!("api/v1/environments/{id}/lifecycle-operations/{operation}")
+            }
             Self::Images => "api/v1/images".into(),
             Self::Environments => "api/v1/environments".into(),
             Self::Snapshots(id) => format!("api/v1/environments/{id}/snapshots"),
@@ -169,6 +205,7 @@ impl ReadPath<'_> {
     fn limit(self) -> usize {
         match self {
             Self::Health => 1024,
+            Self::InstanceStatus(_) => 4096,
             Self::Snapshots(_) => 2 * 1024 * 1024,
             _ => 256 * 1024,
         }
@@ -232,8 +269,11 @@ struct ConnectionState {
     generation: u64,
     profile: Option<Profile>,
     prepared: Option<create::Prepared>,
+    recreation: recreation::RecreationState,
     snapshot_creation: snapshot_create::CreationState,
     snapshot_restore: snapshot_restore::RestoreState,
+    deletion: deletion::DeletionState,
+    lifecycle: lifecycle::LifecycleState,
 }
 #[derive(Default)]
 pub struct RemoteConnection(Mutex<ConnectionState>);
@@ -311,8 +351,11 @@ impl RemoteConnection {
             .ok_or("Connection state unavailable.")?;
         state.profile = None;
         state.prepared = None;
+        state.recreation = recreation::RecreationState::default();
         state.snapshot_creation = snapshot_create::CreationState::default();
         state.snapshot_restore = snapshot_restore::RestoreState::default();
+        state.deletion = deletion::DeletionState::default();
+        state.lifecycle = lifecycle::LifecycleState::default();
         Ok(state.generation)
     }
     fn complete(&self, generation: u64, profile: Profile) -> Result<ConnectionStatus, String> {
@@ -670,5 +713,57 @@ mod tests {
         let error = read.await.unwrap().err().unwrap();
         assert!(error.contains("outdated"));
         task.await.unwrap();
+    }
+}
+
+#[cfg(test)]
+mod capacity_tests {
+    use super::*;
+    #[tokio::test]
+    async fn request_capacity_errors_cover_all_remote_decoders_without_auth_marker_or_body_echo() {
+        for marked in [false, true] {
+            for decoder in 0..4 {
+                let headers = if marked {
+                    "x-vmanyware-authenticated: bearer\r\nRetry-After: 1\r\n"
+                } else {
+                    "Retry-After: private-proxy-value\r\n"
+                };
+                let (endpoint, ca, task) =
+                    tests::fixture("429 Too Many Requests", "PRIVATE_SERVER_BODY", headers).await;
+                let profile = Profile::new(
+                    &endpoint,
+                    "fixture-only-access-token-0123456789abcdef",
+                    Some(ca),
+                )
+                .unwrap();
+                let request = profile
+                    .client
+                    .get(profile.endpoint.join("api/v1/health").unwrap());
+                let error = match decoder {
+                    0 => profile
+                        .get::<serde_json::Value>(ReadPath::Health)
+                        .await
+                        .unwrap_err(),
+                    1 => profile
+                        .create_json::<serde_json::Value>(request)
+                        .await
+                        .unwrap_err(),
+                    2 => profile
+                        .snapshot_json::<serde_json::Value>(request, false)
+                        .await
+                        .unwrap_err(),
+                    _ => profile
+                        .deletion_json::<serde_json::Value>(request, false)
+                        .await
+                        .unwrap_err(),
+                };
+                assert_eq!(error, RATE_LIMITED);
+                assert!(
+                    !error.contains("PRIVATE_SERVER_BODY")
+                        && !error.contains("private-proxy-value")
+                );
+                assert!(task.await.unwrap().starts_with("GET /api/v1/health "));
+            }
+        }
     }
 }

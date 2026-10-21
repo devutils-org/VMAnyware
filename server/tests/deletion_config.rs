@@ -551,3 +551,170 @@ async fn actual_router_reports_deletion_flag_without_enqueuing_or_enabling_other
         assert!(!reads.is_empty() && reads.iter().all(|request| request.starts_with("GET ")));
     }
 }
+
+#[tokio::test]
+async fn actual_http_deletion_confirmation_runs_worker_once_and_replays_retained_result() {
+    let directory = tempfile::tempdir().unwrap();
+    let database = directory.path().join("http-deletion.sqlite");
+    let provider = Provider::new().await;
+    let store = Store::open(&database).unwrap();
+    let approval = prepare(&store, &provider).await;
+    provider.requests();
+    let service_port = port();
+    let mut child = start(&database, service_port, directory.path(), &provider, true);
+    let client = reqwest::Client::builder()
+        .no_proxy()
+        .timeout(Duration::from_secs(3))
+        .build()
+        .unwrap();
+    let base = format!("http://127.0.0.1:{service_port}");
+    let deadline = Instant::now() + Duration::from_secs(5);
+    loop {
+        if client
+            .get(format!("{base}/api/v1/health"))
+            .bearer_auth(ACCESS)
+            .send()
+            .await
+            .is_ok()
+        {
+            break;
+        }
+        assert!(child.0.try_wait().unwrap().is_none());
+        assert!(Instant::now() < deadline);
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    let url = format!("{base}/api/v1/environments/{}/delete", approval.instance_id);
+    let denied = client
+        .post(&url)
+        .header("idempotency-key", "owned-http")
+        .json(&approval)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(denied.status(), reqwest::StatusCode::UNAUTHORIZED);
+    assert!(store.recent_operations().unwrap().is_empty());
+    assert!(provider.requests().is_empty());
+    let send = || {
+        client
+            .post(&url)
+            .bearer_auth(ACCESS)
+            .header("idempotency-key", "owned-http")
+            .json(&approval)
+    };
+    let first = send().send().await.unwrap();
+    assert_eq!(first.status(), reqwest::StatusCode::ACCEPTED);
+    let location = first.headers()["location"].to_str().unwrap().to_owned();
+    let first: Value = first.json().await.unwrap();
+    let id = first["id"].as_str().unwrap();
+    let saved = store.deletion_job(id).unwrap().unwrap();
+    assert_eq!(
+        saved.approval.input_hash().unwrap(),
+        approval.input_hash().unwrap()
+    );
+    let retry = send().send().await.unwrap();
+    assert_eq!(retry.status(), reqwest::StatusCode::ACCEPTED);
+    assert_eq!(retry.json::<Value>().await.unwrap()["id"], id);
+    let completed = wait_for(&store, id, &mut child, Status::Succeeded).await;
+    let observed = provider.requests();
+    assert_eq!(
+        observed.len(),
+        30,
+        "HTTP enqueue must not add provider reads outside the executor"
+    );
+    assert_eq!(
+        observed
+            .iter()
+            .filter(|request| request.starts_with("DELETE "))
+            .count(),
+        1
+    );
+    assert_eq!(store.recent_operations().unwrap().len(), 1);
+    assert_eq!(
+        store
+            .instance(&approval.instance_id)
+            .unwrap()
+            .unwrap()
+            .summary
+            .status,
+        vmanyware_server::instance::Status::Deleted
+    );
+    let final_retry = send().send().await.unwrap();
+    assert_eq!(final_retry.status(), reqwest::StatusCode::ACCEPTED);
+    assert_eq!(
+        final_retry.json::<Value>().await.unwrap()["result"],
+        completed.result.clone().unwrap()
+    );
+    assert_eq!(
+        store.deletion_job(id).unwrap().unwrap().confirmed_at,
+        saved.confirmed_at
+    );
+    let recovered: Value = client
+        .get(format!("{base}{location}"))
+        .bearer_auth(ACCESS)
+        .send()
+        .await
+        .unwrap()
+        .json()
+        .await
+        .unwrap();
+    assert_eq!(recovered["result"], completed.result.clone().unwrap());
+    assert!(provider.requests().is_empty());
+    // A new production process must read the deleted identity with no provider or write flags.
+    drop(child);
+    let recovery_port = port();
+    let mut readonly = OwnedChild(command(&database, recovery_port).spawn().unwrap());
+    let recovery_base = format!("http://127.0.0.1:{recovery_port}");
+    let deadline = Instant::now() + Duration::from_secs(5);
+    loop {
+        if client
+            .get(format!("{recovery_base}/api/v1/health"))
+            .bearer_auth(ACCESS)
+            .send()
+            .await
+            .is_ok()
+        {
+            break;
+        }
+        assert!(readonly.0.try_wait().unwrap().is_none());
+        assert!(Instant::now() < deadline);
+        tokio::time::sleep(Duration::from_millis(10)).await;
+    }
+    let detail = client
+        .get(format!(
+            "{recovery_base}/api/v1/environments/{}/deletion-operations/{id}",
+            approval.instance_id
+        ))
+        .bearer_auth(ACCESS)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(detail.status(), reqwest::StatusCode::OK);
+    let detail: Value = detail.json().await.unwrap();
+    assert_eq!(
+        detail["operation"],
+        serde_json::to_value(&completed).unwrap()
+    );
+    assert_eq!(detail["approvalHash"], approval.input_hash().unwrap());
+    assert_eq!(
+        detail["plan"],
+        serde_json::to_value(&approval.plan).unwrap()
+    );
+    let history = client
+        .get(format!(
+            "{recovery_base}/api/v1/environments/{}/deletion-operations",
+            approval.instance_id
+        ))
+        .bearer_auth(ACCESS)
+        .send()
+        .await
+        .unwrap();
+    assert_eq!(history.status(), reqwest::StatusCode::OK);
+    let history: Value = history.json().await.unwrap();
+    assert_eq!(history["operations"][0]["id"], id);
+    assert_eq!(history["operations"][0]["status"], "succeeded");
+    assert_eq!(
+        serde_json::to_value(store.operation(id).unwrap().unwrap()).unwrap(),
+        serde_json::to_value(&completed).unwrap()
+    );
+    assert!(provider.requests().is_empty());
+}

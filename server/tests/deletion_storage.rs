@@ -318,6 +318,10 @@ fn deletion_schema_twelve_upgrade_preserves_restore_and_failed_provisioning_grap
     let store = Store::open(&path).unwrap();
     let approval = setup(&store);
     let connection = rusqlite::Connection::open(&path).unwrap();
+    // Remove schema-15 objects before constructing this historical schema fixture.
+    connection
+        .execute_batch("DROP TABLE recreation_sources;")
+        .unwrap();
     connection
         .execute_batch(include_str!("../../migrations/0012_snapshot_restore.sql"))
         .unwrap();
@@ -374,7 +378,7 @@ fn deletion_schema_twelve_upgrade_preserves_restore_and_failed_provisioning_grap
         connection
             .pragma_query_value(None, "user_version", |row| row.get::<_, u32>(0))
             .unwrap(),
-        14
+        15
     );
     assert!(!connection
         .prepare("PRAGMA foreign_key_check")
@@ -426,6 +430,10 @@ fn deletion_schema_twelve_orphan_refuses_upgrade_atomically() {
     let path = directory.path().join("broken.sqlite");
     drop(Store::open(&path).unwrap());
     let connection = rusqlite::Connection::open(&path).unwrap();
+    // Remove schema-15 objects before constructing this historical schema fixture.
+    connection
+        .execute_batch("DROP TABLE recreation_sources;")
+        .unwrap();
     connection
         .execute_batch(include_str!("../../migrations/0012_snapshot_restore.sql"))
         .unwrap();
@@ -567,7 +575,7 @@ fn retirement_schema_thirteen_preserves_marked_delete_and_rejects_orphan_atomica
                 connection
                     .pragma_query_value(None, "user_version", |r| r.get::<_, u32>(0))
                     .unwrap(),
-                14
+                15
             );
             assert!(!connection
                 .prepare("PRAGMA foreign_key_check")
@@ -600,4 +608,15 @@ fn retirement_schema_thirteen_preserves_marked_delete_and_rejects_orphan_atomica
             1
         );
     }
+}
+
+#[test]
+fn deletion_approval_matches_native_golden_contract() {
+    let approval: Approval =
+        serde_json::from_str(include_str!("../../fixtures/deletion-approval.json")).unwrap();
+    assert!(approval.is_valid());
+    assert_eq!(
+        approval.input_hash().unwrap(),
+        include_str!("../../fixtures/deletion-approval.sha256").trim()
+    );
 }

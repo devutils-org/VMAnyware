@@ -315,10 +315,15 @@ Idempotency-Key and the complete confirmation:
 ```
 
 This shape example is not approval of real infrastructure. Hashes bind the exact
-resources and public keys shown in the definition/plan. Initial creation requires
-an empty packages list, snapshotAfterProvisioning=false and an explicit validated
-imageDefaultUser declaration. Unsupported features are rejected with HTTP 422;
-they are never silently omitted. Browser Origin and duplicate request keys are
+resources, public keys, declared packages and final snapshot shown in the definition/plan.
+Creation requires an explicit validated imageDefaultUser declaration. Bounded Debian
+package declarations (optional exact versions) use the fixed guest-agent installer;
+invalid/removal/shell/release selectors return HTTP 422. snapshotAfterProvisioning
+requires VMANYWARE_SNAPSHOTS_ENABLED=true in addition to provisioning; otherwise
+creationEnabled=false and enqueue returns HTTP 403 snapshot_disabled. Declared
+stages must all succeed; they are never silently omitted. See ADRs 0079–0081 for
+PID/task recovery and actual-guest validation limits. The current native form still
+restricts packages/final snapshots pending its separate client integration. Browser Origin and duplicate request keys are
 rejected. Missing/invalid confirmation returns 400, changed plan/scope or conflicting
 work 409, absent definition 404, disabled capability 403, missing provider/catalog
 or unavailable storage 503. Unknown JSON fields return 422; body limit is 4096 bytes.
@@ -360,3 +365,10 @@ retain a verified username. Historical readiness is not current reachability.
 Queued/failed operations have no readiness handoff. Selecting a target again or
 disconnecting clears the previous SSH flow; no account, credential or automatic
 connection is restored from browser storage. ADR 0051 records verification limits.
+
+
+The initial resource PUT now assigns the new clone's sole VMAnyware instance tag
+and verifies it with CPU/memory. This replaces inherited template tags on that fresh
+clone and enables subsequent strict lifecycle/snapshot checks; it does not repair
+existing VMs or replay an uncertain resource write. Real ACL/target validation is
+still required. API/worker tests are not evidence of actual guest apt execution.

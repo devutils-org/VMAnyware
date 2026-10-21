@@ -615,14 +615,14 @@ impl LifecycleAction {
 #[derive(Clone, Deserialize, Serialize)]
 #[serde(deny_unknown_fields, rename_all = "camelCase")]
 pub struct LifecycleApproval {
-    action: LifecycleAction,
-    instance_id: String,
-    provider_scope_id: String,
-    node: String,
-    vmid: u32,
-    definition_hash: String,
-    config_digest: String,
-    confirmed: bool,
+    pub(crate) action: LifecycleAction,
+    pub(crate) instance_id: String,
+    pub(crate) provider_scope_id: String,
+    pub(crate) node: String,
+    pub(crate) vmid: u32,
+    pub(crate) definition_hash: String,
+    pub(crate) config_digest: String,
+    pub(crate) confirmed: bool,
 }
 fn lower_hex(value: &str, length: usize) -> bool {
     value.len() == length
@@ -631,7 +631,7 @@ fn lower_hex(value: &str, length: usize) -> bool {
             .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
 }
 impl LifecycleApproval {
-    fn valid(&self) -> bool {
+    pub(crate) fn valid(&self) -> bool {
         self.confirmed
             && lower_hex(&self.instance_id, 32)
             && lower_hex(&self.provider_scope_id, 64)
@@ -661,20 +661,59 @@ pub struct LifecycleResult {
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct LifecycleOperation {
-    id: String,
+    pub(crate) id: String,
     kind: String,
     instance_id: String,
-    status: OperationStatus,
+    pub(crate) status: OperationStatus,
     result: Option<LifecycleResult>,
     failure: Option<String>,
     #[serde(default)]
-    provider_task_known: bool,
+    pub(crate) provider_task_known: bool,
     created_at: String,
     updated_at: String,
 }
-fn checked_lifecycle_operation(
+pub(crate) fn valid_lifecycle_failure(code: &str) -> bool {
+    matches!(
+        code,
+        "provider_not_configured"
+            | "provider_unauthorized"
+            | "provider_forbidden"
+            | "provider_timeout"
+            | "provider_unavailable"
+            | "process_interrupted"
+            | "provider_scope_changed"
+            | "instance_reference_invalid"
+            | "lifecycle_disabled"
+            | "approval_expired"
+            | "lifecycle_target_changed"
+            | "lifecycle_preconditions_failed"
+            | "provider_submission_unconfirmed"
+            | "provider_task_failed"
+            | "provider_task_unconfirmed"
+            | "power_state_unconfirmed"
+    )
+}
+pub(crate) fn checked_lifecycle_operation(
     operation: LifecycleOperation,
     approval: &LifecycleApproval,
+) -> Result<LifecycleOperation, String> {
+    checked_lifecycle_evidence(
+        operation,
+        approval.action,
+        &approval.instance_id,
+        &approval.provider_scope_id,
+        &approval.node,
+        approval.vmid,
+    )
+}
+/// Match historical evidence without constructing or restoring an approval.
+pub(crate) fn checked_lifecycle_evidence(
+    operation: LifecycleOperation,
+    action: LifecycleAction,
+    instance_id: &str,
+    provider_scope_id: &str,
+    node: &str,
+    vmid: u32,
 ) -> Result<LifecycleOperation, String> {
     let success = operation.status == OperationStatus::Succeeded;
     let failed = matches!(
@@ -682,41 +721,24 @@ fn checked_lifecycle_operation(
         OperationStatus::Failed | OperationStatus::Interrupted | OperationStatus::Uncertain
     );
     if !lower_hex(&operation.id, 32)
-        || operation.kind != approval.action.kind()
-        || operation.instance_id != approval.instance_id
+        || operation.kind != action.kind()
+        || operation.instance_id != instance_id
         || success != operation.result.is_some()
         || failed != operation.failure.is_some()
         || (success && !operation.provider_task_known)
-        || operation.failure.as_ref().is_some_and(|code| {
-            !matches!(
-                code.as_str(),
-                "provider_not_configured"
-                    | "provider_unauthorized"
-                    | "provider_forbidden"
-                    | "provider_timeout"
-                    | "provider_unavailable"
-                    | "process_interrupted"
-                    | "provider_scope_changed"
-                    | "instance_reference_invalid"
-                    | "lifecycle_disabled"
-                    | "approval_expired"
-                    | "lifecycle_target_changed"
-                    | "lifecycle_preconditions_failed"
-                    | "provider_submission_unconfirmed"
-                    | "provider_task_failed"
-                    | "provider_task_unconfirmed"
-                    | "power_state_unconfirmed"
-            )
-        })
+        || operation
+            .failure
+            .as_ref()
+            .is_some_and(|code| !valid_lifecycle_failure(code))
         || operation.result.as_ref().is_some_and(|result| {
-            result.action != approval.action
-                || result.instance_id != approval.instance_id
-                || result.provider_scope_id != approval.provider_scope_id
+            result.action != action
+                || result.instance_id != instance_id
+                || result.provider_scope_id != provider_scope_id
                 || result.task_status != "succeeded"
-                || result.observation.node != approval.node
-                || result.observation.vmid != approval.vmid
+                || result.observation.node != node
+                || result.observation.vmid != vmid
                 || result.observation.status
-                    != match approval.action {
+                    != match action {
                         LifecycleAction::Start => VmPowerState::Running,
                         LifecycleAction::Shutdown => VmPowerState::Stopped,
                     }

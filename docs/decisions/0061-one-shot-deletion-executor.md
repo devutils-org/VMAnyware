@@ -58,3 +58,34 @@ passes. No unrelated suites, real infrastructure or credential files are involve
 No runtime flag, worker wiring, HTTP submission or native/client deletion controls
 are added here. API preflight execution remains false. Next integrate a separately
 default-off runtime capability and fair worker, with process-level evidence.
+
+## Runtime integration — 2026-10-21
+
+The production service now parses independent default-off
+`VMANYWARE_DELETIONS_ENABLED` before opening its database and supplies it to both
+the router and sequential worker. Legacy constructors retain false. A full round
+services existing queues before one deletion; known tasks still reconcile with
+writes disabled. The read-only preflight reports this capability, separately from
+its prerequisite checks. No deletion submission route or client confirmation is
+introduced by this extension.
+
+Actual owned server/generated-HTTPS process tests now prove one DELETE/retirement,
+forced process death with a running linked task, and a second server completing
+through seven GETs with deletion disabled. Tests also cover default-off/strict
+configuration, safe invalid-startup output, queue fairness and authenticated router
+capability propagation. Existing restore startup/worker tests pass through the
+extended production call chain. No new dependency/schema or real VM mutation.
+
+## Confirmed HTTP enqueue — 2026-10-21
+
+POST `/api/v1/environments/{id}/delete` now binds the saved path/target/digest and
+complete approved cleanup plan, mandatory data-loss consent and one idempotency
+key. It requires the independent runtime flag/provider scope and journals only;
+provider calls remain in the revalidating worker. JSON is bounded to 64 KiB and
+unknown fields are rejected. Same-key retries retain original identity/age/result;
+new work on retired identities and competing mutations conflict. Existing
+provider-independent operation GET supplies known-ID recovery. POST is an action
+submission, distinct from the worker's one-shot provider DELETE.
+
+Five focused API tests and one actual authenticated server/generated-provider
+submission-to-retirement test pass. No schema/dependency or native/client change.

@@ -20,7 +20,7 @@ pub enum LifecycleError {
     InvalidOperation,
 }
 
-fn read_job(connection: &Connection, id: &str) -> Result<Option<Job>, LifecycleError> {
+pub(super) fn read_job(connection: &Connection, id: &str) -> Result<Option<Job>, LifecycleError> {
     let Some(operation) =
         operations::read(connection, id).map_err(|_| LifecycleError::Unavailable)?
     else {
@@ -30,7 +30,7 @@ fn read_job(connection: &Connection, id: &str) -> Result<Option<Job>, LifecycleE
         return Err(LifecycleError::InvalidOperation);
     }
     let (json, hash, confirmed_at, dispatch_started, upid): (String, String, i64, bool, Option<String>) = connection.query_row(
-        "SELECT approval_json, input_hash, confirmed_at, dispatch_started, provider_upid FROM operations WHERE id=?1", [id],
+        "SELECT CASE WHEN length(CAST(approval_json AS BLOB))<=4096 THEN approval_json ELSE NULL END, input_hash, confirmed_at, dispatch_started, provider_upid FROM operations WHERE id=?1", [id],
         |row| Ok((row.get(0)?, row.get(1)?, row.get(2)?, row.get(3)?, row.get(4)?)),
     ).map_err(|_| LifecycleError::Unavailable)?;
     let approval: Approval =

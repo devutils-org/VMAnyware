@@ -207,7 +207,7 @@ pub struct Job {
     pub provider_task: Option<crate::proxmox::TaskReference>,
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, serde::Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ResultEvidence {
     pub action: Action,
@@ -221,4 +221,38 @@ pub enum Outcome {
     Succeeded(ResultEvidence),
     Failed(crate::operation::Failure),
     Uncertain(crate::operation::Failure),
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Recovered {
+    pub operation: crate::operation::Operation,
+    pub target: RecoveryTarget,
+    pub action: Action,
+    pub submission_started: bool,
+}
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecoveryTarget {
+    pub instance_id: String,
+    pub provider_scope_id: String,
+    pub definition_hash: String,
+    pub node: String,
+    pub vmid: u32,
+}
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct History {
+    pub instance_id: String,
+    pub operations: Vec<HistoryEntry>,
+}
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct HistoryEntry {
+    pub id: String,
+    pub action: Action,
+    pub status: crate::operation::Status,
+    pub failure: Option<crate::operation::Failure>,
+    pub provider_task_known: bool,
+    pub created_at: String,
 }

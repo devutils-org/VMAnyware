@@ -1,8 +1,10 @@
 //! Fixed durable provisioning stages used by the explicitly enabled production worker.
 mod cloud_init;
 mod disk;
+mod packages;
 mod readiness;
 mod seed;
+mod snapshot;
 mod start;
 use crate::{
     operation::Failure,
@@ -14,8 +16,10 @@ use crate::{
 };
 pub use cloud_init::run_cloud_init;
 pub use disk::run_disk;
+pub use packages::run_packages;
 pub use readiness::run_readiness;
 pub use seed::run_seed;
+pub use snapshot::run_final_snapshot;
 pub use start::run_start;
 use std::time::Duration;
 fn storage_error(_: ProvisioningError) -> store::Error {

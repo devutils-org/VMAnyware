@@ -94,7 +94,7 @@ async fn run() -> Result<(), &'static str> {
     let (stopping, stopped_signal) = tokio::sync::oneshot::channel();
     let server = axum::serve(
         listener,
-        vmanyware_server::auth::protect(
+        vmanyware_server::request_limits::protect(vmanyware_server::auth::protect(
             router_with_deletions(
                 provider,
                 store,
@@ -106,7 +106,7 @@ async fn run() -> Result<(), &'static str> {
                 config.deletions_enabled(),
             ),
             access,
-        ),
+        )),
     )
     .with_graceful_shutdown(async move {
         shutdown.wait().await;

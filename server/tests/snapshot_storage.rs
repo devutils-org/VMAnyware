@@ -330,6 +330,9 @@ fn snapshot_schema_migration_preserves_provisioning_graph_and_restores_foreign_k
         .split("CREATE TABLE provisioning_intents")
         .next()
         .unwrap();
+    connection
+        .execute_batch("DROP TABLE recreation_sources;")
+        .unwrap();
     connection.execute_batch(old).unwrap();
     connection
         .pragma_update(None, "foreign_keys", true)
@@ -339,6 +342,9 @@ fn snapshot_schema_migration_preserves_provisioning_graph_and_restores_foreign_k
     connection.execute("INSERT INTO provisioning_intents (operation_id,catalog_yaml,plan_json) VALUES (?1,'retained-catalog','{}')",[&provision]).unwrap();
     connection.execute("INSERT INTO provisioning_stages (operation_id,position,kind,status) VALUES (?1,0,'full_clone','queued')",[&provision]).unwrap();
     connection.execute("INSERT INTO provisioning_seed_regeneration (operation_id,journal_json) VALUES (?1,'{}')",[&provision]).unwrap();
+    connection
+        .execute_batch("DROP TABLE IF EXISTS recreation_sources;")
+        .unwrap();
     connection.pragma_update(None, "user_version", 10).unwrap();
     drop(connection);
     let store = Store::open(&path).unwrap();
@@ -377,7 +383,7 @@ fn snapshot_schema_migration_preserves_provisioning_graph_and_restores_foreign_k
         connection
             .pragma_query_value(None, "user_version", |r| r.get::<_, u32>(0))
             .unwrap(),
-        14
+        15
     );
     // Use the store's connection through an operation, not an unrelated handle's pragma.
     connection
@@ -420,6 +426,9 @@ fn snapshot_schema_migration_rejects_orphaned_journals_atomically() {
         .pragma_update(None, "foreign_keys", false)
         .unwrap();
     connection.execute("INSERT INTO provisioning_intents (operation_id,catalog_yaml,plan_json) VALUES (?1,'retained','{}')",["a".repeat(32)]).unwrap();
+    connection
+        .execute_batch("DROP TABLE IF EXISTS recreation_sources;")
+        .unwrap();
     connection.pragma_update(None, "user_version", 10).unwrap();
     drop(connection);
     assert!(Store::open(&path).is_err());

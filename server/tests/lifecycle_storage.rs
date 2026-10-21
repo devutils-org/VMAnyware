@@ -438,7 +438,7 @@ fn schema_four_upgrade_preserves_read_records_and_instance_snapshots() {
         connection
             .pragma_query_value(None, "user_version", |row| row.get::<_, u32>(0))
             .unwrap(),
-        14
+        15
     );
 }
 

@@ -28,6 +28,7 @@ async fn provider_fixture() -> Fixture {
         let start_upid = "UPID:pve-test:00000001:00000002:00000003:qmstart:202:fixture@pve:";
         let mut target = serde_json::json!({"name":"kernel-lab","template":0,"digest":"d".repeat(40),"scsi0":"local-lvm:vm-202-disk-0,size=8G","ide2":"local-lvm:vm-202-cloudinit,media=cdrom,size=4M","net0":"virtio=BC:24:11:12:34:56,bridge=old-br,firewall=1"});
         let mut running = false;
+        let mut snapshots = Vec::<serde_json::Value>::new();
         while let Ok((socket, _)) = listener.accept().await {
             let Ok(mut stream) = acceptor.accept(socket).await else {
                 continue;
@@ -102,6 +103,8 @@ async fn provider_fixture() -> Fixture {
                     clone_upid
                 } else if path.contains("resize") {
                     RESIZE_TASK
+                } else if path.contains("qmsnapshot") {
+                    "UPID:pve-test:00000001:00000002:00000003:qmsnapshot:202:fixture@pve:"
                 } else {
                     start_upid
                 };
@@ -122,6 +125,7 @@ async fn provider_fixture() -> Fixture {
                     target.as_object_mut().unwrap().remove("ciuser");
                     target["digest"] = serde_json::json!("f".repeat(40));
                 } else {
+                    target["tags"] = serde_json::json!(form["tags"]);
                     for key in ["sockets", "cores", "vcpus", "cpulimit", "memory", "balloon"] {
                         target[key] = serde_json::json!(form[key].parse::<u64>().unwrap());
                     }
@@ -142,11 +146,32 @@ async fn provider_fixture() -> Fixture {
             } else if path.ends_with("/agent/network-get-interfaces") {
                 guest_network()["data"].clone()
             } else if path.ends_with("/agent/exec") && method == "POST" {
-                assert_eq!(
-                    serde_json::from_str::<serde_json::Value>(body).unwrap(),
-                    serde_json::json!({"command":["/usr/bin/cloud-init","status","--format","json"]})
-                );
-                serde_json::json!({"pid":42})
+                let command = serde_json::from_str::<serde_json::Value>(body).unwrap();
+                if command
+                    == serde_json::json!({"command":["/usr/bin/cloud-init","status","--format","json"]})
+                {
+                    serde_json::json!({"pid":42})
+                } else {
+                    assert_eq!(command["command"][0], "/usr/bin/timeout");
+                    assert!(command["command"]
+                        .as_array()
+                        .unwrap()
+                        .iter()
+                        .any(|v| v == "build-essential"));
+                    serde_json::json!({"pid":43})
+                }
+            } else if path.ends_with("/agent/exec-status?pid=43") {
+                serde_json::json!({"exited":1,"exitcode":0})
+            } else if path.ends_with("/feature?feature=snapshot") {
+                serde_json::json!({"hasFeature":1})
+            } else if path.ends_with("/qemu/202/snapshot") && method == "POST" {
+                snapshots.push(serde_json::json!({"name":form["snapname"],"description":form["description"],"vmstate":0,"snaptime":1700000000}));
+                target["digest"] = serde_json::json!("b".repeat(40));
+                serde_json::json!(
+                    "UPID:pve-test:00000001:00000002:00000003:qmsnapshot:202:fixture@pve:"
+                )
+            } else if path.ends_with("/qemu/202/snapshot") {
+                serde_json::json!(snapshots)
             } else if path.ends_with("/agent/exec-status?pid=42") {
                 serde_json::json!({"exited":1,"exitcode":0,"out-data":clean_cloud_status().to_string()})
             } else {
@@ -168,6 +193,15 @@ async fn provider_fixture() -> Fixture {
 }
 #[tokio::test]
 async fn confirmed_create_api_runs_production_worker_to_clean_guest_with_restart_and_no_replay() {
+    run_confirmed_flow(false, false, false).await;
+}
+
+#[tokio::test]
+async fn confirmed_recreation_api_runs_worker_with_fresh_identity_retained_source_and_no_replay() {
+    run_confirmed_flow(true, false, false).await;
+}
+
+async fn run_confirmed_flow(recreation: bool, packages: bool, snapshot: bool) {
     use crate::{operation::Status, provisioning_intent::Approval};
     for disk_gib in [8, 40] {
         let mut fixture = provider_fixture().await;
@@ -180,9 +214,40 @@ async fn confirmed_create_api_runs_production_worker_to_clean_guest_with_restart
         ))
         .unwrap();
         definition.spec.resources.disk_gib = disk_gib;
-        definition.spec.provisioning.packages.clear();
+        if !packages {
+            definition.spec.provisioning.packages.clear();
+        }
+        definition.spec.lifecycle.snapshot_after_provisioning = snapshot;
         store.create(&definition).unwrap();
         let catalog=crate::provisioning::Catalog::parse(&format!("{}    imageDefaultUser: {{name: debian, templateVersion: debian-13-cloud-20261016, passwordLocked: true, noAuthorizedKeys: true}}\n",include_str!("../../../../examples/templates.yaml"))).unwrap();
+        let source = if recreation {
+            let instance = store
+                .register_instance(
+                    &crate::instance::Registration {
+                        definition_name: definition.metadata.name.clone(),
+                        definition_hash: definition.hash().unwrap(),
+                        node: "pve-test".into(),
+                        vmid: 202,
+                    },
+                    &provider.scope_id(),
+                )
+                .unwrap();
+            // Construct only a retired source fixture. Real deletion has separate
+            // task/absence acceptance; this test exercises subsequent recreation.
+            rusqlite::Connection::open(&path)
+                .unwrap()
+                .execute(
+                    "UPDATE instances SET status='deleted' WHERE id=?1",
+                    [&instance.summary.id],
+                )
+                .unwrap();
+            Some(
+                serde_json::to_value(store.instance(&instance.summary.id).unwrap().unwrap())
+                    .unwrap(),
+            )
+        } else {
+            None
+        };
         let plan = catalog.plan(&definition, 202).unwrap();
         let approval = Approval {
             definition_name: "kernel-lab".into(),
@@ -197,33 +262,71 @@ async fn confirmed_create_api_runs_production_worker_to_clean_guest_with_restart
             confirmed: true,
         };
         let request = || {
-            Request::post("/api/v1/provisioning/create")
+            let (route, body) = if let Some(source) = &source {
+                (
+                    format!(
+                        "/api/v1/environments/{}/recreate",
+                        source["id"].as_str().unwrap()
+                    ),
+                    serde_json::json!({"sourceInstanceId":source["id"],"approval":approval})
+                        .to_string(),
+                )
+            } else {
+                (
+                    "/api/v1/provisioning/create".into(),
+                    serde_json::to_string(&approval).unwrap(),
+                )
+            };
+            Request::post(route)
                 .header("content-type", "application/json")
                 .header("idempotency-key", "complete-flow")
-                .body(Body::from(serde_json::to_string(&approval).unwrap()))
+                .header(
+                    "authorization",
+                    "Bearer owned-declared-flow-token-0000000000",
+                )
+                .body(Body::from(body))
                 .unwrap()
         };
-        let app = crate::router_with_execution(
+        let app = crate::router_with_snapshots(
             Some(provider.clone()),
             store.clone(),
             Some(catalog.clone()),
             false,
             true,
+            snapshot,
+        );
+        let app = crate::auth::protect(
+            app,
+            Some(crate::auth::AccessToken::parse("owned-declared-flow-token-0000000000").unwrap()),
         );
         let response = app.oneshot(request()).await.unwrap();
         assert_eq!(response.status(), StatusCode::ACCEPTED);
         let operation: serde_json::Value =
             serde_json::from_slice(&to_bytes(response.into_body(), 65536).await.unwrap()).unwrap();
         let id = operation["id"].as_str().unwrap().to_owned();
+        if let Some(source) = &source {
+            assert_ne!(operation["instanceId"], source["id"]);
+            let target = store
+                .instance(operation["instanceId"].as_str().unwrap())
+                .unwrap()
+                .unwrap();
+            assert_eq!(target.definition_yaml, source["definitionYaml"]);
+            assert_eq!(target.summary.definition_hash, source["definitionHash"]);
+            assert_eq!(
+                target.summary.definition_revision,
+                source["definitionRevision"]
+            );
+        }
         assert!(fixture.requests.try_recv().is_err());
         let inventory = store.enqueue_inventory("fair-inventory").unwrap();
-        for round in 0..8 {
-            assert!(crate::worker::run_execution_round(
+        for round in 0..12 {
+            assert!(crate::worker::run_snapshot_round(
                 &store,
                 Some(&provider),
                 Some(&catalog),
                 false,
-                true
+                true,
+                snapshot
             )
             .await
             .unwrap());
@@ -254,7 +357,42 @@ async fn confirmed_create_api_runs_production_worker_to_clean_guest_with_restart
             .stages
             .iter()
             .all(|s| s.status == Status::Succeeded));
+        let job = store.provisioning_job(&id).unwrap().unwrap();
+        assert_eq!(job.installed_packages().is_some(), packages);
+        assert_eq!(job.stages.iter().filter(|s|s.kind=="snapshot_after_provisioning" && s.status==Status::Succeeded).count(),usize::from(snapshot));
         let requests: Vec<_> = std::iter::from_fn(|| fixture.requests.try_recv().ok()).collect();
+        for request in &requests {
+            assert!(request
+                .to_ascii_lowercase()
+                .contains("authorization: pveapitoken=reader@pve!vmanyware=fake-test-secret\r\n"));
+        }
+        if let Some(source) = &source {
+            let clone = requests
+                .iter()
+                .find(|request| {
+                    request.starts_with("POST ") && request.contains("/qemu/9000/clone ")
+                })
+                .unwrap();
+            let fields: std::collections::BTreeMap<_, _> =
+                form_urlencoded::parse(clone.split_once("\r\n\r\n").unwrap().1.as_bytes())
+                    .into_owned()
+                    .collect();
+            let target_id = operation["instanceId"].as_str().unwrap();
+            assert!(fields["description"].contains(&format!("VMAnyware instance {target_id}\n")));
+            assert!(!fields["description"].contains(source["id"].as_str().unwrap()));
+            assert_eq!(fields["newid"], "202");
+            assert_eq!(
+                requests
+                    .iter()
+                    .filter(|request| !request.starts_with("GET "))
+                    .count(),
+                6 + usize::from(disk_gib == 40) + usize::from(packages) + usize::from(snapshot)
+            );
+            assert_eq!(
+                store.get("kernel-lab").unwrap().unwrap().yaml,
+                source["definitionYaml"]
+            );
+        }
         for (method, suffix) in [
             ("POST", "/qemu/9000/clone"),
             ("PUT", "/qemu/202/cloudinit"),
@@ -267,7 +405,7 @@ async fn confirmed_create_api_runs_production_worker_to_clean_guest_with_restart
                     .filter(|r| r.starts_with(method)
                         && r.split_whitespace().nth(1).unwrap().ends_with(suffix))
                     .count(),
-                1,
+                1 + usize::from(suffix == "/agent/exec" && packages),
                 "{suffix}"
             );
         }
@@ -285,24 +423,93 @@ async fn confirmed_create_api_runs_production_worker_to_clean_guest_with_restart
                 .count(),
             usize::from(disk_gib == 40)
         );
-        let app = crate::router_with_execution(
+        let app = crate::router_with_snapshots(
             Some(provider.clone()),
             store.clone(),
             Some(catalog.clone()),
             false,
             true,
+            snapshot,
+        );
+        let app = crate::auth::protect(
+            app,
+            Some(crate::auth::AccessToken::parse("owned-declared-flow-token-0000000000").unwrap()),
         );
         let response = app.oneshot(request()).await.unwrap();
         assert_eq!(response.status(), StatusCode::ACCEPTED);
-        assert!(!crate::worker::run_execution_round(
+        assert!(!crate::worker::run_snapshot_round(
             &store,
             Some(&provider),
             Some(&catalog),
             false,
-            true
+            true,
+            snapshot
         )
         .await
         .unwrap());
         assert!(fixture.requests.try_recv().is_err());
+        if let Some(source) = &source {
+            let source_id = source["id"].as_str().unwrap();
+            let saved = serde_json::to_value(store.operation(&id).unwrap().unwrap()).unwrap();
+            drop(store);
+            let store = crate::store::Store::open(&path).unwrap();
+            let app = crate::router_with_services(None, store.clone());
+            let response = app
+                .oneshot(
+                    Request::get(format!(
+                        "/api/v1/environments/{source_id}/recreation-operations/{id}"
+                    ))
+                    .body(Body::empty())
+                    .unwrap(),
+                )
+                .await
+                .unwrap();
+            assert_eq!(response.status(), StatusCode::OK);
+            let recovered: serde_json::Value =
+                serde_json::from_slice(&to_bytes(response.into_body(), 65536).await.unwrap())
+                    .unwrap();
+            assert_eq!(recovered["operation"], saved);
+            assert_eq!(recovered["sourceInstanceId"], source_id);
+            assert_eq!(
+                serde_json::to_value(store.instance(source_id).unwrap().unwrap()).unwrap(),
+                *source
+            );
+            assert_eq!(
+                store
+                    .provisioning_job(&id)
+                    .unwrap()
+                    .unwrap()
+                    .recreated_from
+                    .as_deref(),
+                Some(source_id)
+            );
+            assert_eq!(store.recent_instances().unwrap().len(), 2);
+            assert_eq!(
+                store
+                    .recent_operations()
+                    .unwrap()
+                    .iter()
+                    .filter(|op| op.kind == "vm_provision")
+                    .count(),
+                1
+            );
+            assert!(
+                fixture.requests.try_recv().is_err(),
+                "Saved recovery contacted provider"
+            );
+        }
+    }
+}
+
+#[tokio::test]
+async fn declared_create_api_runs_packages_and_final_snapshot_combinations() {
+    for (packages, snapshot) in [(true, false), (false, true), (true, true)] {
+        run_confirmed_flow(false, packages, snapshot).await;
+    }
+}
+#[tokio::test]
+async fn declared_recreation_api_runs_packages_and_final_snapshot_combinations() {
+    for (packages, snapshot) in [(true, false), (false, true), (true, true)] {
+        run_confirmed_flow(true, packages, snapshot).await;
     }
 }

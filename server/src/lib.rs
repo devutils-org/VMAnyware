@@ -4,6 +4,7 @@ pub mod definition;
 mod definitions_api;
 pub mod deletion;
 pub mod deletion_executor;
+mod deletions_api;
 pub mod diagnostics;
 pub mod instance;
 mod instances_api;
@@ -11,6 +12,7 @@ mod inventory;
 pub mod lifecycle;
 mod lifecycle_api;
 pub mod lifecycle_executor;
+mod lifecycle_recovery_api;
 pub mod operation;
 mod operations_api;
 mod preflight;
@@ -19,6 +21,8 @@ mod provisioning_api;
 pub mod provisioning_executor;
 pub mod provisioning_intent;
 pub mod proxmox;
+mod recreation_api;
+pub mod request_limits;
 pub mod restore_executor;
 mod restores_api;
 pub mod service_lock;
@@ -116,15 +120,28 @@ pub fn router_with_restores(
     snapshots_enabled: bool,
     restores_enabled: bool,
 ) -> Router {
-    router_with_deletions(provider, store, catalog, lifecycle_enabled, provisioning_enabled, snapshots_enabled, restores_enabled, false)
+    router_with_deletions(
+        provider,
+        store,
+        catalog,
+        lifecycle_enabled,
+        provisioning_enabled,
+        snapshots_enabled,
+        restores_enabled,
+        false,
+    )
 }
 
 // Keep existing constructor callers default-off while the production service supplies all flags.
 #[allow(clippy::too_many_arguments)]
 pub fn router_with_deletions(
-    provider: Option<proxmox::Proxmox>, store: store::Store,
-    catalog: Option<provisioning::Catalog>, lifecycle_enabled: bool,
-    provisioning_enabled: bool, snapshots_enabled: bool, restores_enabled: bool,
+    provider: Option<proxmox::Proxmox>,
+    store: store::Store,
+    catalog: Option<provisioning::Catalog>,
+    lifecycle_enabled: bool,
+    provisioning_enabled: bool,
+    snapshots_enabled: bool,
+    restores_enabled: bool,
     deletions_enabled: bool,
 ) -> Router {
     Router::new()
@@ -132,8 +149,36 @@ pub fn router_with_deletions(
             "/api/v1/provisioning/create",
             post(provisioning_api::create).layer(DefaultBodyLimit::max(4096)),
         )
+        .route(
+            "/api/v1/environments/{id}/lifecycle-operations",
+            get(lifecycle_recovery_api::history),
+        )
+        .route(
+            "/api/v1/environments/{id}/lifecycle-operations/{operation_id}",
+            get(lifecycle_recovery_api::recover),
+        )
         .route("/api/v1/health", get(health))
         .route("/api/v1/images", get(provisioning_api::images))
+        .route(
+            "/api/v1/environments/{id}/recreate",
+            post(recreation_api::create).layer(DefaultBodyLimit::max(4096)),
+        )
+        .route(
+            "/api/v1/environments/{id}/recreation-operations",
+            get(recreation_api::history),
+        )
+        .route(
+            "/api/v1/environments/{id}/recreation-operations/{operation_id}",
+            get(recreation_api::recover),
+        )
+        .route(
+            "/api/v1/environments/{id}/recreate-preflight",
+            post(recreation_api::preflight).layer(DefaultBodyLimit::max(1024)),
+        )
+        .route(
+            "/api/v1/environments/{id}/recreate-plan",
+            post(recreation_api::preview).layer(DefaultBodyLimit::max(1024)),
+        )
         .route(
             "/api/v1/provisioning/plan",
             post(provisioning_api::preview)
@@ -159,6 +204,18 @@ pub fn router_with_deletions(
             get(instances_api::list).post(instances_api::create),
         )
         .route("/api/v1/environments/{id}", get(instances_api::get))
+        .route(
+            "/api/v1/environments/{id}/deletion-operations",
+            get(deletions_api::history),
+        )
+        .route(
+            "/api/v1/environments/{id}/deletion-operations/{operation_id}",
+            get(deletions_api::recover),
+        )
+        .route(
+            "/api/v1/environments/{id}/delete",
+            post(deletions_api::delete).layer(DefaultBodyLimit::max(64 * 1024)),
+        )
         .route(
             "/api/v1/environments/{id}/delete-preflight",
             get(instances_api::deletion_preflight),

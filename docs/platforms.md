@@ -18,6 +18,15 @@ The current Mac reports macOS build `26A434`. Apple developer directory is
 were not found on PATH during the check; their absence on PATH is not proof
 that no SDK exists elsewhere. No personal SDK/configuration files were inspected.
 
+## Current Android artifacts — 2026-10-21
+
+Both current-source debug APKs now compile and are copied to `.lab/packages/android/`
+with verified signatures, package/version/ABI, API 24/36 declarations and exact
+embedded-native-library SHA-256 matches. See [installation](install-android.md).
+Their manifest records `runtimeValidatedForTheseApks:false`: earlier emulator/SSH
+reports below belong to historical APKs and do not prove these new binaries run.
+Physical ARM64, fresh runtime/input/network behavior and release signing remain open.
+
 ## Reproduce the current development checks
 
 | Tool | Tested version/configuration |

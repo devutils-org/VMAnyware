@@ -46,6 +46,13 @@ pub(crate) async fn request(request: Request, next: Next) -> Response {
         Some("/api/v1/environments/{id}/lifecycle-preflight") => {
             "/api/v1/environments/{id}/lifecycle-preflight"
         }
+        Some("/api/v1/environments/{id}/deletion-operations") => {
+            "/api/v1/environments/{id}/deletion-operations"
+        }
+        Some("/api/v1/environments/{id}/deletion-operations/{operation_id}") => {
+            "/api/v1/environments/{id}/deletion-operations/{operation_id}"
+        }
+        Some("/api/v1/environments/{id}/delete") => "/api/v1/environments/{id}/delete",
         Some("/api/v1/environments/{id}/delete-preflight") => {
             "/api/v1/environments/{id}/delete-preflight"
         }

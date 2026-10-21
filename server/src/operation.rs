@@ -75,6 +75,9 @@ pub enum Failure {
     GuestReadinessUnconfirmed,
     GuestReadinessTimedOut,
     GuestReadinessFailed,
+    PackagesUnconfirmed,
+    PackagesFailed,
+    PackagesTimedOut,
 }
 
 impl Failure {
@@ -106,6 +109,9 @@ impl Failure {
             Self::ProviderSubmissionUnconfirmed => "A provider submission may have occurred. It will not be repeated automatically.",
             Self::ProviderTaskFailed => "The provider task failed. Inspect the target before another action.",
             Self::ProviderTaskUnconfirmed => "The submitted provider task outcome remains unconfirmed. No write will be repeated.",
+            Self::PackagesUnconfirmed => "Package installation is not confirmed. The retained PID and deadline remain unchanged; no installation is replayed.",
+            Self::PackagesFailed => "Declared package installation failed. The VM is retained for inspection.",
+            Self::PackagesTimedOut => "Package installation exceeded its retained deadline. Its outcome remains uncertain; inspect the retained VM before further action.",
             Self::GuestReadinessUnconfirmed => "Guest initialization is not confirmed. The retained probe and deadline remain unchanged.",
             Self::GuestReadinessFailed => "Guest readiness checks failed. Inspect the retained VM and its Cloud-Init status before retrying.",
             Self::GuestReadinessTimedOut => "Guest readiness did not complete before its retained deadline. The VM is retained for inspection.",

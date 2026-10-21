@@ -2541,14 +2541,27 @@ fn queued_clone(
     crate::store::Store,
     crate::operation::Operation,
 ) {
+    queued_clone_with_yaml(provider, include_str!("../../../examples/kernel-lab.yaml"))
+}
+fn queued_clone_with_yaml(
+    provider: &Proxmox,
+    yaml: &str,
+) -> (
+    tempfile::TempDir,
+    crate::store::Store,
+    crate::operation::Operation,
+) {
     let directory = tempfile::tempdir().unwrap();
     let path = directory.path().join("clone.sqlite");
     let store = crate::store::Store::open(&path).unwrap();
-    let definition =
-        crate::definition::Definition::parse(include_str!("../../../examples/kernel-lab.yaml"))
-            .unwrap();
+    let definition = crate::definition::Definition::parse(yaml).unwrap();
+    let final_snapshot = definition.spec.lifecycle.snapshot_after_provisioning;
     store.create(&definition).unwrap();
-    let plan = full_clone_plan();
+    let plan =
+        crate::provisioning::Catalog::parse(include_str!("../../../examples/templates.yaml"))
+            .unwrap()
+            .plan(&definition, 202)
+            .unwrap();
     let approval = crate::provisioning_intent::Approval {
         definition_name: definition.metadata.name,
         definition_hash: plan.definition_hash,
@@ -2585,8 +2598,33 @@ fn queued_clone(
             rusqlite::params!["a".repeat(32), operation.id],
         )
         .unwrap();
+    let operation_id = if final_snapshot {
+        // Snapshot fixtures need deterministic metadata, before any dispatch.
+        let id = "b".repeat(32);
+        transaction
+            .execute(
+                "UPDATE operations SET id=?1 WHERE id=?2",
+                rusqlite::params![id, operation.id],
+            )
+            .unwrap();
+        transaction
+            .execute(
+                "UPDATE provisioning_intents SET operation_id=?1 WHERE operation_id=?2",
+                rusqlite::params![id, operation.id],
+            )
+            .unwrap();
+        transaction
+            .execute(
+                "UPDATE provisioning_stages SET operation_id=?1 WHERE operation_id=?2",
+                rusqlite::params![id, operation.id],
+            )
+            .unwrap();
+        id
+    } else {
+        operation.id
+    };
     transaction.commit().unwrap();
-    let operation = store.operation(&operation.id).unwrap().unwrap();
+    let operation = store.operation(&operation_id).unwrap().unwrap();
     (directory, store, operation)
 }
 
@@ -2769,7 +2807,7 @@ async fn provisioning_clone_executor_rejects_unproven_source_or_occupied_target_
 
 fn resource_config(plan: &crate::provisioning::Plan) -> serde_json::Value {
     serde_json::json!({"digest":"d".repeat(40),"description":clone_description(plan),
-        "name":"kernel-lab","template":0,"sockets":1,"cores":4,"vcpus":4,"cpulimit":0,"memory":8192,"balloon":0})
+        "name":"kernel-lab","tags":format!("vmanyware-{}","a".repeat(32)),"template":0,"sockets":1,"cores":4,"vcpus":4,"cpulimit":0,"memory":8192,"balloon":0})
 }
 
 #[tokio::test]
@@ -2803,8 +2841,8 @@ async fn resource_transport_checks_stopped_clone_and_puts_only_fixed_digest_boun
     assert_eq!(
         requests[3].split_once("\r\n\r\n").unwrap().1,
         format!(
-            "digest={}&sockets=1&cores=4&vcpus=4&cpulimit=0&memory=8192&balloon=0",
-            "d".repeat(40)
+            "digest={}&sockets=1&cores=4&vcpus=4&cpulimit=0&memory=8192&balloon=0&tags=vmanyware-{}",
+            "d".repeat(40), "a".repeat(32)
         )
     );
 }
@@ -2851,10 +2889,25 @@ async fn resource_observation_requires_exact_applied_settings_and_consistent_rev
         .resource_request(&"a".repeat(32), &"c".repeat(40))
         .unwrap();
     for variant in [
-        "valid", "sockets", "cores", "vcpus", "memory", "balloon", "cpulimit", "revision",
+        "valid",
+        "sockets",
+        "cores",
+        "vcpus",
+        "memory",
+        "balloon",
+        "cpulimit",
+        "revision",
         "pending",
+        "missing_tag",
+        "foreign_tag",
     ] {
         let mut config = resource_config(&plan);
+        if variant == "missing_tag" {
+            config.as_object_mut().unwrap().remove("tags");
+        }
+        if variant == "foreign_tag" {
+            config["tags"] = serde_json::json!(format!("vmanyware-{}", "b".repeat(32)));
+        }
         if ["sockets", "cores", "vcpus", "memory", "balloon", "cpulimit"].contains(&variant) {
             config[variant] = serde_json::json!(999);
         }
@@ -2928,8 +2981,21 @@ fn completed_clone_for_resources(
     crate::store::Store,
     crate::operation::Operation,
 ) {
+    completed_clone_for_resources_with_yaml(
+        provider,
+        include_str!("../../../examples/kernel-lab.yaml"),
+    )
+}
+fn completed_clone_for_resources_with_yaml(
+    provider: &Proxmox,
+    yaml: &str,
+) -> (
+    tempfile::TempDir,
+    crate::store::Store,
+    crate::operation::Operation,
+) {
     use crate::provisioning_intent::{CloneOutcome, CloneResult};
-    let (directory, store, operation) = queued_clone(provider);
+    let (directory, store, operation) = queued_clone_with_yaml(provider, yaml);
     let job = store.claim_provisioning_clone().unwrap().unwrap();
     store
         .begin_provisioning_clone(&operation.id, &job.approval)
@@ -3392,7 +3458,20 @@ fn completed_resources_for_disk(
     crate::store::Store,
     crate::operation::Operation,
 ) {
-    let (directory, store, operation) = completed_clone_for_resources(provider);
+    completed_resources_for_disk_with_yaml(
+        provider,
+        include_str!("../../../examples/kernel-lab.yaml"),
+    )
+}
+fn completed_resources_for_disk_with_yaml(
+    provider: &Proxmox,
+    yaml: &str,
+) -> (
+    tempfile::TempDir,
+    crate::store::Store,
+    crate::operation::Operation,
+) {
+    let (directory, store, operation) = completed_clone_for_resources_with_yaml(provider, yaml);
     let job = store.claim_provisioning_resources().unwrap().unwrap();
     store
         .begin_provisioning_resources(&operation.id, &job.approval, &"d".repeat(40))
@@ -4036,7 +4115,20 @@ fn completed_disk_for_cloud_init(
     crate::store::Store,
     crate::operation::Operation,
 ) {
-    let (directory, store, operation) = completed_resources_for_disk(provider);
+    completed_disk_for_cloud_init_with_yaml(
+        provider,
+        include_str!("../../../examples/kernel-lab.yaml"),
+    )
+}
+fn completed_disk_for_cloud_init_with_yaml(
+    provider: &Proxmox,
+    yaml: &str,
+) -> (
+    tempfile::TempDir,
+    crate::store::Store,
+    crate::operation::Operation,
+) {
+    let (directory, store, operation) = completed_resources_for_disk_with_yaml(provider, yaml);
     let job = store.claim_provisioning_disk().unwrap().unwrap();
     store
         .begin_provisioning_disk(
@@ -5198,10 +5290,23 @@ fn completed_start_for_guest_probe(
     crate::store::Store,
     crate::operation::Operation,
 ) {
+    completed_start_for_guest_probe_with_yaml(
+        provider,
+        include_str!("../../../examples/kernel-lab.yaml"),
+    )
+}
+fn completed_start_for_guest_probe_with_yaml(
+    provider: &Proxmox,
+    yaml: &str,
+) -> (
+    tempfile::TempDir,
+    crate::store::Store,
+    crate::operation::Operation,
+) {
     use crate::provisioning_intent::{
         CloudInitOutcome, CloudInitResult, SeedOutcome, StartOutcome, StartResult,
     };
-    let (directory, store, operation) = completed_disk_for_cloud_init(provider);
+    let (directory, store, operation) = completed_disk_for_cloud_init_with_yaml(provider, yaml);
     let job = store.claim_provisioning_cloud_init().unwrap().unwrap();
     store
         .begin_provisioning_cloud_init(
@@ -5493,3 +5598,11 @@ mod deletion_absence;
 
 #[path = "tests/deletion_execution.rs"]
 mod deletion_execution;
+
+#[path = "tests/recreation_preflight.rs"]
+mod recreation_preflight;
+
+mod packages;
+mod packages_worker;
+
+mod provisioning_snapshot;

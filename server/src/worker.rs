@@ -204,7 +204,8 @@ pub async fn run_execution_round(
     provisioning_enabled: bool,
 ) -> Result<bool, store::Error> {
     let existing = run_round(store, provider, lifecycle_enabled).await?;
-    let provisioning = run_provisioning_one(store, provider, catalog, provisioning_enabled).await?;
+    let provisioning =
+        run_provisioning_one(store, provider, catalog, provisioning_enabled, false).await?;
     Ok(existing || provisioning)
 }
 /// Preserve sequential fairness: existing queues, then one snapshot claim/reconciliation.
@@ -216,16 +217,17 @@ pub async fn run_snapshot_round(
     provisioning_enabled: bool,
     snapshots_enabled: bool,
 ) -> Result<bool, store::Error> {
-    let existing = run_execution_round(
+    let existing = run_round(store, provider, lifecycle_enabled).await?;
+    let provisioning = run_provisioning_one(
         store,
         provider,
         catalog,
-        lifecycle_enabled,
         provisioning_enabled,
+        snapshots_enabled,
     )
     .await?;
     let snapshot = crate::snapshot_executor::run_one(store, provider, snapshots_enabled).await?;
-    Ok(existing || snapshot)
+    Ok(existing || provisioning || snapshot)
 }
 
 /// Existing queues, then one restore; retained-task reconciliation stays GET-only.
@@ -282,9 +284,16 @@ async fn run_provisioning_one(
     provider: Option<&Proxmox>,
     catalog: Option<&crate::provisioning::Catalog>,
     enabled: bool,
+    snapshots_enabled: bool,
 ) -> Result<bool, store::Error> {
     use crate::provisioning_executor as execution;
     // Finish existing work before cloning more VMs; do not chain new stages in one round.
+    if execution::run_final_snapshot(store, provider, catalog, enabled, snapshots_enabled).await? {
+        return Ok(true);
+    }
+    if execution::run_packages(store, provider, catalog, enabled).await? {
+        return Ok(true);
+    }
     if execution::run_readiness(store, provider).await? {
         return Ok(true);
     }

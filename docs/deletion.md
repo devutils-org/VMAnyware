@@ -202,3 +202,177 @@ The provider DELETE API does not offer digest comparison: our consent review and
 the provider mutation are separate requests. Local exclusion does not prevent
 external administrator changes between them. ADR 0061 records this limitation,
 the fixed upstream protocol and the remaining real-target review requirement.
+
+## Runtime capability and worker
+
+`VMANYWARE_DELETIONS_ENABLED` is independently default-off. Only exact lowercase
+`true`/`false` are accepted; invalid or non-Unicode configuration stops startup
+before opening the database, without logging its supplied value. Other write
+flags never enable deletion. Existing router/runner constructors default this
+new capability to false.
+
+The production worker now services one deletion claim after its existing read,
+lifecycle, provisioning, snapshot and restore queues, sequentially. Known tasks
+can reconcile through GETs while the flag is false. Unknown submissions without a
+verified task remain excluded from automatic claims. The preflight response's
+`executionEnabled` reports the runtime flag; it does not replace read prerequisites,
+full consent, authorization or executor revalidation. HTTP deletion submission is
+not connected yet.
+
+Actual isolated server tests verify strict startup/default-off behavior, queue
+fairness, flag propagation to the authenticated GET preflight, one generated-
+provider DELETE and independent retirement. Another process is killed while its
+verified task is running, then a new server on the same database completes through
+seven provider GETs with deletion disabled. The saved task is never resubmitted.
+These are generated-provider process tests, not real VM cleanup acceptance.
+
+## Confirmed HTTP submission
+
+`POST /api/v1/environments/{id}/delete` now accepts the full reviewed plan/target/
+digest with both explicit confirmation and data-loss acknowledgement. It requires
+independent deletion capability, matching saved provider scope and exactly one
+idempotency key; the 64 KiB JSON route never reads or mutates the provider.
+Unknown/unsafe scope/effects are rejected. Same-key/full-input retries keep the
+original operation and expiry, including after successful retirement. Changed
+inputs, active mutations or attempts to use a retired identity for a new operation
+conflict. `202` exposes the retained operation through its provider-independent GET
+location. POST retries still require current capability/provider; known operation
+reads do not. See the API contract for status codes and the exact plan projection.
+
+Five focused HTTP/SQLite tests pass using an unreachable provider, proving enqueue
+needs no provider access. One actual authenticated server/generated-provider test
+passes API -> journal -> worker -> exactly one DELETE -> independent retirement,
+same-key retries before/after completion, unchanged expiry and GET result recovery.
+Its provider traffic is the executor's exact 30-request sequence for a disk-only VM
+without snapshots; HTTP enqueue adds no reads. No native deletion commands, UI,
+scoped deletion history or real infrastructure acceptance are claimed yet.
+
+## Retained native commands
+
+The native bridge now registers `prepare_remote_deletion`,
+`confirm_remote_deletion`, `read_remote_deletion_operation` and
+`clear_remote_deletion`. Preparation takes only connection ID, request key and
+retained instance ID. It reads registered target/preflight through fixed GETs and
+retains their complete validated public scope in native memory. IPC confirmation
+supplies two true consent flags and the same key, never a replacement plan/target.
+Initial review expires after 120 monotonic seconds.
+
+After any unverified submission reply, retain that same key/body; preparing another
+intent or clearing unknown/nonterminal work is refused. A received operation ID
+uses GET only. Partial destroy failures remain uncertain until verified completion,
+and result success must match the complete approval hash and absence/retirement/
+definition evidence. Disconnect discards native memory while server work may
+continue; it cannot cancel or resubmit it. See ADR 0063 for the shared hash example
+and native/server compatibility checks.
+
+Fourteen focused native tests, the shared server hash test and five affected
+workspace/restore tests pass; Linux native compilation/linking is proven. The
+client screen, scoped saved-operation recovery, actual GUI/native deletion journey,
+fresh mobile runtime and real infrastructure acceptance remain open.
+
+## Client confirmation and status
+
+Registered remote rows now offer explicit deletion selection. A separate review
+button calls native preparation; selecting a row alone does not read or submit
+consent. The screen displays the node/VMID, owned candidate references, recorded
+fleecing, removed snapshot metadata, preserved media/other observed images, fixed
+provider effects, retained definition/history and prerequisite results. Independent
+target/scope and permanent-loss checkboxes start unchecked; disabled/failed review
+cannot submit. No implicit stop/start, purge or extra-volume option is offered.
+
+A submitted unknown response retains its key and frozen consent; only an explicit
+identical retry is offered. Known operation IDs expose refresh through reads,
+with partial cleanup kept uncertain and no new submit/clear. Native code validates
+the complete approval hash; the screen also checks target/task/absence/retirement
+flags before showing success. Verified retirement removes active controls for the
+old row. Acknowledgement clears local intent without reviving that deleted identity.
+
+Shared mutation selectors stay locked through review/submission, while disconnect
+still clears client consent without cancelling server work. Generation/component
+keys suppress late review/status replies on a new selection/connection. Consent
+and request keys are not restored automatically after reconnecting.
+
+Frontend build and the dedicated Linux Firefox simulated-IPC deletion scenario
+pass. Affected snapshot creation and restoration scenarios pass too; the restore
+scenario needed a sequential rerun after a parallel-run timeout of unconfirmed
+cause. This proves React interaction, not a launched native deletion journey or
+real VM cleanup. Scoped saved deletion history/recovery remains the next task.
+
+## Saved deletion history and detail
+
+Instance-scoped GET `deletion-operations` and `deletion-operations/{operationId}`
+now read the durable journal without provider access or write capability. Deleted
+associations retain this history even if a new instance reuses their VMID. Detail
+returns saved target/digest/full plan/hash and submission state, without consent
+flags, request key or raw UPID. It never prepares replacement approval. History
+contains at most 100 compact summaries; older saved IDs remain readable.
+
+Readers validate full approval/task/target/status/result consistency and require
+actual association retirement for successful records. Active work stays active;
+partial/unknown work remains uncertain and old terminal failures remain visible.
+Corrupt or oversized evidence fails closed before exposing private fields, with
+scope filtering before journal decoding. ADR 0064 records the bounds and contract.
+
+Eight focused HTTP/SQLite tests and the extended actual authenticated server
+scenario pass. The latter completes deletion against a generated provider,
+restarts with provider removed/all writes off, and reads unchanged succeeded
+history/detail without another provider request. Native/client saved-operation
+recovery and actual native restart acceptance remain next; real cleanup is unproven.
+
+## Native saved-operation recovery
+
+The bridge registers `read_remote_deletion_history(connectionId, instanceId)` and
+`recover_remote_deletion(connectionId, instanceId, operationId)`. Both use fixed
+GET paths, the current HTTPS/authenticated connection and canonical IDs; no
+preparation, submit, clear, provider request or write capability is needed.
+
+The native reader independently validates saved target/digest/complete plan and
+its full approval hash, then exact operation/result/dispatch consistency. History
+is bounded to 100 unique IDs with safe partial/failed/interrupted states. Known
+failed destroy tasks stay uncertain. Disconnect/reconnect rejects old replies;
+unknown response fields are not forwarded and server errors do not become mutation
+retry instructions. No saved record installs a prepared intent or preselected
+consent. The internal hash reconstruction is verification only.
+
+Eight focused native recovery tests and 14 affected retained-submission/status
+tests pass. Native Linux compilation/linking is proven. The client panel and actual native
+restart journey are now verified below; fresh mobile runtime and real VM cleanup
+remain open.
+
+## Client saved-record panel
+
+Every retained remote row now exposes saved-deletion history and manual operation-ID
+lookup, including rows marked deleted. Loads, row inspection and refresh call only
+the dedicated native GET readers; no live review, consent or request key is restored.
+The panel displays recorded submission/task status, reviewed volumes/references,
+fixed planned cleanup effects, snapshot metadata and media/images excluded from
+deletion. Result evidence is explicitly historical: it does not observe current
+VM/storage state, particularly when a VMID has been reused.
+
+Success presentation additionally binds target and result approval hash, task,
+absence, retention and retirement flags. Partial/unknown cleanup remains uncertain
+with refresh-only controls; historical failed attempts remain visible. Editing an
+ID or disconnecting invalidates pending replies, and a new connection starts with
+no restored saved ID/result/consent. Errors remain distinct from empty history.
+
+Production frontend build and the focused Firefox simulated-IPC saved-deletion
+scenario pass. Affected deletion submission and saved-restore scenarios pass too,
+run sequentially. This is React interaction evidence; actual native application/server restart
+evidence follows. Real infrastructure deletion acceptance remains open.
+
+
+## Actual Linux native journey
+
+The opt-in `experiments/lifecycle-native/check.py --deletion-recovery` scenario
+passes through real React/WebKit, production native IPC/HTTPS commands, an
+actual authenticated Axum worker and generated HTTPS provider. It checks a
+running-target refusal, cancelled review, two independent consent flags, a lost
+accepted HTTP response and exact same-key/body retry with one provider DELETE.
+Verified task/VM/volume-absence results retire the association while retaining
+its complete definition. New app/server processes then recover history, saved ID
+and refresh with provider configuration removed and all five write flags false.
+Recovery is GET-only, provider counters and the complete operation are unchanged.
+
+This proves the isolated Linux fixture, not real Proxmox cleanup, normal packaged
+startup, fresh mobile behavior or live-provider crash recovery. Reproduction and
+log locations are in the native fixture README.

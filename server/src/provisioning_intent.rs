@@ -82,6 +82,7 @@ pub struct Stage {
 }
 #[derive(Debug)]
 pub struct Job {
+    pub recreated_from: Option<String>,
     pub operation: Operation,
     pub approval: Approval,
     pub confirmed_at: i64,
@@ -288,6 +289,10 @@ pub(crate) struct SeedJournal {
     pub power: Option<PowerDispatch>,
     #[serde(default, skip_serializing_if = "Option::is_none")]
     pub readiness: Option<ReadinessJournal>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub packages: Option<PackageJournal>,
+    #[serde(default, skip_serializing_if = "Option::is_none")]
+    pub snapshot_digest: Option<String>,
 }
 pub enum SeedOutcome {
     Completed(crate::proxmox::SeedPreflight),
@@ -461,5 +466,153 @@ impl Job {
             return None;
         }
         Some(proof)
+    }
+}
+
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecreationHistory {
+    pub source_instance_id: String,
+    pub operations: Vec<RecreationSummary>,
+}
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct RecreationSummary {
+    pub id: String,
+    pub instance_id: String,
+    pub status: Status,
+    pub created_at: String,
+}
+
+#[derive(Debug, Clone, Deserialize, Serialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+pub(crate) struct PackageJournal {
+    pub started_at: i64,
+    pub deadline: i64,
+    pub pid: Option<u32>,
+}
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(deny_unknown_fields, rename_all = "camelCase")]
+pub struct PackageResult {
+    pub instance_id: String,
+    pub provider_scope_id: String,
+    pub plan_hash: String,
+    pub package_count: usize,
+    pub installed: bool,
+}
+pub enum PackageOutcome {
+    Completed,
+    Pending,
+    Uncertain,
+    Failed(crate::operation::Failure),
+    TimedOut,
+}
+impl Job {
+    pub fn guest_readiness(&self) -> Option<ReadinessResult> {
+        self.started()?;
+        let stage = self
+            .stages
+            .iter()
+            .find(|s| s.kind == "wait_for_guest_readiness")?;
+        let journal = self.seed_journal.as_ref()?.readiness.as_ref()?;
+        if stage.status != Status::Succeeded
+            || !stage.dispatch_started
+            || !journal.probe_started
+            || journal.pid.is_none()
+        {
+            return None;
+        }
+        let proof: ReadinessResult = serde_json::from_value(stage.result.clone()?).ok()?;
+        let ip = proof.guest.ipv4;
+        if Some(proof.instance_id.as_str()) != self.operation.instance_id.as_deref()
+            || proof.provider_scope_id != self.approval.provider_scope_id
+            || proof.plan_hash != self.approval.plan_hash
+            || !proof.guest_ready
+            || !proof.guest.cloud_init_clean
+            || proof.guest.cloud_init_exit_code != 0
+            || ip.is_unspecified()
+            || ip.is_loopback()
+            || ip.is_link_local()
+            || ip.is_broadcast()
+            || ip.octets()[0] == 0
+            || ip.octets()[0] >= 224
+            || proof.guest.interface.is_empty()
+            || proof.guest.interface.len() > 15
+            || !proof
+                .guest
+                .interface
+                .bytes()
+                .all(|b| b.is_ascii_alphanumeric() || b"._-".contains(&b))
+        {
+            return None;
+        }
+        Some(proof)
+    }
+    pub fn installed_packages(&self) -> Option<PackageResult> {
+        self.guest_readiness()?;
+        let stage = self
+            .stages
+            .iter()
+            .find(|s| s.kind == "install_declared_packages")?;
+        if stage.status != Status::Succeeded
+            || !stage.dispatch_started
+            || self.seed_journal.as_ref()?.packages.as_ref()?.pid.is_none()
+        {
+            return None;
+        }
+        let proof: PackageResult = serde_json::from_value(stage.result.clone()?).ok()?;
+        if Some(proof.instance_id.as_str()) != self.operation.instance_id.as_deref()
+            || proof.provider_scope_id != self.approval.provider_scope_id
+            || proof.plan_hash != self.approval.plan_hash
+            || !proof.installed
+            || proof.package_count == 0
+            || proof.package_count != self.definition.spec.provisioning.packages.len()
+        {
+            return None;
+        }
+        Some(proof)
+    }
+}
+
+impl Job {
+    pub fn final_snapshot_request(&self) -> Option<crate::snapshot::CreateRequest> {
+        if !self.definition.spec.lifecycle.snapshot_after_provisioning
+            || self.operation.id.len() != 32
+            || !self
+                .operation
+                .id
+                .bytes()
+                .all(|b| b.is_ascii_digit() || (b'a'..=b'f').contains(&b))
+        {
+            return None;
+        }
+        Some(crate::snapshot::CreateRequest {
+            name: format!("ready_{}", self.operation.id),
+            description: format!(
+                "VMAnyware provisioning {}\ndefinition-sha256: {}\nplan-sha256: {}",
+                self.operation.id, self.approval.definition_hash, self.approval.plan_hash
+            ),
+        })
+    }
+    pub fn final_snapshot_prerequisites(&self) -> bool {
+        self.final_snapshot_request().is_some()
+            && self.guest_readiness().is_some()
+            && (self.definition.spec.provisioning.packages.is_empty()
+                || self.installed_packages().is_some())
+    }
+    pub(crate) fn valid_final_snapshot(&self, proof: &crate::snapshot::ResultEvidence) -> bool {
+        let Some(request) = self.final_snapshot_request() else {
+            return false;
+        };
+        self.final_snapshot_prerequisites()
+            && Some(proof.instance_id.as_str()) == self.operation.instance_id.as_deref()
+            && proof.provider_scope_id == self.approval.provider_scope_id
+            && proof.node == self.approval.target_node
+            && proof.vmid == self.approval.target_vmid
+            && proof.task_status == crate::proxmox::TaskStatus::Succeeded
+            && proof.snapshot.name == request.name
+            && proof.snapshot.description == request.description
+            && proof.snapshot.includes_ram == Some(false)
+            && proof.snapshot.provider_state.is_none()
     }
 }
