@@ -62,6 +62,11 @@ pub fn run() {
         .invoke_handler(tauri::generate_handler![
             runtime_platform,
             ssh::identity_support,
+            ssh::system_identity_support,
+            ssh::remember_app_identity,
+            ssh::unlock_system_app_identity,
+            ssh::forget_app_identity,
+            ssh::list_system_ssh_identity,
             ssh::ssh_agent_support,
             ssh::list_app_ssh_identity,
             ssh::create_app_identity,

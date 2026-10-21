@@ -330,3 +330,83 @@ pub async fn list_app_ssh_identity(
         Err("Application SSH identity unavailable on this platform".into())
     }
 }
+
+#[tauri::command]
+pub fn system_identity_support() -> bool {
+    cfg!(target_os = "linux")
+}
+#[tauri::command]
+pub async fn remember_app_identity(
+    app: tauri::AppHandle,
+    passphrase: String,
+    confirmed: bool,
+) -> Result<serde_json::Value, String> {
+    if !confirmed {
+        return Err("Confirm saving this identity's unlock secret in the system key store.".into());
+    }
+    system_identity_action(app, Some(passphrase), false, false).await
+}
+#[tauri::command]
+pub async fn unlock_system_app_identity(
+    app: tauri::AppHandle,
+) -> Result<serde_json::Value, String> {
+    system_identity_action(app, None, false, false).await
+}
+#[tauri::command]
+pub async fn forget_app_identity(
+    app: tauri::AppHandle,
+    confirmed: bool,
+) -> Result<serde_json::Value, String> {
+    system_identity_action(app, None, true, confirmed).await
+}
+async fn system_identity_action(
+    app: tauri::AppHandle,
+    passphrase: Option<String>,
+    forget: bool,
+    confirmed: bool,
+) -> Result<serde_json::Value, String> {
+    #[cfg(target_os = "linux")]
+    {
+        use tauri::Manager;
+        let passphrase = passphrase.map(zeroize::Zeroizing::new);
+        tauri::async_runtime::spawn_blocking(move || {
+            let store = app.state::<identity::IdentityStore>();
+            if forget {
+                store.forget(confirmed)?;
+                return Ok(serde_json::Value::Null);
+            }
+            let public = match passphrase {
+                Some(secret) => store.remember(secret)?,
+                None => store.unlock_system()?,
+            };
+            serde_json::to_value(public).map_err(|_| "System SSH identity unavailable".into())
+        })
+        .await
+        .map_err(|_| "System SSH identity unavailable")?
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        let _ = (app, passphrase, forget, confirmed);
+        Err("System SSH identity storage is unavailable on this platform".into())
+    }
+}
+#[tauri::command]
+pub async fn list_system_ssh_identity(
+    window: tauri::WebviewWindow,
+    manager: tauri::State<'_, AgentManager>,
+    host: String,
+    port: u16,
+    username: String,
+) -> Result<Selection, String> {
+    #[cfg(target_os = "linux")]
+    {
+        manager
+            .list_system_application(window.label(), &host, port, &username)
+            .await
+    }
+    #[cfg(not(target_os = "linux"))]
+    {
+        let _ = (window, manager, host, port, username);
+        Err("System SSH identity storage is unavailable on this platform".into())
+    }
+}

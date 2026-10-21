@@ -7,7 +7,7 @@
   const publicCa = "-----BEGIN CERTIFICATE-----\npublic-browser-fixture\n-----END CERTIFICATE-----";
   const appPublicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
   const fixturePassphrase = "disposable identity phrase 42";
-  let unlockReads = 0;
+  let unlockReads = 0, vaultUnlocks = 0, vaultSaved = false;
   let complete;
   let reads = 0, releaseImages, rejectEnvironments;
   let submittedKey, createAttempts = 0, createReads = 0, releaseCreate;
@@ -29,7 +29,22 @@
       trustedSsh = true;
       return {host:"192.0.2.42",port:22,fingerprint:args.fingerprint};
     }
-    if (command === "identity_support") return true;
+    if (command === "identity_support" || command === "system_identity_support") return true;
+    if (command === "remember_app_identity") {
+      check(args.confirmed === true && args.passphrase === fixturePassphrase, "Vault save lacks exact secret/consent"); vaultSaved=true;
+      return { publicKey: appPublicKey, fingerprint: "SHA256:fixture-identity" };
+    }
+    if (command === "unlock_system_app_identity") {
+      check(Object.keys(args).length === 0, "Vault unlock received a renderer secret");
+      if (++vaultUnlocks === 1 || !vaultSaved) throw "PRIVATE_KEYRING_ERROR";
+      return { publicKey: appPublicKey, fingerprint: "SHA256:fixture-identity" };
+    }
+    if (command === "forget_app_identity") { check(args.confirmed === true && Object.keys(args).length === 1, "Vault forget lacks scoped consent"); vaultSaved=false; return; }
+    if (command === "list_system_ssh_identity") {
+      check(args.host === "192.0.2.42" && args.port === 22 && args.username === "debian" && !Object.hasOwn(args, "passphrase"), "Vault SSH changed target or sent secret");
+      return {id:"vault-selection",host:args.host,port:args.port,username:args.username,identities:[{algorithm:"ssh-ed25519",fingerprint:"SHA256:fixture-identity"}],expiresInSeconds:120};
+    }
+    if (command === "cancel_ssh_authentication") return;
     if (command === "create_app_identity" || command === "unlock_app_identity") {
       check(args.passphrase === fixturePassphrase, "Wrong fixture passphrase");
       if (command === "unlock_app_identity" && ++unlockReads === 1) throw "Cannot unlock application SSH identity";
@@ -129,6 +144,20 @@
     button("Create encrypted SSH identity").click();
     await wait(() => button("Add this public key to the definition"));
     check(document.getElementById("identity-passphrase").value === "" && document.getElementById("identity-confirmation").value === "", "Passphrase fields retained secrets");
+    await wait(()=>document.getElementById("remember-identity-consent"));
+    check(!document.getElementById("remember-identity-consent").checked && button("Remember SSH unlock secret").disabled && button("Forget saved SSH unlock secret").disabled, "Vault save/forget consent enabled by default");
+    check(!calls.some(call=>["remember_app_identity","unlock_system_app_identity","forget_app_identity"].includes(call.command)), "Vault accessed implicitly");
+    input("identity-passphrase",fixturePassphrase);document.getElementById("remember-identity-consent").click();
+    await wait(()=>!button("Remember SSH unlock secret").disabled);button("Remember SSH unlock secret").click();
+    await wait(()=>text().includes("Unlock secret saved in the system key store"));
+    check(document.getElementById("identity-passphrase").value===""&&!document.getElementById("remember-identity-consent").checked,"Vault save retained secret or consent");
+    button("Unlock using system key store").click();await wait(()=>text().includes("System key store unavailable or unable"));
+    check(!text().includes("PRIVATE_")&&!document.getElementById("identity-public-key"),"Failed vault unlock retained identity or private error");
+    button("Unlock using system key store").click();await wait(()=>text().includes("Identity unlocked using the system key store"));
+    document.getElementById("forget-identity-consent").click();await wait(()=>!button("Forget saved SSH unlock secret").disabled);button("Forget saved SSH unlock secret").click();
+    await wait(()=>text().includes("Saved unlock secret forgotten"));check(!document.getElementById("forget-identity-consent").checked,"Forget consent survived action");
+    button("Unlock using system key store").click();await wait(()=>text().includes("System key store unavailable or unable"));
+    input("identity-passphrase",fixturePassphrase);document.getElementById("remember-identity-consent").click();await wait(()=>!button("Remember SSH unlock secret").disabled);button("Remember SSH unlock secret").click();await wait(()=>button("Add this public key to the definition"));
     button("Add this public key to the definition").click();
     await wait(() => document.getElementById("create-public-key").value === appPublicKey);
     button("Add this public key to the definition").click();
@@ -206,6 +235,13 @@
     await wait(() => !button("Trust this host key").disabled);button("Trust this host key").click();
     await wait(() => text().includes("Saved host-key trust"));button("Inspect host key").click();
     await wait(() => document.getElementById("ssh-username")?.value === "debian");
+    await wait(()=>[...document.getElementById("ssh-source").options].some(option=>option.value==="system"));
+    const sourceSelect=document.getElementById("ssh-source");sourceSelect.value="system";sourceSelect.dispatchEvent(new Event("change",{bubbles:true}));
+    await wait(()=>!document.getElementById("ssh-key-passphrase"));
+    check(button("Unlock connection identity").disabled && !calls.some(call=>call.command==="list_system_ssh_identity"),"System source reused consent or read a key implicitly");
+    document.getElementById("ssh-source").closest("form").querySelector('input[type="checkbox"]').click();
+    await wait(()=>!button("Unlock connection identity").disabled);button("Unlock connection identity").click();
+    await wait(()=>document.querySelector('input[name="ssh-identity"]'));check(!calls.some(call=>call.command==="start_ssh_session"),"Vault selection opened SSH implicitly");
     const inspections = calls.filter(call=>call.command==="inspect_ssh_host").length;
     button("Prepare SSH connection").click();
     await wait(() => !document.getElementById("ssh-username"));
@@ -270,6 +306,6 @@
     await new Promise(resolve => setTimeout(resolve, 50));
     check(!text().includes("STALE_RECOVERY"), "Recovery result leaked across connection modes");
     check(calls.filter(call => call.command === "connect_remote").length === 3, "Unexpected connection replay");
-    return { ok: true, checks: [...(declared ? ["declared packages and snapshot review", "changed server declarations refused", "edit invalidates consent and request key"] : []), "remote form", "local controls isolated", "token cleared/no storage", "connect/disconnect", "remote lists/empty states", "partial failure", "create confirmation/same-key retry/status", "safe package/snapshot failure and saved-failure messages", "read-only creation recovery after remount", "explicit ready-target SSH handoff with host-trust gate and account prefill", "reselection/disconnect clears SSH state", "application identity create/unlock/public-key flow", "stale workspace/create/recovery/connect responses suppressed"] };
+    return { ok: true, checks: [...(declared ? ["declared packages and snapshot review", "changed server declarations refused", "edit invalidates consent and request key"] : []), "remote form", "local controls isolated", "token cleared/no storage", "connect/disconnect", "remote lists/empty states", "partial failure", "create confirmation/same-key retry/status", "safe package/snapshot failure and saved-failure messages", "read-only creation recovery after remount", "explicit ready-target SSH handoff with host-trust gate and account prefill", "reselection/disconnect clears SSH state", "application identity create/unlock/public-key flow", "system vault explicit save/unlock/forget, secret clearing and SSH consent", "stale workspace/create/recovery/connect responses suppressed"] };
   })().catch(error => ({ ok: false, error: error.message })).then(report => fetch("/__instance_fixture/result", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(report) }));
 })();

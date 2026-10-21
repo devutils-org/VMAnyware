@@ -8,30 +8,18 @@ ignored local lab records to verify actual identifiers before operations.
 
 ## Latest resume point
 
-Current slice (ADR 0079): package transport and durable sequential worker now
-compile/pass six focused SQLite/HTTPS worker tests and three affected readiness/seed
-checks. PID/deadline/no-replay restart behavior is proven against owned fixtures.
-The optional final snapshot worker now also passes six targeted HTTPS/SQLite tests
-plus affected package/create/scheduling checks (ADR 0080). API admission now accepts
-supported package/final-snapshot declarations and passes all create/recreate feature
-combinations with independent gates and actual initial clone tagging (ADR 0081).
-Native declared-plan acceptance now passes create/recreate/recovery protocol checks
-(ADR 0082). Explicit React package/final-snapshot inputs and creation/recreation
-review now build/pass focused browser checks (ADR 0083). Actual Linux native
-create/recreate now also pass the full declared workflow against an owned HTTPS
-provider, with identical lost-reply retry and exact stage evidence. Refreshed Linux
-server and ARM64/x86_64 Android debug artifacts now include this integrated source
-and pass package/signature/content checks. Exact APK/platform/real-target acceptance
-remains open. Safe provisioning failure codes/messages now pass native and browser
-checks across creation/recreation/recovery (ADR 0084). A safe recorded per-stage
-progress API passes focused HTTP/SQLite checks (ADR 0085). Its native reader and
-explicit four-view React display now pass protocol/browser checks (ADR 0086); joined
-Linux declared creation/recreation pass with package/snapshot stage reads. Server
-and ARM64/x86_64 Android artifacts are refreshed, and the exact extracted server
-also passes the joined native declared journey. Current-APK/real-guest/OS-backed
-storage acceptance remains open. Next: platform credential-store implementation.
-Current Android delivery already includes existing-instance manual SSH; Linux native
-application-key/PTY integration passes. Exact APK/real guest acceptance stays open.
+ADR 0087 adds optional Linux Secret Service storage of the application SSH unlock
+passphrase: explicit save/unlock/forget, scoped lookup and SSH source selection.
+The private SSH key stays encrypted in the existing app file. Eighteen affected
+native SSH checks, a focused namespace check, two isolated real-daemon/vault/SSH
+cases and separate React/browser journeys pass. No personal vault is accessed.
+Clippy strict exposes one pre-existing unrelated argument-count lint; the client
+check passes with only that lint allowed. Source is not new GUI/device acceptance.
+Next: joined Linux WebView/production IPC/vault/terminal acceptance, then extend
+platform stores. Current server/Android delivery artifacts include ADR 0086 progress
+but predate this new vault IPC/UI. Android runtime, real Proxmox, other OS stores,
+Windows/iOS parity, host deployment and local-provider acceptance remain open.
+The previous source/delivery checkpoint is retained in the dated entries below.
 
 
 Latest source slice: production HTTP admission now has a global burst-120,
@@ -6718,3 +6706,61 @@ these text changes. Website commit `85d9e1e` is pushed; Pages run `39650078223`
 completed successfully (`.lab/provisioning-progress-site-deploy.log`). Both worktrees
 were clean after publication. Test artifacts remain local/ignored, not a public
 release or a claim of device/real-host execution.
+
+
+## 2026-10-21 — Optional Linux system SSH unlock (ADR 0087)
+
+Scope/acceptance: explicit opt-in saving/reading/forgetting of the existing app-key
+passphrase in Linux Secret Service, exact directory/public-fingerprint scope,
+no automatic vault access or silent fallback, unchanged encrypted SSH key, and
+owned isolated acceptance including actual SSH authentication. Implemented five
+fixed native commands, bringing the manifest/handler/local-main capability to 82.
+Support detection only reports platform implementation. UI offers separate unchecked
+save/forget consent, clears input before IPC and requires fresh connection consent
+when switching to the system key store. Existing host/owner/expiry/single-use/
+cancellation/authentication/session gates stay in the shared SSH implementation.
+
+Use pinned Linux-only dbus-secret-service 4.1.0 with encrypted DH session and zero
+prompt timeout. Only the default collection and exact four lookup attributes are
+accessed. Correct passphrase verification precedes save; unique-item/secret readback
+precedes success. Duplicate, locked, missing or corrupt entries fail closed with
+fixed text. Forget deletes only this saved unlock secret; manual encrypted-file
+unlock remains available explicitly. No other platform or token persistence is
+implemented. ADR 0087 records the dependency, trust and recovery choices.
+
+Verification: 18 affected native SSH checks pass and two opt-in vault cases stay
+ignored by default (`.lab/native-deps/identity-vault-affected-ssh-tests.log`). This
+broader SSH selection was warranted by refactored shared identity loading and the
+new crypto dependency feature graph; unrelated HTTP/server suites did not rerun.
+A focused namespace check also passes after adding successful-save readback
+(`identity-vault-scope-test.log` in that directory). Two actual ignored cases pass
+through the owned runner (`identity-vault-owned-check.log`): save/reopen/forget,
+wrong secret/duplicate/locked refusal, another directory/key cannot retrieve the
+secret, exact private ciphertext remains unchanged, host verification precedes
+vault use, wrong window is refused and an owned SSH peer authenticates once.
+Each case uses its own private D-Bus/GNOME Keyring, temporary XDG state and generated
+passwords. Signed gcr 3.41.2-2 / gnome-keyring 1:51.1-1 archives were verified with
+the packaged Arch public keyring and extracted to the owned prefix without hooks;
+`.lab/native-deps/vault-packages.json` retains provenance. No host installation,
+personal bus/keyring, credential or VM was touched.
+
+Frontend build/typecheck passes (`.lab/identity-vault-ui-build.log`). Two scoped
+React/Firefox simulated-IPC journeys pass: explicit vault save/read/forget,
+unsupported/unavailable error redaction, no implicit access, input/consent clearing,
+system SSH selection without a renderer secret and no automatic session
+(`.lab/identity-vault-ui-check.log`); affected manual app-key/terminal/stale-response
+flow also passes (`.lab/identity-vault-affected-ssh-ui.log`). Command ACL, scoped
+Rust format, Python/JS syntax and diff review pass. Strict client Clippy reports
+pre-existing `snapshot_restore.rs:229` too_many_arguments, confirmed unchanged in
+HEAD (`.lab/native-deps/identity-vault-clippy.log`). It passes with only that known
+lint allowed (`identity-vault-clippy-scoped.log`); no unrelated source was edited.
+
+Limits: separate backend and browser evidence, not joined WebView/new IPC or an
+exact-current desktop/mobile artifact. OS vault lookup metadata is not isolation
+from a compromised unlocked account. Private keys are still encrypted application
+files, not non-exportable hardware keys. Current APKs predate new commands; no
+artifact rebuild or device/AVD/real-provider operation ran for this Linux slice.
+Next task: extend the owned actual Linux WebView/IPC/manual-SSH fixture to start a
+private test vault, remember through the new production command, select the system
+source, authenticate/open the real owned terminal, forget and verify read refusal.
+Then batch delivery/platform validation rather than rebuilding per tiny edit.

@@ -19,12 +19,13 @@ function cancel(selectionId: string | null) {
 
 export function SshAuthentication({ host, port, initialUsername = "" }: { host: string; port: number; initialUsername?: string }) {
   const [username, setUsername] = useState(initialUsername);
-  const [agentSupported, setAgentSupported] = useState(false);
+  const [agentSupported, setAgentSupported] = useState(false), [systemSupported, setSystemSupported] = useState(false);
   const [source, setSource] = useState("application");
   const [passphrase, setPassphrase] = useState("");
   useEffect(() => {
     let active = true;
     void invoke<boolean>("ssh_agent_support").then(value => { if (active) setAgentSupported(value); }).catch(() => {});
+    void invoke<boolean>("system_identity_support").then(value => { if (active) setSystemSupported(value); }).catch(() => {});
     return () => { active = false; };
   }, []);
   const [consent, setConsent] = useState(false);
@@ -79,6 +80,7 @@ export function SshAuthentication({ host, port, initialUsername = "" }: { host: 
     try {
       const found = source === "application"
         ? await invoke<Selection>("list_app_ssh_identity", { host, port, username, passphrase: secret })
+        : source === "system" ? await invoke<Selection>("list_system_ssh_identity", { host, port, username })
         : await invoke<Selection>("list_ssh_identities", { host, port, username });
       if (request !== generation.current) { cancel(found.id); return; }
       if (found.host !== host || found.port !== port || found.username !== username) {
@@ -140,6 +142,7 @@ export function SshAuthentication({ host, port, initialUsername = "" }: { host: 
       <label htmlFor="ssh-source">Identity source</label>
       <select id="ssh-source" value={source} onChange={event => { invalidate(); setConsent(false); setSource(event.target.value); }}>
         <option value="application">Encrypted application key</option>
+        {systemSupported && <option value="system">Application key via Linux system key store</option>}
         {agentSupported && <option value="agent">Configured SSH agent</option>}
       </select>
       <label htmlFor="ssh-username">SSH username</label>
@@ -150,8 +153,8 @@ export function SshAuthentication({ host, port, initialUsername = "" }: { host: 
         <label htmlFor="ssh-key-passphrase">Application key passphrase</label>
         <input id="ssh-key-passphrase" type="password" minLength={16} maxLength={1024} required autoComplete="off" autoCapitalize="none" autoCorrect="off" spellCheck={false} value={passphrase} onChange={event => setPassphrase(event.target.value)} />
       </>}
-      <p><label><input type="checkbox" checked={consent} onChange={event => { invalidate(!event.target.checked); setConsent(event.target.checked); }} /> {source === "application" ? "Allow use of my encrypted application SSH identity for this connection." : "Allow access to my configured SSH agent for this connection."}</label></p>
-      <button type="submit" disabled={!consent || busy}>{source === "application" ? "Unlock connection identity" : "List agent identities"}</button>
+      <p><label><input type="checkbox" checked={consent} onChange={event => { invalidate(!event.target.checked); setConsent(event.target.checked); }} /> {source === "agent" ? "Allow access to my configured SSH agent for this connection." : "Allow use of my encrypted application SSH identity for this connection."}</label></p>
+      <button type="submit" disabled={!consent || busy}>{source === "agent" ? "List agent identities" : "Unlock connection identity"}</button>
     </form>
     {busy && <p role="status">Verifying the host and preparing the selected SSH identity…</p>}
     {error && <p role="alert" className="error">{error}</p>}

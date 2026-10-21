@@ -1,4 +1,7 @@
 //! Fixed app-owned encrypted Ed25519 identity. Never imports user key files.
+#[cfg(target_os = "linux")]
+#[path = "identity_vault.rs"]
+pub(super) mod vault;
 use ssh_key::{Algorithm, Cipher, HashAlg, Kdf, LineEnding, PrivateKey};
 use std::{
     fs::{self, File, OpenOptions},
@@ -90,6 +93,11 @@ impl IdentityStore {
         self.read_key(&password)
     }
     fn read_key(&self, password: &str) -> Result<PrivateKey, String> {
+        self.read_encrypted()?
+            .decrypt(password)
+            .map_err(|_| UNLOCK.into())
+    }
+    fn read_encrypted(&self) -> Result<PrivateKey, String> {
         self.directory(false).map_err(|_| UNLOCK)?;
         let path = self.directory.join("identity.openssh");
         private_metadata(&path, false).map_err(|_| UNLOCK)?;
@@ -121,7 +129,7 @@ impl IdentityStore {
         {
             return Err(UNLOCK.into());
         }
-        encrypted.decrypt(password).map_err(|_| UNLOCK.into())
+        Ok(encrypted)
     }
 }
 fn password_bounds(password: &str) -> Result<(), String> {

@@ -219,3 +219,50 @@ async fn app_identity_opens_real_shell_resizes_interrupts_and_reconnects() {
     .unwrap();
     assert_eq!(fixture.auth.load(Ordering::SeqCst), 2);
 }
+
+#[cfg(target_os = "linux")]
+#[tokio::test]
+#[ignore = "Requires an isolated owned Secret Service; use the vault runner"]
+async fn owned_vault_ssh_selection_checks_host_owner_and_actual_authentication() {
+    let root = crate::ssh::identity::vault::tests::require_owned_bus();
+    let identity = IdentityStore::new(root.join("ssh-identity"));
+    let exported = serde_json::to_value(identity.create(password()).unwrap()).unwrap();
+    let public = PublicKey::from_openssh(exported["publicKey"].as_str().unwrap()).unwrap();
+    identity.remember(password()).unwrap();
+    let path = root.join("ssh-trust");
+    let trust = Store::create(&path).unwrap();
+    let manager = AgentManager::new(HostManager::new(path), None).with_identity(identity.clone());
+    let fixture = Fixture::start(public).await;
+    assert!(manager
+        .list_system_application("main", "127.0.0.1", fixture.port, "fixture")
+        .await
+        .err()
+        .unwrap()
+        .contains("host verification"));
+    assert_eq!(fixture.auth.load(Ordering::SeqCst), 0);
+    fixture.trust(&trust);
+    let selection = manager
+        .list_system_application("main", "127.0.0.1", fixture.port, "fixture")
+        .await
+        .unwrap();
+    assert!(manager
+        .authenticate("other", &selection.id, &selection.identities[0].fingerprint)
+        .await
+        .is_err());
+    manager.cancel_selection("main", &selection.id);
+    let selection = manager
+        .list_system_application("main", "127.0.0.1", fixture.port, "fixture")
+        .await
+        .unwrap();
+    manager
+        .authenticate("main", &selection.id, &selection.identities[0].fingerprint)
+        .await
+        .unwrap();
+    assert_eq!(fixture.auth.load(Ordering::SeqCst), 1);
+    assert_eq!(fixture.channels.load(Ordering::SeqCst), 0);
+    identity.forget(true).unwrap();
+    assert!(manager
+        .list_system_application("main", "127.0.0.1", fixture.port, "fixture")
+        .await
+        .is_err());
+}

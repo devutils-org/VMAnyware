@@ -40,6 +40,7 @@ Implemented, with local/generated-provider evidence:
 - Snapshot creation/restore, deletion and retained-definition recreation.
 - Durable operations, idempotent requests and read-only restart recovery.
 - SSH host trust, encrypted application identity and an interactive native terminal.
+- Optional Linux system key store for the application identity unlock passphrase.
 - API/worker execution of declared packages and an optional final disk-only snapshot.
 
 The package/final-snapshot workflow passes all create/recreate combinations against
@@ -67,6 +68,12 @@ open. A home Proxmox host will need an explicitly mapped Debian template,
 storage/network, verified TLS, least-privilege token and an approved disposable
 target. Start with the [template preparation guide](docs/debian-template.md) and
 [Proxmox setup](docs/proxmox-setup.md).
+
+The optional Linux Secret Service controls pass isolated real-daemon/native SSH
+and separate browser checks. The private key remains encrypted in application
+storage; macOS Keychain/Android Keystore and joined Linux WebView acceptance are
+still open. Current delivery files predate these new vault commands. See
+[the decision and limits](docs/decisions/0087-linux-system-identity-unlock.md).
 
 ## Install
 

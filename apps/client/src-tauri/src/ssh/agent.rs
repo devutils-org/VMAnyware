@@ -214,6 +214,28 @@ impl AgentManager {
         username: &str,
         password: zeroize::Zeroizing<String>,
     ) -> Result<Selection, String> {
+        self.list_application_inner(owner, host, port, username, Some(password))
+            .await
+    }
+    #[cfg(target_os = "linux")]
+    pub async fn list_system_application(
+        &self,
+        owner: &str,
+        host: &str,
+        port: u16,
+        username: &str,
+    ) -> Result<Selection, String> {
+        self.list_application_inner(owner, host, port, username, None)
+            .await
+    }
+    async fn list_application_inner(
+        &self,
+        owner: &str,
+        host: &str,
+        port: u16,
+        username: &str,
+        password: Option<zeroize::Zeroizing<String>>,
+    ) -> Result<Selection, String> {
         let (id, active) = self.begin(owner)?;
         let _permit = self
             .permits
@@ -237,7 +259,15 @@ impl AgentManager {
             let unlocking = active.clone();
             let key = tokio::task::spawn_blocking(move || {
                 ensure_active(&unlocking)?;
-                store.signing_key(password)
+                match password {
+                    Some(password) => store.signing_key(password),
+                    #[cfg(target_os = "linux")]
+                    None => store.signing_system(),
+                    #[cfg(not(target_os = "linux"))]
+                    None => {
+                        Err("System SSH identity storage is unavailable on this platform".into())
+                    }
+                }
             })
             .await
             .map_err(|_| "Application SSH identity unavailable")??;

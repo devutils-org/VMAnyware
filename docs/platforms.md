@@ -27,6 +27,16 @@ Their manifest records `runtimeValidatedForTheseApks:false`: earlier emulator/SS
 reports below belong to historical APKs and do not prove these new binaries run.
 Physical ARM64, fresh runtime/input/network behavior and release signing remain open.
 
+## Optional Linux identity key store — 2026-10-21
+
+Source now offers explicit save/unlock/forget of the application SSH unlock
+passphrase through Secret Service, plus an SSH identity-source choice. A real
+isolated GNOME Keyring/private D-Bus fixture passes roundtrip/failure and native
+SSH authentication checks; React/Firefox controls pass separate simulated-IPC
+checks. Joined WebView/IPC proof is next. This does not store a non-exportable SSH
+key, implement macOS Keychain/Android Keystore or update existing delivery files.
+See [ADR 0087](decisions/0087-linux-system-identity-unlock.md).
+
 ## Reproduce the current development checks
 
 | Tool | Tested version/configuration |
