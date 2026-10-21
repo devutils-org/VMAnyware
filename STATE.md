@@ -6709,3 +6709,12 @@ Keychain/Keystore support, Windows/iOS parity and the added local-provider reque
 remain open. Next autonomous source task: inspect and implement the first concrete
 platform credential-store use case without reading personal credentials, keeping
 passphrase-encrypted-file support labelled accurately and tests in an owned store.
+
+Publication checkpoint: source commit `6a3b622` is pushed to VMAnyware main.
+Website EN/FR copy now includes recorded stages and exact extracted-server evidence;
+its source-only copy update passes build/render generation and diff review
+(`.lab/provisioning-progress-site-build.log`). No unrelated website suite reran for
+these text changes. Website commit `85d9e1e` is pushed; Pages run `39650078223`
+completed successfully (`.lab/provisioning-progress-site-deploy.log`). Both worktrees
+were clean after publication. Test artifacts remain local/ignored, not a public
+release or a claim of device/real-host execution.
