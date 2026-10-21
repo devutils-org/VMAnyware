@@ -40,7 +40,8 @@ Implemented, with local/generated-provider evidence:
 - Snapshot creation/restore, deletion and retained-definition recreation.
 - Durable operations, idempotent requests and read-only restart recovery.
 - SSH host trust, encrypted application identity and an interactive native terminal.
-- Optional Linux system key store for the application identity unlock passphrase.
+- Optional Linux Secret Service and Android Keystore protection for the identity
+  unlock passphrase (Android runtime acceptance pending).
 - API/worker execution of declared packages and an optional final disk-only snapshot.
 
 The package/final-snapshot workflow passes all create/recreate combinations against
@@ -71,9 +72,12 @@ target. Start with the [template preparation guide](docs/debian-template.md) and
 
 The optional Linux Secret Service controls pass isolated real-daemon/native SSH,
 browser and joined Linux WebView/production IPC/terminal checks. The private key
-remains encrypted in application storage; macOS Keychain/Android Keystore and
-normal deployment/platform acceptance remain open. Current delivery files predate these new vault commands. See
-[the decision and limits](docs/decisions/0087-linux-system-identity-unlock.md).
+remains encrypted in application storage. Android Keystore now compiles/packages
+for both ABIs, with scoped ciphertext and JNI checks; actual device behavior, macOS
+Keychain and normal deployment/platform acceptance remain open. Current Android
+APKs include the vault commands but have not been executed. See
+[Linux decision](docs/decisions/0087-linux-system-identity-unlock.md) and
+[Android decision and limits](docs/decisions/0088-android-keystore-identity-unlock.md).
 
 ## Install
 

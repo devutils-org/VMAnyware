@@ -1,4 +1,7 @@
 //! Fixed app-owned encrypted Ed25519 identity. Never imports user key files.
+#[cfg(any(target_os = "android", all(test, target_os = "linux")))]
+#[path = "identity_android.rs"]
+mod android;
 #[cfg(target_os = "linux")]
 #[path = "identity_vault.rs"]
 pub(super) mod vault;

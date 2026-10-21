@@ -1,6 +1,6 @@
 # VMAnyware — current state
 
-Updated: 2026-10-21. Historical evidence and decisions are in Git and docs.
+Updated: 2026-10-22. Historical evidence and decisions are in Git and docs.
 
 Naming note: historical lab resource identifiers below are normalized to the
 current VMAnyware name. External resources were not renamed; use VMIDs and
@@ -8,21 +8,22 @@ ignored local lab records to verify actual identifiers before operations.
 
 ## Latest resume point
 
-ADR 0087 adds optional Linux Secret Service storage of the application SSH unlock
-passphrase: explicit save/unlock/forget, scoped lookup and SSH source selection.
-The private SSH key stays encrypted in the existing app file. Eighteen affected
-native SSH checks, a focused namespace check, two isolated real-daemon/vault/SSH
-cases, React/browser journeys and joined Linux WebView/production IPC/vault/terminal
-acceptance pass. No personal vault is accessed.
-Clippy strict exposes one pre-existing unrelated argument-count lint; the client
-check passes with only that lint allowed. New GUI evidence is isolated Linux
-acceptance; device/normal-deployment gates stay open.
-Next: Android Keystore implementation using the existing native platform bridge,
-with source/compilation/device evidence distinguished. Current server/Android
-delivery artifacts include ADR 0086 progress
-but predate this new vault IPC/UI. Android runtime, real Proxmox, other OS stores,
-Windows/iOS parity, host deployment and local-provider acceptance remain open.
-The previous source/delivery checkpoint is retained in the dated entries below.
+User-requested session checkpoint: finish this slice, commit/push and stop here.
+ADR 0088 implements Android Keystore wrapping for the optional application SSH
+unlock secret. ARM64/x86_64 Rust, Kotlin/JNI and both signed debug APKs compile/package;
+helper presence, native hashes, descriptors, initializer exports and existing
+manifest constraints pass. A focused scope test and affected browser journey pass.
+This is compiled/packaged implementation, not actual Android runtime acceptance.
+The SSH private key stays in its passphrase-encrypted app file. Linux Secret Service
+already has joined native UI/vault/SSH acceptance (ADR 0087). macOS Keychain,
+Windows/iOS parity, exact APK/device/Keystore behavior, real Proxmox and deployment
+acceptance remain open. No full-roadmap completion or audited percentage is claimed.
+
+Resume next with an explicitly approved owned Android runtime: save/read/restart,
+tamper/wrong-scope and missing/invalidated wrapping-key refusal, forget/read refusal,
+then host-trust-first SSH/PTY using the system source. Do not start a VM, AVD or
+personal credential operation just because source/build checks pass. All task
+processes are terminal; no pending build or test needs restarting.
 
 
 Latest source slice: production HTTP admission now has a global burst-120,
@@ -6839,3 +6840,65 @@ and initializes the platform verifier before Tauri starts. Add a narrowly scoped
 keystore bridge alongside that path without altering TLS verification or
 regenerating the reviewed Android project. Use the existing owned build toolchain;
 source/compilation never substitutes for explicit device/AVD runtime acceptance.
+
+
+## 2026-10-22 — Android Keystore identity unlock, session checkpoint (ADR 0088)
+
+Scope/acceptance: Android implementation for the same explicit save/use/forget
+identity commands, key/directory scope binding, fixed failures/no silent fallback,
+source/native/Kotlin compilation and package checks. Implemented a narrow JNI
+helper retained via application context and initialized alongside unchanged TLS
+verification. Startup does not open a vault. Rust computes a purpose/directory/
+fingerprint SHA-256 scope, verifies the existing encrypted key/passphrase before
+save, confirms readback and retains shared busy/host/owner/session gates. Kotlin
+accepts only scoped aliases, wraps with AndroidKeyStore AES-256-GCM, binds scope as
+AAD and stores only bounded versioned ciphertext in private SharedPreferences.
+Existing backup/device-transfer exclusions cover that data. Missing/invalidated
+keys behind ciphertext cannot be silently regenerated. Explicit forget removes
+only the scoped key/ciphertext, preserving the SSH key. Fixed native exceptions
+never return Java/provider errors or plaintext to the renderer. UI labels now
+support Linux/Android and preserve separate unchecked consent. No new dependency,
+IPC command (82 total), network permission or automatic migration is added.
+
+Verification: `make package-android` passes with the existing owned SDK/JDK/NDK
+(`.lab/android-toolchain/keystore-package.log`): frontend/typecheck, ARM64/x86_64
+native compilation, Kotlin/Gradle, both signed debug APKs and signature/version/
+ABI/manifest/exact native-library checks. Initial compile errors (inner doc position
+and typed JNI byte-array signatures) were corrected; final compile/package handles
+exited successfully. An additional package check requires IdentityVault in DEX
+(`keystore-content-check.log` in that directory). Compiled Kotlin JNI descriptors
+match save/read/forget, and both new vault and unchanged TLS initializer symbols
+are exported (`keystore-jni-descriptors.log`, `keystore-jni-exports.log`).
+
+The focused Linux-host Android-scope test passes
+(`.lab/native-deps/android-keystore-scope-test.log`): stable lowercase 64-hex scope,
+changed directory and changed public identity produce independent scopes. It does
+not emulate Android cryptography. The affected React/Firefox simulated-IPC journey
+passes (`.lab/android-keystore-ui-check.log`), including explicit vault operations,
+input/consent clearing, scoped SSH selection, no automatic connection and private
+error suppression. Scoped rustfmt, Python syntax, IPC-manifest consistency and diff
+review pass. No unrelated server/Linux native suite or Clippy reran for Android
+conditional branches/UI copy changes.
+
+Current local test artifacts (`.lab/packages/android/`):
+- ARM64 SHA-256 `5a6554b8e32c54d39321fb99c1d2b274be73ca0c6a75397c067793d7277d2166`, 485011736 bytes.
+- x86_64 SHA-256 `0aa58facc6a8d659e76f64cdcc738c44ac2072ddac55c3429c9643d3a072ab47`, 492984213 bytes.
+- `releaseCandidate=false`, `runtimeValidatedForTheseApks=false`; updated INSTALL
+  instructions match repository documentation. No device/AVD was started/installed,
+  personal credential/key store touched, real VM contacted or host service changed.
+
+Limits: no actual Keystore save/decrypt, process/activity restart, ciphertext tamper,
+wrapping-key invalidation/loss, OEM transfer behavior, physical security-level or
+Android system-source SSH/PTY runtime evidence yet. No biometric/StrongBox claim:
+the wrapping key has no user-authentication requirement, and a compromised app can
+use it. The SSH key remains encrypted application storage. Forgetting saved unlock
+does not revoke an already selected key/session. Source compilation cannot close
+platform/phase acceptance. Existing Linux acceptance remains independently recorded.
+
+Next task after resuming: use an approved owned Android target and current exact APK
+for the acceptance sequence above; keep package provenance and no silent fallback.
+If no runtime target is authorized, prepare its opt-in fixture without launching it,
+then continue other source/platform work. User asked to stop at this checkpoint;
+do not start another slice in this session. Website remains at the accepted Linux
+checkpoint `11dcb6c`; Android source/package evidence is now in this repo and should
+be synchronized on the next publication pass, without claiming device validation.

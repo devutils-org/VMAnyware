@@ -217,7 +217,7 @@ impl AgentManager {
         self.list_application_inner(owner, host, port, username, Some(password))
             .await
     }
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "android"))]
     pub async fn list_system_application(
         &self,
         owner: &str,
@@ -261,9 +261,9 @@ impl AgentManager {
                 ensure_active(&unlocking)?;
                 match password {
                     Some(password) => store.signing_key(password),
-                    #[cfg(target_os = "linux")]
+                    #[cfg(any(target_os = "linux", target_os = "android"))]
                     None => store.signing_system(),
-                    #[cfg(not(target_os = "linux"))]
+                    #[cfg(not(any(target_os = "linux", target_os = "android")))]
                     None => {
                         Err("System SSH identity storage is unavailable on this platform".into())
                     }

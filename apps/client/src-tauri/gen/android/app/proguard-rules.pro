@@ -25,3 +25,6 @@
 -keepclassmembers class dev.vmanyware.client.MainActivity {
     native <methods>;
 }
+
+# Fixed native identity bridge methods must retain their JNI names.
+-keep class dev.vmanyware.client.IdentityVault { *; }

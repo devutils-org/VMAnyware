@@ -43,6 +43,8 @@ for variant, abi, target in [('arm64', 'arm64-v8a', 'aarch64-linux-android'), ('
     assert re.search(r':dataExtractionRules\(0x[0-9a-f]+\)=@0x[0-9a-f]+$', manifest, re.MULTILINE), 'Extraction policy missing'
     with zipfile.ZipFile(apk) as archive:
         assert 'res/xml/file_paths.xml' not in archive.namelist(), 'Broad sharing-path resource remains in APK'
+        dex_files = [name for name in archive.namelist() if re.fullmatch(r'classes[0-9]*\.dex', name)]
+        assert any(b'Ldev/vmanyware/client/IdentityVault;' in archive.read(name) for name in dex_files), 'Android identity vault helper missing from APK'
         names = [entry for entry in archive.namelist() if entry.startswith('lib/') and entry.endswith('/libvmanyware_client_lib.so')]
         assert names == [f'lib/{abi}/libvmanyware_client_lib.so'], names
         with archive.open(names[0]) as native:

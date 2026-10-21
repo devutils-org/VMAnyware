@@ -1,4 +1,6 @@
 #[cfg(target_os = "android")]
+mod android_identity;
+#[cfg(target_os = "android")]
 mod android_tls;
 mod control_plane;
 mod remote_connection;

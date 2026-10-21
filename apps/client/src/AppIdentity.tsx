@@ -39,7 +39,7 @@ export function AppIdentity({ disabled, onUse }: { disabled: boolean; onUse: (pu
         const result = action === "remember" ? await invoke<PublicIdentity>("remember_app_identity", { passphrase: secret, confirmed: true }) : await invoke<PublicIdentity>("unlock_system_app_identity");
         if (generation.current === current) { setIdentity(result); setNotice(action === "remember" ? "Unlock secret saved in the system key store." : "Identity unlocked using the system key store."); }
       }
-    } catch { if (generation.current === current) setError("System key store unavailable or unable to open this identity. Unlock your desktop key store and retry, or use the passphrase."); }
+    } catch { if (generation.current === current) setError("System key store unavailable or unable to open this identity. Retry the read, use the passphrase, or explicitly forget the saved secret before saving again."); }
     finally { if (generation.current === current) setBusy(false); }
   }
   function unlock(event: FormEvent) { event.preventDefault(); void read(false); }
@@ -59,8 +59,8 @@ export function AppIdentity({ disabled, onUse }: { disabled: boolean; onUse: (pu
       </fieldset>
     </form>
     {systemSupported && <fieldset disabled={disabled || busy} className="identity-vault">
-      <legend>Linux system key store</legend>
-      <p>Optionally remember this key's unlock passphrase in your desktop Secret Service. The SSH key remains encrypted in application storage. Access depends on your desktop key store; keep the passphrase for recovery.</p>
+      <legend>System key store</legend>
+      <p>Optionally protect this key's unlock passphrase with the operating system key store (Linux Secret Service or Android Keystore). The SSH key remains encrypted in application storage. Access depends on this device and key store; keep the passphrase for recovery.</p>
       <label><input id="remember-identity-consent" type="checkbox" checked={rememberConsent} onChange={event => setRememberConsent(event.target.checked)} /> Save the entered passphrase for this application SSH identity.</label>
       <button type="button" disabled={!rememberConsent || passphrase.length < 16} onClick={() => vault("remember")}>Remember SSH unlock secret</button>
       <button type="button" onClick={() => vault("unlock")}>Unlock using system key store</button>

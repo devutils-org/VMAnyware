@@ -142,7 +142,7 @@ export function SshAuthentication({ host, port, initialUsername = "" }: { host: 
       <label htmlFor="ssh-source">Identity source</label>
       <select id="ssh-source" value={source} onChange={event => { invalidate(); setConsent(false); setSource(event.target.value); }}>
         <option value="application">Encrypted application key</option>
-        {systemSupported && <option value="system">Application key via Linux system key store</option>}
+        {systemSupported && <option value="system">Application key via system key store</option>}
         {agentSupported && <option value="agent">Configured SSH agent</option>}
       </select>
       <label htmlFor="ssh-username">SSH username</label>

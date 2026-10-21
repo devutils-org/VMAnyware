@@ -69,6 +69,16 @@ retains the target for inspection. Refresh the known operation; do not start a n
 creation to work around a lost reply. These are snapshots, not independent backups,
 and unpinned packages/dependencies can change with the configured guest repositories.
 
+The current source also offers **System key store** for the application key's
+unlock passphrase. Enter the correct passphrase and explicitly consent to remember
+it; then select the system key store as the SSH identity source with fresh connection
+consent. Only encrypted unlock ciphertext is stored in app preferences, protected
+by an Android Keystore wrapping key. The SSH key remains passphrase-encrypted.
+Keep its passphrase: device migration, key loss or invalidation can prevent automatic
+unlock. Explicit forget removes the saved unlock secret, not the SSH key or an
+already active session. This implementation compiles/packages but has not yet been
+executed on Android; do not infer hardware or biometric protection.
+
 After successful provisioning, prepare SSH to the new address. Independently verify the
 host-key fingerprint before trusting it, unlock the chosen identity and test the
 terminal. The mobile device must have a route to the guest's actual SSH address

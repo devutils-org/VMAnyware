@@ -36,7 +36,9 @@ SSH authentication checks; React/Firefox controls pass separate simulated-IPC
 checks. Joined Linux WebView/production IPC now also passes actual save/use/forget,
 interactive terminal, remote resize and changed-host refusal with that private
 keyring. This does not store a non-exportable SSH
-key, implement macOS Keychain/Android Keystore or update existing delivery files.
+key, implement macOS Keychain or prove Android runtime behavior. Android Keystore
+source and refreshed APKs now compile/package independently (ADR 0088); the wrapping
+key, ciphertext, restart and SSH behavior still need actual device acceptance.
 See [ADR 0087](decisions/0087-linux-system-identity-unlock.md).
 
 ## Reproduce the current development checks
