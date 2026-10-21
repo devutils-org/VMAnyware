@@ -6825,3 +6825,17 @@ The affected normal manual-key SSH journey also passes through the shared driver
 (`.lab/native-deps/system-vault-affected-manual-ssh.log`), retaining manual passphrase,
 PTY/stdout/resize/disconnect and changed-host refusal without enabling a test vault.
 No unrelated server, browser or native suite reran for these fixture-only changes.
+
+Publication checkpoint: source/evidence commit `48e1062` is pushed. Website EN/FR
+now reports the joined private-keyring acceptance and retains normal deployment,
+Android/other stores and artifact limits. Text-only build/render generation and
+diff review pass (`.lab/system-vault-site-build.log`); website commit `11dcb6c` is
+pushed and Pages run `39654060275` succeeds (`.lab/system-vault-site-deploy.log`).
+No unrelated site suite reran. Worktrees were clean after publication.
+
+Android starting points inspected: `src-tauri/src/android_tls.rs` already exports
+an `EnvUnowned`/`jni_mangle` initializer; `MainActivity.kt` loads the native library
+and initializes the platform verifier before Tauri starts. Add a narrowly scoped
+keystore bridge alongside that path without altering TLS verification or
+regenerating the reviewed Android project. Use the existing owned build toolchain;
+source/compilation never substitutes for explicit device/AVD runtime acceptance.
