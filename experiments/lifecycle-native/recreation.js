@@ -15,6 +15,7 @@
     await new Promise(resolve=>setTimeout(resolve,50));document.querySelector('.remote-connection form').requestSubmit();await click('Load remote workspace');await click('Prepare recreation from VM 202');
     input('recreation-vmid','202');await review();check(text().includes('Target VMID was observed free: passed'),'Target availability review missing');
     check(text().includes('Previous disk contents and snapshots are not restored')&&text().includes('revision 1')&&text().includes('mobile-lab'),'Retained source/fresh disk semantics missing');
+    if(window.__snapshotFixture.declared)check(text().includes('Declared packages: build-essential, git=1:2.0-1')&&text().includes('Requested · disk-only'),'Declared native recreation summary missing');
     check(consents().length===1&&!consents()[0].checked&&button('Confirm recreation').disabled,'Consent preselected');
     consents()[0].click();await click('Cancel recreation review');await review();check(!consents()[0].checked&&button('Confirm recreation').disabled,'Consent survived cancellation');
     consents()[0].click();await click('Confirm recreation');await wait(()=>text().includes('No verified operation ID received.')&&button('Retry the same recreation request')&&!button('Retry the same recreation request').disabled,'lost response');

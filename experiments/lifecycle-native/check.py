@@ -34,7 +34,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--prefix', type=Path, required=True, help='Verified package prefix containing sysroot/usr')
     modes = parser.add_mutually_exclusive_group()
-    modes.add_argument('--manual-ssh', action='store_true', help='Existing-row native manual SSH host trust against owned peer; no login or provider read')
+    modes.add_argument('--manual-ssh', action='store_true', help='Existing-row native application-key SSH terminal against owned peer; no provider read')
     modes.add_argument('--lifecycle-recovery', action='store_true', help='Remote start/shutdown, restart app/server and recover both operations by GET only')
     modes.add_argument('--remote-lifecycle', action='store_true', help='Remote HTTPS native start/shutdown, lost replies and identical retries')
     modes.add_argument('--snapshots', action='store_true', help='Read-only remote snapshot UI instead of lifecycle mutations')
@@ -43,11 +43,14 @@ def main():
     modes.add_argument('--snapshot-restore', action='store_true', help='Destructive restore UI, generated provider and lost HTTP response retry')
     modes.add_argument('--restore-recovery', action='store_true', help='Restore once, restart app/server and recover through GET only')
     modes.add_argument('--deletion-recovery', action='store_true', help='Delete once, restart app/server and recover through GET only')
+    modes.add_argument('--declared-create', action='store_true', help='Native create with declared packages/final snapshot and lost API reply')
+    modes.add_argument('--declared-recreation', action='store_true', help='Native recreation with declared packages/final snapshot and lost API reply')
     modes.add_argument('--recreation', action='store_true', help='Actual native retained-source recreation against generated HTTPS infrastructure')
     modes.add_argument('--recreation-recovery', action='store_true', help='Recreate once, restart app/server and recover by GET only without provider/catalog/writes')
     args = parser.parse_args()
     args.remote_lifecycle = args.remote_lifecycle or args.lifecycle_recovery
-    args.recreation = args.recreation or args.recreation_recovery
+    args.declared = args.declared_create or args.declared_recreation
+    args.recreation = args.recreation or args.recreation_recovery or args.declared
     args.snapshot_create = args.snapshot_create or args.snapshot_recovery
     args.snapshot_restore = args.snapshot_restore or args.restore_recovery
     remote_snapshot = args.manual_ssh or args.remote_lifecycle or args.snapshots or args.snapshot_create or args.snapshot_restore or args.deletion_recovery or args.recreation
@@ -229,7 +232,7 @@ def main():
                 # Reuse the Android journey's generated provider protocol fixture.
                 demo_key = next(line.strip()[2:] for line in (REPO / 'examples/kernel-lab.yaml').read_text().splitlines() if line.strip().startswith('- ssh-ed25519 '))
                 configuration = directory / 'recreation-provider.json'
-                configuration.write_text(json.dumps({'certificate': str(certificate), 'key': str(key), 'publicKey': ' '.join(demo_key.split()[:2])}))
+                configuration.write_text(json.dumps({'certificate': str(certificate), 'key': str(key), 'publicKey': ' '.join(demo_key.split()[:2]), 'declared': args.declared}))
                 generated_provider = subprocess.Popen(['node', str(REPO / 'experiments/lifecycle-native/recreation-provider.mjs'), str(configuration)],
                     env={'PATH': '/usr/bin:/bin'}, stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE, text=True, start_new_session=True)
                 children.append(generated_provider)
@@ -242,6 +245,8 @@ def main():
                 catalog = directory / 'templates.yaml'
                 catalog.write_text((REPO / 'examples/templates.yaml').read_text() + '    imageDefaultUser: {name: debian, templateVersion: debian-13-cloud-20261016, passwordLocked: true, noAuthorizedKeys: true}\n')
                 server_env.update({'VMANYWARE_PROXMOX_URL': f'https://localhost:{provider_port}', 'VMANYWARE_TEMPLATES': str(catalog), 'VMANYWARE_PROVISIONING_ENABLED': 'true'})
+            if args.declared:
+                server_env['VMANYWARE_SNAPSHOTS_ENABLED'] = 'true'
             server = subprocess.Popen([str(REPO / 'target/debug/vmanyware-server')], env=server_env,
                                       stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True, start_new_session=True)
             children.append(server)
@@ -262,6 +267,13 @@ def main():
             yaml = (REPO / 'examples/kernel-lab.yaml').read_text()
             if args.recreation:
                 yaml = yaml.replace('kernel-lab', 'mobile-lab').replace('cpu: 4', 'cpu: 2').replace('memoryMiB: 8192', 'memoryMiB: 2048').replace('diskGiB: 40', 'diskGiB: 8').replace('packages:\n      - build-essential\n      - git', 'packages: []')
+            if args.declared:
+                yaml = yaml.replace('packages: []', 'packages:\n      - build-essential\n      - git=1:2.0-1').replace('snapshotAfterProvisioning: false', 'snapshotAfterProvisioning: true')
+            if args.declared_create:
+                yaml = json.dumps({'apiVersion': 'vmanyware.dev/v1', 'kind': 'Environment', 'metadata': {'name': 'mobile-lab'},
+                    'spec': {'image': 'debian-13', 'resources': {'cpu': 2, 'memoryMiB': 2048, 'diskGiB': 8},
+                    'provisioning': {'cloudInit': True, 'sshAuthorizedKeys': [demo_key], 'packages': ['build-essential', 'git=1:2.0-1']},
+                    'lifecycle': {'snapshotAfterProvisioning': True}}})
             definition_name = 'mobile-lab' if args.recreation else 'kernel-lab'
             request = urllib.request.Request(root + '/api/v1/definitions', data=yaml.encode(), headers={'Content-Type': 'application/yaml'})
             definition = json.load(opener.open(request, timeout=5))
@@ -313,7 +325,7 @@ def main():
                                 assert observed['instanceId'] == instance['id'] and observed['providerScopeId'] == instance['providerReference']['scopeId']
                                 assert observed['observation']['node'] == 'pve-test' and observed['observation']['vmid'] == 202
                                 state.setdefault('explicit_power_reads', []).append(observed['observation']['status'])
-                            if self.command == 'POST' and ((args.snapshot_restore and self.path.endswith('/restore')) or (args.deletion_recovery and self.path.endswith('/delete')) or (args.recreation and self.path.endswith('/recreate')) or (args.remote_lifecycle and self.path.endswith(('/start', '/shutdown')))):
+                            if self.command == 'POST' and ((args.snapshot_restore and self.path.endswith('/restore')) or (args.deletion_recovery and self.path.endswith('/delete')) or (args.recreation and self.path.endswith('/recreate')) or (args.declared_create and self.path == '/api/v1/provisioning/create') or (args.remote_lifecycle and self.path.endswith(('/start', '/shutdown')))):
                                 state['restore_submissions'].append((self.path, headers.get('Idempotency-Key'), payload))
                                 assert reply.status == 202
                                 first_reply = sum(entry[0] == self.path for entry in state['restore_submissions']) == 1 if args.remote_lifecycle else len(state['restore_submissions']) == 1
@@ -336,7 +348,7 @@ def main():
                 proxy.socket = tls.wrap_socket(proxy.socket, server_side=True)
                 threading.Thread(target=proxy.serve_forever, daemon=True).start()
                 env['VMANYWARE_SNAPSHOT_FIXTURE'] = json.dumps({'endpoint': f'https://localhost:{proxy.server_port}',
-                    'token': token, 'ca': certificate.read_text(), 'remoteLifecycle': args.remote_lifecycle, 'manualSsh': args.manual_ssh, 'creation': args.snapshot_create, 'restore': args.snapshot_restore, 'deletion': args.deletion_recovery, 'recreation': args.recreation})
+                    'token': token, 'ca': certificate.read_text(), 'remoteLifecycle': args.remote_lifecycle, 'manualSsh': args.manual_ssh, 'creation': args.snapshot_create, 'restore': args.snapshot_restore, 'deletion': args.deletion_recovery, 'recreation': args.recreation, 'declared': args.declared, 'declaredCreate': args.declared_create, 'publicKey': demo_key if args.recreation else None})
 
             display = str(1000 + secrets.randbelow(20000))
             authority = directory / 'Xauthority'
@@ -498,9 +510,16 @@ def main():
                 assert json.load(opener.open(root + '/api/v1/definitions/mobile-lab', timeout=5)) == definition
                 assert len(json.load(opener.open(root + '/api/v1/environments', timeout=5))) == 2
                 with sqlite3.connect(directory / 'fixture.sqlite') as database:
-                    assert database.execute('SELECT source_instance_id FROM recreation_sources WHERE operation_id=?', (operation['id'],)).fetchone() == (instance['id'],)
+                    assert database.execute('SELECT source_instance_id FROM recreation_sources WHERE operation_id=?', (operation['id'],)).fetchone() == (None if args.declared_create else (instance['id'],))
+                    if args.declared:
+                        package = json.loads(database.execute("SELECT result_json FROM provisioning_stages WHERE operation_id=? AND kind='install_declared_packages'", (operation['id'],)).fetchone()[0])
+                        snapshot = json.loads(database.execute("SELECT result_json FROM provisioning_stages WHERE operation_id=? AND kind='snapshot_after_provisioning'", (operation['id'],)).fetchone()[0])
+                        assert package['installed'] is True and package['packageCount'] == 2 and package['instanceId'] == operation['instanceId']
+                        assert package['planHash'] == operation['result']['planHash']
+                        assert snapshot['snapshot']['name'] == 'ready_' + operation['id'] and snapshot['snapshot']['includesRam'] is False
+                        assert snapshot['instanceId'] == operation['instanceId'] and snapshot['taskStatus'] == 'succeeded'
                     assert database.execute("SELECT count(*) FROM provisioning_stages WHERE operation_id=? AND status!='succeeded'", (operation['id'],)).fetchone() == (0,)
-                assert len([request for request in provider_report['requests'] if request['method'] != 'GET']) == 6
+                assert len([request for request in provider_report['requests'] if request['method'] != 'GET']) == (8 if args.declared else 6)
             if args.snapshot_restore:
                 assert state['snapshot_reads'] == 12, state['snapshot_reads']
                 assert state['saved_reads'] == 10, state['saved_reads']
@@ -555,7 +574,7 @@ def main():
             assert all('fixture-only-token' not in line and 'UPID:' not in line for line in lines)
             if remote_snapshot:
                 assert token not in output and all(token not in line for line in lines)
-            print('Real native React/WebKit -> Tauri IPC -> Axum -> generated HTTPS ' + ('manual SSH application-key/interactive terminal' if args.manual_ssh else 'remote lifecycle/app+server restart/GET-only recovery' if args.lifecycle_recovery else 'remote lifecycle/start-shutdown/identical retry' if args.remote_lifecycle else 'recreation/app+server restart/read-only recovery' if args.recreation_recovery else 'retained-definition recreation/same-key retry/new guest' if args.recreation else 'deletion/app+server restart/read-only recovery' if args.deletion_recovery else 'snapshot restore/app+server restart/read-only recovery' if args.restore_recovery else 'snapshot restore/same-key retry after lost HTTP reply' if args.snapshot_restore else 'snapshot create/app+server restart/read-only recovery' if args.snapshot_recovery else 'snapshot creation' if args.snapshot_create else 'snapshot listing' if args.snapshots else 'start/shutdown') + ': passed')
+            print('Real native React/WebKit -> Tauri IPC -> Axum -> generated HTTPS ' + ('declared create/packages/final snapshot/same-key retry' if args.declared_create else 'declared recreation/packages/final snapshot/same-key retry' if args.declared_recreation else 'manual SSH application-key/interactive terminal' if args.manual_ssh else 'remote lifecycle/app+server restart/GET-only recovery' if args.lifecycle_recovery else 'remote lifecycle/start-shutdown/identical retry' if args.remote_lifecycle else 'recreation/app+server restart/read-only recovery' if args.recreation_recovery else 'retained-definition recreation/same-key retry/new guest' if args.recreation else 'deletion/app+server restart/read-only recovery' if args.deletion_recovery else 'snapshot restore/app+server restart/read-only recovery' if args.restore_recovery else 'snapshot restore/same-key retry after lost HTTP reply' if args.snapshot_restore else 'snapshot create/app+server restart/read-only recovery' if args.snapshot_recovery else 'snapshot creation' if args.snapshot_create else 'snapshot listing' if args.snapshots else 'start/shutdown') + ': passed')
         finally:
             for child in reversed(children):
                 # Reap remaining owned group members even if their leader exited.

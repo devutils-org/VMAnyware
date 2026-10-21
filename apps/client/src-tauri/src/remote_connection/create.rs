@@ -59,6 +59,8 @@ pub struct Operation {
     status: Status,
     #[serde(default)]
     result: Option<Ready>,
+    #[serde(default)]
+    failure: Option<Failure>,
 }
 impl Operation {
     pub(super) fn id(&self) -> &str {
@@ -83,6 +85,42 @@ pub(super) enum Status {
     Failed,
     Interrupted,
     Uncertain,
+}
+// Only fixed provisioning failure codes cross the native boundary. Raw provider
+// messages, repository output and unrelated operation failures are never forwarded.
+#[derive(Debug, Deserialize, Serialize)]
+#[serde(rename_all = "snake_case")]
+enum Failure {
+    ProviderNotConfigured,
+    ProviderUnauthorized,
+    ProviderForbidden,
+    ProviderTimeout,
+    ProviderUnavailable,
+    ProcessInterrupted,
+    ProviderScopeChanged,
+    InstanceReferenceInvalid,
+    SnapshotDisabled,
+    SnapshotTargetChanged,
+    SnapshotPreconditionsFailed,
+    ProvisioningDisabled,
+    ProvisioningPlanChanged,
+    ProvisioningPreconditionsFailed,
+    ApprovalExpired,
+    ProviderSubmissionUnconfirmed,
+    ProviderTaskFailed,
+    ProviderTaskUnconfirmed,
+    PowerStateUnconfirmed,
+    SnapshotStateUnconfirmed,
+    ResourceStateUnconfirmed,
+    DiskStateUnconfirmed,
+    CloudInitStateUnconfirmed,
+    SeedRegenerationUnconfirmed,
+    GuestReadinessUnconfirmed,
+    GuestReadinessTimedOut,
+    GuestReadinessFailed,
+    PackagesUnconfirmed,
+    PackagesFailed,
+    PackagesTimedOut,
 }
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -113,6 +151,36 @@ fn valid_key(key: &str) -> bool {
             .bytes()
             .all(|b| b.is_ascii_alphanumeric() || b"._-".contains(&b))
 }
+// Keep declaration acceptance aligned with the server transport; the shared
+// contract fixture is checked by both crates without linking server machinery.
+fn valid_packages(packages: &[String]) -> bool {
+    let mut seen = std::collections::HashSet::new();
+    packages.len() <= 128
+        && packages
+            .iter()
+            .all(|p| p.len() <= 128 && valid_package(p) && seen.insert(p))
+}
+fn valid_package(value: &str) -> bool {
+    let (name, version) = value
+        .split_once('=')
+        .map_or((value, None), |(n, v)| (n, Some(v)));
+    let (name, architecture) = name
+        .split_once(':')
+        .map_or((name, None), |(n, a)| (n, Some(a)));
+    let identifier = |s: &str| {
+        !s.is_empty()
+            && s.as_bytes()[0].is_ascii_alphanumeric()
+            && s.bytes()
+                .all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b"+.-".contains(&b))
+    };
+    identifier(name)
+        // Refuse removal syntax. The fixed script additionally verifies literal names
+        // and exact versions, including genuine names ending in + (such as g++).
+        && !name.ends_with('-')
+        && architecture.is_none_or(|a| !a.is_empty() && a.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b == b'-'))
+        && version.is_none_or(|v| !v.is_empty() && v.bytes().all(|b| b.is_ascii_lowercase() || b.is_ascii_digit() || b".+:~-".contains(&b)))
+}
+
 impl Plan {
     pub(super) fn valid(&self, vmid: u32) -> bool {
         (!self.definition_name.is_empty()
@@ -141,8 +209,7 @@ impl Plan {
             && (4..=4096).contains(&self.target.resources.disk_gib)
             && self.ssh_key_count > 0
             && self.ssh_key_count <= 32
-            && self.packages.is_empty()
-            && !self.snapshot_after_provisioning
+            && valid_packages(&self.packages)
     }
     pub(super) fn matches_definition(&self, name: &str, hash: &str) -> bool {
         self.definition_name == name && self.definition_hash == hash
@@ -206,7 +273,7 @@ impl Profile {
     ) -> Result<T, String> {
         let (status, bytes) = self.create_response(request).await?;
         if !status.is_success() {
-            return Err(match status.as_u16(){403=>"Creation is disabled or access was denied.",409=>"Definition, target or request conflicts with retained work. Review the server operation before changing inputs.",422=>"Definition or template features are unsupported. Use empty packages and an attested template.",_=>"The server could not complete this request. Retain the request key if creation was submitted."}.into());
+            return Err(match status.as_u16(){403=>"Creation is disabled or access was denied.",409=>"Definition, target or request conflicts with retained work. Review the server operation before changing inputs.",422=>"Definition, package declarations or template features are unsupported. Review the saved plan and template attestation.",_=>"The server could not complete this request. Retain the request key if creation was submitted."}.into());
         }
         serde_json::from_slice(&bytes)
             .map_err(|_| "The server returned an invalid creation response.".into())
@@ -402,6 +469,15 @@ impl RemoteConnection {
     }
 }
 fn validate_read_operation(operation: &Operation) -> Result<(), String> {
+    if matches!(
+        operation.status,
+        Status::Queued | Status::Running | Status::Succeeded
+    ) && operation.failure.is_some()
+        || !matches!(operation.status, Status::Succeeded) && operation.result.is_some()
+    {
+        return Err("Creation status contradicts its failure or readiness evidence.".into());
+    }
+
     if !hex(&operation.id, 32)
         || operation.kind != "vm_provision"
         || operation
@@ -493,6 +569,180 @@ mod tests {
     const TOKEN: &str = "fixture-only-access-token-0123456789abcdef";
     pub(super) fn plan() -> Plan {
         serde_json::from_value(json!({"definitionName":"mobile-lab","definitionHash":"a".repeat(64),"planHash":"b".repeat(64),"providerScopeId":"c".repeat(64),"source":{"templateVmid":9000,"templateVersion":"fixture-v1"},"target":{"node":"pve-test","vmid":202,"storage":"local-lvm","bridge":"vmbr0","guestUser":"debian","resources":{"cpu":2,"memoryMiB":2048,"diskGiB":8}},"creationEnabled":true,"sshKeyCount":1,"packages":[],"snapshotAfterProvisioning":false})).unwrap()
+    }
+    #[test]
+    fn declared_plan_acceptance_matches_shared_package_contract_and_bounds() {
+        let cases: serde_json::Value = serde_json::from_str(include_str!(
+            "../../../../../fixtures/package-declarations.json"
+        ))
+        .unwrap();
+        for case in cases.as_array().unwrap() {
+            let mut declared = plan();
+            declared.packages = serde_json::from_value(case["packages"].clone()).unwrap();
+            for snapshot in [false, true] {
+                declared.snapshot_after_provisioning = snapshot;
+                assert_eq!(
+                    declared.valid(202),
+                    case["valid"].as_bool().unwrap(),
+                    "{case}"
+                );
+            }
+        }
+        let mut declared = plan();
+        declared.packages = (0..128).map(|n| format!("package-{n}")).collect();
+        assert!(declared.valid(202));
+        declared.packages.push("one-more".into());
+        assert!(!declared.valid(202));
+        declared.packages = vec!["a".repeat(128)];
+        assert!(declared.valid(202));
+        declared.packages = vec!["a".repeat(129)];
+        assert!(!declared.valid(202));
+    }
+    #[test]
+    fn declared_plan_comparison_includes_exact_packages_versions_order_and_snapshot() {
+        let mut retained = plan();
+        retained.packages = vec!["git=1:2.0-1".into(), "g++".into()];
+        retained.snapshot_after_provisioning = true;
+        let mut changed = retained.clone();
+        changed.creation_enabled = false;
+        assert!(retained.same_configuration(&changed));
+        for variant in [0, 1, 2, 3] {
+            let mut changed = retained.clone();
+            match variant {
+                0 => changed.packages[0] = "git=1:2.0-2".into(),
+                1 => changed.packages.reverse(),
+                2 => changed.packages.clear(),
+                _ => changed.snapshot_after_provisioning = false,
+            }
+            assert!(!retained.same_configuration(&changed));
+        }
+    }
+    #[test]
+    fn provisioning_failures_are_typed_redacted_and_status_consistent() {
+        for code in [
+            "packages_failed",
+            "packages_timed_out",
+            "packages_unconfirmed",
+            "snapshot_state_unconfirmed",
+            "snapshot_disabled",
+            "guest_readiness_timed_out",
+        ] {
+            let value = json!({"id":"d".repeat(32),"kind":"vm_provision","instanceId":"e".repeat(32),"status":"uncertain","result":null,"failure":code,"message":"PRIVATE_REPOSITORY_URL","stderr":"PRIVATE_GUEST_OUTPUT"});
+            let mut operation: Operation = serde_json::from_value(value).unwrap();
+            assert!(validate_operation(&operation, &plan()).is_ok());
+            let safe = serde_json::to_string(&operation).unwrap();
+            assert!(safe.contains(code));
+            assert!(!safe.contains("PRIVATE_"));
+            operation.status = Status::Running;
+            assert!(validate_operation(&operation, &plan()).is_err());
+        }
+        for failure in [
+            json!("PRIVATE_GUEST_OUTPUT"),
+            json!({"message":"PRIVATE_REPOSITORY_URL"}),
+            json!("deletion_state_unconfirmed"),
+        ] {
+            assert!(serde_json::from_value::<Operation>(json!({"id":"d".repeat(32),"kind":"vm_provision","status":"failed","failure":failure})).is_err());
+        }
+        let legacy: Operation = serde_json::from_value(
+            json!({"id":"d".repeat(32),"kind":"vm_provision","status":"failed"}),
+        )
+        .unwrap();
+        assert!(validate_operation(&legacy, &plan()).is_ok());
+    }
+    #[tokio::test]
+    async fn provisioning_failed_status_forwards_only_safe_code_through_retained_get() {
+        let body=json!({"id":"d".repeat(32),"kind":"vm_provision","instanceId":"e".repeat(32),"status":"uncertain","result":null,"failure":"packages_timed_out","message":"PRIVATE_REPOSITORY_URL","stderr":"PRIVATE_GUEST_STDERR"}).to_string();
+        let (endpoint, ca, task) =
+            super::super::tests::fixture("200 OK", &body, "x-vmanyware-authenticated: bearer\r\n")
+                .await;
+        let manager = RemoteConnection::default();
+        let id = manager.begin().unwrap();
+        manager
+            .complete(id, Profile::new(&endpoint, TOKEN, Some(ca)).unwrap())
+            .unwrap();
+        manager.0.lock().unwrap().prepared = Some(Prepared {
+            key: "retained-key".into(),
+            plan: plan(),
+            submitted: true,
+            inflight: false,
+            operation: Some("d".repeat(32)),
+        });
+        let operation = manager.create_status(id, "retained-key").await.unwrap();
+        let safe = serde_json::to_value(operation).unwrap();
+        assert_eq!(safe["failure"], "packages_timed_out");
+        assert!(!safe.to_string().contains("PRIVATE_"));
+        assert_eq!(
+            manager
+                .0
+                .lock()
+                .unwrap()
+                .prepared
+                .as_ref()
+                .unwrap()
+                .operation,
+            Some("d".repeat(32))
+        );
+        assert!(task
+            .await
+            .unwrap()
+            .starts_with(&format!("GET /api/v1/operations/{} ", "d".repeat(32))));
+    }
+    #[tokio::test]
+    async fn declared_plan_preparation_and_unknown_reply_retry_keep_exact_retained_approval() {
+        let mut declared = plan();
+        declared.packages = vec!["build-essential".into(), "git=1:2.0-1".into()];
+        declared.snapshot_after_provisioning = true;
+        let operation =
+            json!({"id":"d".repeat(32),"kind":"vm_provision","status":"queued","result":null});
+        let (endpoint, ca, task) = super::prepare_tests::sequence(vec![
+            ("200 OK", serde_json::to_string(&declared).unwrap()),
+            (
+                "201 Created",
+                json!({"name":"mobile-lab","hash":"a".repeat(64)}).to_string(),
+            ),
+            ("503 Service Unavailable", "PRIVATE_SERVER_BODY".into()),
+            ("202 Accepted", operation.to_string()),
+        ])
+        .await;
+        let manager = RemoteConnection::default();
+        let id = manager.begin().unwrap();
+        manager
+            .complete(id, Profile::new(&endpoint, TOKEN, Some(ca)).unwrap())
+            .unwrap();
+        let prepared = manager
+            .prepare_create(id, "declared-key".into(), "fixture-yaml".into(), 202)
+            .await
+            .unwrap();
+        assert!(prepared.same_configuration(&declared));
+        assert!(manager
+            .confirm_create(id, "declared-key", true)
+            .await
+            .is_err());
+        {
+            let state = manager.0.lock().unwrap();
+            let retained = state.prepared.as_ref().unwrap();
+            assert!(retained.plan.same_configuration(&declared));
+            assert!(retained.submitted && !retained.inflight);
+        }
+        manager
+            .confirm_create(id, "declared-key", true)
+            .await
+            .unwrap();
+        let requests = task.await.unwrap();
+        assert_eq!(requests.len(), 4);
+        for request in &requests[2..] {
+            assert!(request.starts_with("POST /api/v1/provisioning/create "));
+            assert!(request
+                .to_lowercase()
+                .contains("idempotency-key: declared-key"));
+            let approval: serde_json::Value =
+                serde_json::from_str(request.split_once("\r\n\r\n").unwrap().1).unwrap();
+            assert_eq!(approval, declared.approval());
+        }
+        assert_eq!(
+            requests[2].split_once("\r\n\r\n").unwrap().1,
+            requests[3].split_once("\r\n\r\n").unwrap().1
+        );
     }
     #[tokio::test]
     async fn remote_create_confirmation_posts_only_retained_approval_and_records_operation() {

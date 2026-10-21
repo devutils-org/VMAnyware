@@ -14,7 +14,7 @@ export async function exerciseCreate({check,delay,evaluate,click,input,wait,has,
   await click("Save definition and preview");await wait(()=>has("Review creation on"),"native creation plan review");
   check(creates()===0,"Preview submitted creation");
   check(await evaluate("[...document.querySelectorAll('button')].find(button=>button.textContent==='Create confirmed VM').disabled"),"Native creation skipped explicit confirmation");
-  await evaluate("document.querySelector('.remote-create input[type=checkbox]').click()");
+  await evaluate("document.getElementById('create-confirm').click()");
   await wait(()=>evaluate("![...document.querySelectorAll('button')].find(button=>button.textContent==='Create confirmed VM').disabled"),"confirmed creation enabled");
   await click("Create confirmed VM");await wait(()=>has("Refresh creation status"),"native creation acknowledgement");
   const deadline=Date.now()+30000;

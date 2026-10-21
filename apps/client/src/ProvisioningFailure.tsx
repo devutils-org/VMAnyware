@@ -1,0 +1,36 @@
+// Messages are local fixed copy. Never render provider/guest text or an unknown code.
+const messages: Record<string, string> = {
+  packages_failed: "Declared package installation failed. Inspect the retained VM before another action.",
+  packages_timed_out: "Package installation exceeded its deadline. Its outcome remains uncertain; inspect the retained VM. No installation is replayed.",
+  packages_unconfirmed: "Package installation is not confirmed. The original process and deadline are retained; no installation is replayed.",
+  snapshot_disabled: "The final snapshot was not submitted because snapshot creation is disabled on the server.",
+  snapshot_target_changed: "The final snapshot target or configuration changed. Inspect the retained VM.",
+  snapshot_preconditions_failed: "Storage, snapshot name or target checks did not permit the final snapshot.",
+  snapshot_state_unconfirmed: "The snapshot task completed, but its exact disk-only snapshot is not confirmed. No snapshot creation is replayed.",
+  guest_readiness_failed: "Guest initialization checks failed. Inspect the retained VM and Cloud-Init state.",
+  guest_readiness_timed_out: "Guest initialization exceeded its deadline. Inspect the retained VM and Cloud-Init state.",
+  guest_readiness_unconfirmed: "Guest initialization remains unconfirmed. Refresh reads the retained operation.",
+  provisioning_disabled: "Provisioning was disabled before this stage was submitted.",
+  provisioning_plan_changed: "The saved plan no longer matches the server catalog. Inspect the retained operation and target.",
+  provisioning_preconditions_failed: "Template, storage, network or target checks did not permit provisioning.",
+  provider_submission_unconfirmed: "A provider submission may have occurred. Retain this operation; it will not be submitted again automatically.",
+  provider_task_failed: "The provider task failed. Inspect the retained target before another action.",
+  provider_task_unconfirmed: "The provider task outcome is unconfirmed. Refresh reads the retained operation without submitting another write.",
+  resource_state_unconfirmed: "Requested CPU or memory configuration remains unconfirmed. No write is replayed.",
+  disk_state_unconfirmed: "Requested disk expansion remains unconfirmed. No write is replayed.",
+  cloud_init_state_unconfirmed: "Cloud-Init configuration remains unconfirmed. No write is replayed.",
+  seed_regeneration_unconfirmed: "Cloud-Init seed regeneration remains unconfirmed. No write is replayed.",
+  power_state_unconfirmed: "Provider completion was observed, but the requested power state remains unconfirmed.",
+  provider_not_configured: "The server has no configured Proxmox provider for this operation.",
+  provider_scope_changed: "The current Proxmox endpoint differs from this retained operation.",
+  provider_unauthorized: "Proxmox rejected the server's API credentials.",
+  provider_forbidden: "The server's Proxmox token lacks permission for this stage.",
+  provider_timeout: "The Proxmox request timed out. Inspect the retained operation before another action.",
+  provider_unavailable: "Proxmox is unavailable. Check the server's endpoint and TLS configuration.",
+  instance_reference_invalid: "The retained environment reference cannot be used for this operation.",
+  approval_expired: "The undispatched approval expired. Review the retained target before another action.",
+  process_interrupted: "The service stopped during this operation. Its outcome needs a read-only refresh.",
+};
+export function ProvisioningFailure({ code }: { code?: string | null }) {
+  return code ? <p role="alert">{Object.hasOwn(messages, code) ? messages[code] : "Provisioning failure details are unavailable. Inspect the retained operation."}</p> : null;
+}

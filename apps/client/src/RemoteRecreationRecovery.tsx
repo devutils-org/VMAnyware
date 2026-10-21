@@ -1,10 +1,11 @@
+import { ProvisioningFailure } from "./ProvisioningFailure";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
 
 type Source = { id: string; definitionName: string; providerReference: { node: string; vmid: number } };
 type Status = "queued" | "running" | "uncertain" | "interrupted" | "failed" | "succeeded";
 type History = { sourceInstanceId: string; operations: { id: string; instanceId: string; status: Status; createdAt: string }[] };
-type Saved = { sourceInstanceId: string; restoresPreviousDiskContents: boolean; requiresNewInstanceIdentity: boolean; plan: { definitionName: string; definitionHash: string; providerScopeId: string; planHash: string; source: { templateVmid: number; templateVersion: string }; target: { node: string; vmid: number; storage: string; bridge: string; guestUser: string; resources: { cpu: number; memoryMiB: number; diskGiB: number } } }; operation: { id: string; kind: string; instanceId: string; status: Status; result: null | { instanceId: string; providerScopeId: string; planHash: string; guestReady: boolean; guest: { ipv4: string; cloudInitClean: boolean; cloudInitExitCode: number } } } };
+type Saved = { sourceInstanceId: string; restoresPreviousDiskContents: boolean; requiresNewInstanceIdentity: boolean; plan: { definitionName: string; definitionHash: string; providerScopeId: string; planHash: string; source: { templateVmid: number; templateVersion: string }; target: { node: string; vmid: number; storage: string; bridge: string; guestUser: string; resources: { cpu: number; memoryMiB: number; diskGiB: number } } }; operation: { id: string; kind: string; instanceId: string; status: Status; failure?: string | null; result: null | { instanceId: string; providerScopeId: string; planHash: string; guestReady: boolean; guest: { ipv4: string; cloudInitClean: boolean; cloudInitExitCode: number } } } };
 const statuses = ["queued", "running", "uncertain", "interrupted", "failed", "succeeded"];
 export function RemoteRecreationRecovery({ connectionId, source, disabled }: { connectionId: number; source: Source; disabled: boolean }) {
   const [history, setHistory] = useState<History | null>(null), [operationId, setOperationId] = useState("");
@@ -56,6 +57,7 @@ export function RemoteRecreationRecovery({ connectionId, source, disabled }: { c
       <p>Recorded template {saved.plan.source.templateVmid} · {saved.plan.source.templateVersion} · {saved.plan.target.resources.cpu} CPUs · {saved.plan.target.resources.memoryMiB} MiB · {saved.plan.target.resources.diskGiB} GiB · storage {saved.plan.target.storage} · bridge {saved.plan.target.bridge}</p>
       <p>Recreation provisions a fresh VM; previous disk contents and snapshots are not restored. The source and its history remain.</p>
       {saved.operation.status === "succeeded" && saved.operation.result && <p>Recorded guest initialization succeeded at {saved.operation.result.guest.ipv4}. Inspect the current instance before preparing SSH.</p>}
+      {["failed", "interrupted", "uncertain"].includes(saved.operation.status) && <ProvisioningFailure code={saved.operation.failure} />}
       {["failed", "interrupted", "uncertain"].includes(saved.operation.status) && <p>Recorded readiness is not confirmed. Refresh reads only the saved operation and never repeats creation.</p>}
       <button type="button" disabled={disabled || busy} onClick={() => inspect(saved.operation.id)}>Refresh saved recreation operation</button>
     </>}

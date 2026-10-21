@@ -174,7 +174,9 @@ fn main() {
         format!(
             "window.__snapshotFixture = {configuration};\n{}\n{}",
             include_str!("../../../../experiments/lifecycle-native/instance-detail.js"),
-            if scenario["manualSsh"].as_bool().unwrap_or(false) {
+            if scenario["declaredCreate"].as_bool().unwrap_or(false) {
+                include_str!("../../../../experiments/lifecycle-native/declared-create.js")
+            } else if scenario["manualSsh"].as_bool().unwrap_or(false) {
                 include_str!("../../../../experiments/lifecycle-native/manual-ssh.js")
             } else if scenario["lifecycleRecovery"].as_bool().unwrap_or(false) {
                 include_str!("../../../../experiments/lifecycle-native/lifecycle-recovery.js")
@@ -222,6 +224,9 @@ fn main() {
             remote_connection::lifecycle::read_remote_lifecycle_operation,
             remote_connection::instance_status::read_remote_instance_status,
             remote_connection::instance_detail::read_remote_instance_detail,
+            remote_connection::create::prepare_remote_create,
+            remote_connection::create::confirm_remote_create,
+            remote_connection::create::read_remote_create,
             remote_connection::connect_remote,
             remote_connection::disconnect_remote,
             remote_connection::read_remote_images,

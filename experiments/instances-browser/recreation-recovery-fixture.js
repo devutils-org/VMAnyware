@@ -18,7 +18,7 @@
     }
     if(command==='recover_remote_recreation'){
       check(args.connectionId===connection&&args.sourceInstanceId===id&&args.operationId===op,'Wrong saved detail');check(Object.keys(args).sort().join(',')==='connectionId,operationId,sourceInstanceId','Recovery supplied consent/key');
-      const value=saved();if(mode==='uncertain'){value.operation.status='uncertain';value.operation.result=null;}if(mode==='false-success')value.operation.result.guest.cloudInitClean=false;if(mode==='wrong-source')value.sourceInstanceId='7'.repeat(32);if(mode==='late')return new Promise(resolve=>{release=()=>resolve(value);});return value;
+      const value=saved();if(mode==='uncertain'){value.operation.status='uncertain';value.operation.result=null;value.operation.failure='snapshot_state_unconfirmed';value.operation.message='PRIVATE_PROVIDER_OUTPUT';}if(mode==='false-success')value.operation.result.guest.cloudInitClean=false;if(mode==='wrong-source')value.sourceInstanceId='7'.repeat(32);if(mode==='late')return new Promise(resolve=>{release=()=>resolve(value);});return value;
     }
     throw Error('Unexpected recovery fixture command: '+command);
   }};
@@ -34,7 +34,7 @@
     await click('Find recreations from VM 202');await wait(()=>text().includes("No recreations in this source's recent history"));await click('Find recreations from VM 202');await click('Inspect recreation operation '+op);await wait(()=>text().includes('Saved recreation status: succeeded'));
     check(text().includes('new-node · VM 204')&&text().includes(target)&&text().includes('Current VM existence, guest readiness, address and SSH host identity have not been checked'),'Saved target/historical context missing');check(text().includes('previous disk contents and snapshots are not restored'),'Fresh disk semantics missing');
     check(!panel().querySelector('input[type="checkbox"]')&&!panel().textContent.includes('Prepare SSH'),'Saved proof restored consent or current SSH access');
-    mode='uncertain';await click('Refresh saved recreation operation');await wait(()=>text().includes('Saved recreation status: uncertain'));check(text().includes('never repeats creation')&&!text().includes('Recorded guest initialization succeeded'),'Uncertain evidence presented as success');
+    mode='uncertain';await click('Refresh saved recreation operation');await wait(()=>text().includes('Saved recreation status: uncertain'));check(text().includes('never repeats creation')&&!text().includes('Recorded guest initialization succeeded'),'Uncertain evidence presented as success');check(text().includes('snapshot task completed, but its exact disk-only snapshot is not confirmed')&&!text().includes('PRIVATE_'),'Saved recreation reason missing or leaked provider text');
     mode='false-success';await click('Inspect recreation operation '+op);await wait(()=>text().includes('Saved recreation success lacks'));check(!text().includes('Recorded guest initialization succeeded'),'False success displayed');
     mode='wrong-source';await click('Inspect recreation operation '+op);await wait(()=>text().includes('Saved recreation belongs to a different source'));mode='success';
     const before=calls.length;input(panel().querySelector('input'),'../bad');panel().querySelector('form').requestSubmit();await new Promise(resolve=>setTimeout(resolve,20));check(calls.length===before,'Invalid ID crossed IPC');

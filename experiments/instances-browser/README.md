@@ -228,3 +228,15 @@ reselection/stale inspection cancellation, association archival cleanup and reco
 reset. It does not authenticate, unlock an identity or open a session. Existing
 --remote-connection and --recreation scenarios protect their ready-guest SSH handoffs.
 This is UI/selection evidence, not actual native SSH or endpoint-to-VM attestation.
+
+
+## Declared provisioning inputs and exact review
+
+`node experiments/instances-browser/check.mjs --declared-create` runs the real
+remote React form with simulated IPC. It checks empty/unchecked defaults, exact
+package/version order and final-snapshot intent, refusal of changed server intent,
+fieldset locks, edit/re-prepare clearing consent and changing request key, and the
+existing unknown-response retry/status/recovery/SSH-trust journey. The launcher
+requires the declared scenario's result marker. --remote-connection still covers
+the empty/no-snapshot default. --recreation additionally checks retained package/
+final-snapshot summaries. No native provider, SSH or VM mutation occurs here.

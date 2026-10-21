@@ -7,6 +7,7 @@ const check = (ok, message) => { if (!ok) throw Error(message); };
 const peer = await createProvider({
   tls: { cert: await readFile(configuration.certificate), key: await readFile(configuration.key) },
   publicKey: configuration.publicKey,
+  declared: Boolean(configuration.declared),
   authorization: 'PVEAPIToken=reader@pve!fixture=fixture-only-token',
   check,
   listen: server => new Promise(resolve => server.listen(0, '127.0.0.1', () => resolve(server.address().port))),

@@ -407,3 +407,37 @@ Normal application builds include no driver, rotation command or owned peer.
 The control-plane side is real authenticated HTTPS, with zero Proxmox provider
 reads/tasks/writes. This is Linux native evidence, not real VM endpoint ownership
 or Android execution. Log: `.lab/native-deps/manual-ssh-terminal-check.log`.
+
+
+## Declared packages and final snapshot through actual native IPC
+
+```sh
+python3 experiments/lifecycle-native/check.py --prefix .lab/native-deps --declared-create
+python3 experiments/lifecycle-native/check.py --prefix .lab/native-deps --declared-recreation
+```
+
+Both modes use the real React/WebKit client, retained production native commands,
+verified HTTPS/bearer control plane, production sequential worker and an owned
+in-memory HTTPS provider. The creation mode uses the explicit fields and unchecked
+confirmation; the recreation mode reviews the retained declaration. Both request
+build-essential and pinned git, followed by a disk-only final snapshot.
+
+The provider requires Cloud-Init observation before package dispatch, package
+completion observation before the final snapshot, exact positional declarations
+and operation/definition/plan-bound snapshot metadata. A first accepted API reply
+is deliberately lost; the two confirmed API requests must retain identical path,
+key and body. The provider must record exactly eight expected non-GET requests,
+including one package dispatch and one final snapshot. SQLite evidence requires
+all stages succeeded, matching scoped package result, final disk-only snapshot and
+unchanged definition/retired source. Creation has no recreation lineage; recreation
+links the exact retired source and a distinct new instance. SSH handoff remains
+explicit with unchanged independent host trust; these modes do not log into a guest.
+
+The generated provider returns controlled guest PID/exit/status data; no apt command
+or VM actually executes. These are Linux native integration results, not real
+Proxmox/guest installation or current Android acceptance. Shared provider behavior
+remains unchanged when declared=false; --recreation-recovery also passes after this
+wiring, including GET-only recovery without provider/catalog/write flags.
+Logs: `.lab/native-deps/declared-create-native-check.log`,
+`.lab/native-deps/declared-recreation-native-check.log` and
+`.lab/native-deps/declared-workflow-default-recovery-check.log`.

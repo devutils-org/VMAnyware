@@ -178,3 +178,19 @@ async fn package_dispatch_refuses_changed_identity_before_post_and_does_not_retr
         1
     );
 }
+
+#[test]
+fn shared_package_declaration_contract_matches_server_admission() {
+    let cases: serde_json::Value = serde_json::from_str(include_str!(
+        "../../../../fixtures/package-declarations.json"
+    ))
+    .unwrap();
+    for case in cases.as_array().unwrap() {
+        let packages: Vec<String> = serde_json::from_value(case["packages"].clone()).unwrap();
+        assert_eq!(
+            PackageRequest::valid_declarations(&packages),
+            case["valid"].as_bool().unwrap(),
+            "{case}"
+        );
+    }
+}

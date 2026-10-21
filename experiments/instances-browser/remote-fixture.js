@@ -2,6 +2,8 @@
 (() => {
   const token = "fixture-only-access-token-0123456789abcdef";
   const calls = [];
+  const declared = Boolean(window.__declaredCreateFixture);
+  let expectedPackages = [], expectedSnapshot = false, prepares = 0;
   const publicCa = "-----BEGIN CERTIFICATE-----\npublic-browser-fixture\n-----END CERTIFICATE-----";
   const appPublicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA";
   const fixturePassphrase = "disposable identity phrase 42";
@@ -45,12 +47,13 @@
     if (command === "prepare_remote_create") {
       check(args.connectionId === 1, "Wrong creation connection");
       const definition = JSON.parse(args.yaml);
-      check(definition.spec.provisioning.packages.length === 0 && definition.spec.lifecycle.snapshotAfterProvisioning === false, "Unexpected creation features");
+      check(JSON.stringify(definition.spec.provisioning.packages) === JSON.stringify(expectedPackages) && definition.spec.lifecycle.snapshotAfterProvisioning === expectedSnapshot, "Creation changed the declared packages/snapshot");
+      prepares++;
       check(definition.spec.provisioning.sshAuthorizedKeys.length === 1, "Public key missing or duplicated");
       check(definition.spec.provisioning.sshAuthorizedKeys[0] === appPublicKey, "Application key not used");
       check(!args.yaml.includes(fixturePassphrase) && !args.yaml.includes("PRIVATE"), "Secret sent to control plane");
       submittedKey = args.requestKey;
-      return {definitionName:"mobile-lab",definitionHash:"a".repeat(64),planHash:"b".repeat(64),creationEnabled:true,sshKeyCount:1,source:{templateVmid:9000,templateVersion:"fixture-v1"},target:{node:"fixture-node",vmid:202,storage:"fixture-storage",bridge:"vmbr0",guestUser:"debian",resources:{cpu:2,memoryMiB:2048,diskGiB:8}}};
+      return {definitionName:"mobile-lab",definitionHash:"a".repeat(64),planHash:"b".repeat(64),creationEnabled:true,sshKeyCount:1,packages:expectedPackages,snapshotAfterProvisioning:declared&&prepares===1 ? !expectedSnapshot : expectedSnapshot,source:{templateVmid:9000,templateVersion:"fixture-v1"},target:{node:"fixture-node",vmid:202,storage:"fixture-storage",bridge:"vmbr0",guestUser:"debian",resources:{cpu:2,memoryMiB:2048,diskGiB:8}}};
     }
     if (command === "confirm_remote_create") {
       check(args.requestKey === submittedKey && args.confirmed === true && args.connectionId === 1, "Creation confirmation or retry key changed");
@@ -59,8 +62,8 @@
     }
     if (command === "read_remote_create") {
       check(args.connectionId === 1 && args.requestKey === submittedKey, "Wrong operation read scope");
-      if (++createReads === 1) return {id:"d".repeat(32),kind:"vm_provision",status:"failed",result:null};
-      if (createReads === 3) return new Promise(resolve => { releaseCreate = resolve; });
+      if (++createReads <= 4) return {id:"d".repeat(32),kind:"vm_provision",status:createReads===1||createReads===4?"failed":"uncertain",result:null,failure:["packages_failed","packages_timed_out","snapshot_state_unconfirmed","PRIVATE_UNKNOWN_CODE"][createReads-1],message:"PRIVATE_GUEST_STDERR"};
+      if (createReads === 6) return new Promise(resolve => { releaseCreate = resolve; });
       return {id:"d".repeat(32),kind:"vm_provision",status:"succeeded",result:{guestReady:true,guest:{ipv4:"192.0.2.42"}}};
     }
     if (command === "read_remote_creations") {
@@ -69,7 +72,8 @@
     }
     if (command === "recover_remote_creation") {
       check(args.connectionId === 3 && args.operationId === "d".repeat(32), "Recovery used the wrong server or operation");
-      if (++recoveryReads === 2) return new Promise(resolve => { releaseRecovery = resolve; });
+      if (++recoveryReads === 1) return {operation:{id:"d".repeat(32),status:"uncertain",result:null,failure:"packages_unconfirmed",message:"PRIVATE_REPOSITORY"},environment:{definitionName:"recovered-lab",providerReference:{node:"recovered-node",vmid:202}}};
+      if (recoveryReads === 3) return new Promise(resolve => { releaseRecovery = resolve; });
       return {operation:{id:"d".repeat(32),status:"succeeded",result:{guestReady:true,guest:{ipv4:"192.0.2.42"}}},environment:{definitionName:"recovered-lab",providerReference:{node:"recovered-node",vmid:202}}};
     }
     if (command === "connect_remote") {
@@ -128,11 +132,31 @@
     await wait(() => button("Add this public key to the definition"));
     check(!JSON.stringify(Object.entries(localStorage)).includes(fixturePassphrase), "Passphrase persisted in browser storage");
     await new Promise(resolve => setTimeout(resolve, 20));
+    check(document.getElementById("create-packages").value === "" && !document.getElementById("create-final-snapshot").checked, "Provisioning features were enabled by default");
+    if (declared) {
+      expectedPackages = ["build-essential", "git=1:2.0-1"]; expectedSnapshot = true;
+      input("create-packages", expectedPackages.join("\n")); document.getElementById("create-final-snapshot").click();
+      await new Promise(resolve => setTimeout(resolve, 20)); document.querySelector(".create-definition").requestSubmit();
+      await wait(() => text().includes("server plan changed the declared packages"));
+      check(!button("Create confirmed VM") && createAttempts === 0, "Changed server declarations allowed confirmation");
+    }
     document.querySelector(".create-definition").requestSubmit();
     await wait(() => button("Create confirmed VM"));
+    check(document.getElementById("create-packages").matches(":disabled") && document.getElementById("create-final-snapshot").matches(":disabled"), "Reviewed features remained editable");
+    if (declared) {
+      check(text().includes("Declared packages: build-essential, git=1:2.0-1") && text().includes("Requested · disk-only"), "Declared review omitted requested packages/snapshot");
+      document.getElementById("create-confirm").click(); const oldKey = submittedKey;
+      button("Edit definition").click(); await wait(() => !button("Create confirmed VM"));
+      expectedPackages = ["git=1:2.0-2", "g++"]; expectedSnapshot = false;
+      input("create-packages", expectedPackages.join("\n")); document.getElementById("create-final-snapshot").click();
+      await new Promise(resolve => setTimeout(resolve, 20)); document.querySelector(".create-definition").requestSubmit();
+      await wait(() => button("Create confirmed VM"));
+      check(!document.getElementById("create-confirm").checked && button("Create confirmed VM").disabled && submittedKey !== oldKey, "Edited declarations reused consent/key");
+      check(text().includes("Declared packages: git=1:2.0-2, g++") && text().includes("Final provisioning snapshot: Not requested"), "Edited plan summary stale");
+    }
     check(button("Create confirmed VM").disabled, "Creation did not require explicit confirmation");
     check(text().includes("fixture-storage") && text().includes("fixture-node") && text().includes("2048 MiB"), "Incomplete target review");
-    document.querySelector(".remote-create input[type=checkbox]").click();
+    document.getElementById("create-confirm").click();
     await wait(() => !button("Create confirmed VM").disabled); button("Create confirmed VM").click();
     await wait(() => button("Retry same confirmed request") && !button("Retry same confirmed request").disabled);
     check(text().includes(submittedKey), "Request key lost after submission error");
@@ -142,6 +166,11 @@
     button("Refresh creation status").click();
     await wait(() => text().includes("Creation: failed") && !button("Refresh creation status").disabled);
     check(!button("Prepare SSH connection") && !document.querySelector('.remote-ssh-target'), "Failed creation offered SSH handoff");
+    check(text().includes("Declared package installation failed"), "Package failure reason missing");
+    for (const message of ["Package installation exceeded its deadline", "snapshot task completed, but its exact disk-only snapshot is not confirmed", "Provisioning failure details are unavailable"]) {
+      button("Refresh creation status").click(); await wait(() => text().includes(message) && !button("Refresh creation status").disabled);
+      check(!text().includes("PRIVATE_") && !button("Prepare SSH connection"), "Failure exposed guest text or enabled SSH");
+    }
     button("Refresh creation status").click();
     await wait(() => text().includes("Guest initialized at 192.0.2.42"));
     check(text().includes("SSH access and host identity still need verification"), "Guest readiness was confused with SSH proof");
@@ -200,6 +229,9 @@
     button("Find recent creations").click(); await wait(() => text().includes("No creations in this server's recent operation history"));
     button("Find recent creations").click(); await wait(() => button(`Inspect ${"d".repeat(32)}`));
     button(`Inspect ${"d".repeat(32)}`).click();
+    await wait(() => text().includes("Recovered creation: uncertain"));
+    check(text().includes("Package installation is not confirmed") && !button("Prepare SSH connection") && !text().includes("PRIVATE_"), "Saved creation failure missing/leaked or offered SSH");
+    button("Refresh recovered creation").click();
     await wait(() => text().includes("Recovered creation: succeeded"));
     check(text().includes("recovered-lab") && text().includes("recovered-node") && text().includes("VM 202"), "Recovered target association missing");
     check(text().includes("This is saved evidence; current power and SSH access still need verification"), "Historical proof was presented as current state");
@@ -216,6 +248,6 @@
     await new Promise(resolve => setTimeout(resolve, 50));
     check(!text().includes("STALE_RECOVERY"), "Recovery result leaked across connection modes");
     check(calls.filter(call => call.command === "connect_remote").length === 3, "Unexpected connection replay");
-    return { ok: true, checks: ["remote form", "local controls isolated", "token cleared/no storage", "connect/disconnect", "remote lists/empty states", "partial failure", "create confirmation/same-key retry/status", "read-only creation recovery after remount", "explicit ready-target SSH handoff with host-trust gate and account prefill", "reselection/disconnect clears SSH state", "application identity create/unlock/public-key flow", "stale workspace/create/recovery/connect responses suppressed"] };
+    return { ok: true, checks: [...(declared ? ["declared packages and snapshot review", "changed server declarations refused", "edit invalidates consent and request key"] : []), "remote form", "local controls isolated", "token cleared/no storage", "connect/disconnect", "remote lists/empty states", "partial failure", "create confirmation/same-key retry/status", "safe package/snapshot failure and saved-failure messages", "read-only creation recovery after remount", "explicit ready-target SSH handoff with host-trust gate and account prefill", "reselection/disconnect clears SSH state", "application identity create/unlock/public-key flow", "stale workspace/create/recovery/connect responses suppressed"] };
   })().catch(error => ({ ok: false, error: error.message })).then(report => fetch("/__instance_fixture/result", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(report) }));
 })();

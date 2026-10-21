@@ -1,0 +1,19 @@
+[
+  {"packages": [], "valid": true},
+  {"packages": ["build-essential", "git", "g++"], "valid": true},
+  {"packages": ["libc6:amd64=2:1.2.3-1~deb13"], "valid": true},
+  {"packages": [""], "valid": false},
+  {"packages": ["git", "git"], "valid": false},
+  {"packages": ["--help"], "valid": false},
+  {"packages": ["git-"], "valid": false},
+  {"packages": ["git;id"], "valid": false},
+  {"packages": ["$(id)"], "valid": false},
+  {"packages": ["git\n"], "valid": false},
+  {"packages": ["git/stable"], "valid": false},
+  {"packages": ["git*"], "valid": false},
+  {"packages": ["git="], "valid": false},
+  {"packages": ["git=1=2"], "valid": false},
+  {"packages": ["git:amd64:other"], "valid": false},
+  {"packages": ["GIT"], "valid": false},
+  {"packages": ["gît"], "valid": false}
+]

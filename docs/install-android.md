@@ -50,7 +50,20 @@ application identity, review its public key and the definition/target, then expl
 confirm creation. Keep the operation ID if the app disconnects; read saved progress
 rather than submitting a new creation with another key.
 
-After guest readiness, prepare SSH to the new address. Independently verify the
+The create form offers optional Debian packages, one per line, and an initially
+unchecked final disk-only snapshot. Review exact package names/versions and snapshot
+intent before confirming; editing clears consent and requires a fresh preview.
+A final snapshot requires the independent server snapshot enablement as well as
+provisioning. Recreation uses the packages/snapshot declaration saved with the
+retained definition; it does not restore previous disk contents or old snapshots.
+
+Wait for the complete operation to succeed: Cloud-Init availability alone does not
+prove package installation or final-snapshot completion. Failed or uncertain work
+retains the target for inspection. Refresh the known operation; do not start a new
+creation to work around a lost reply. These are snapshots, not independent backups,
+and unpinned packages/dependencies can change with the configured guest repositories.
+
+After successful provisioning, prepare SSH to the new address. Independently verify the
 host-key fingerprint before trusting it, unlock the chosen identity and test the
 terminal. The mobile device must have a route to the guest's actual SSH address
 (e.g. the documented LAN/VPN); a reachable control plane alone does not relay SSH.

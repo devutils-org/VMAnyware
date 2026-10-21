@@ -1,11 +1,12 @@
 // In-memory Proxmox protocol peer. Never connects to or changes a real VM.
 import { createServer } from "node:https";
-export async function createProvider({tls,listen,publicKey,authorization,check}) {
+export async function createProvider({tls,listen,publicKey,authorization,check,declared=false}) {
   const requests=[], errors=[];
   const cloneTask="UPID:pve-test:00000001:00000002:00000003:qmclone:9000:fixture@pve:";
   const startTask="UPID:pve-test:00000001:00000002:00000003:qmstart:202:fixture@pve:";
   const target={name:"mobile-lab",template:0,digest:"d".repeat(40),scsi0:"local-lvm:vm-202-disk-0,size=8G",ide2:"local-lvm:vm-202-cloudinit,media=cdrom,size=4M",net0:"virtio=BC:24:11:12:34:56,bridge=old-br,firewall=1"};
-  let running=false, regenerated=false;
+  let running=false, regenerated=false, cloudObserved=false, packagesExecuted=false, packagesObserved=false;
+  const snapshots=[], snapshotTask="UPID:pve-test:00000001:00000002:00000003:qmsnapshot:202:fixture@pve:";
   const server=createServer(tls,async(request,response)=>{
     try {
       check(request.headers.authorization===authorization,"Provider received wrong fixture authorization");
@@ -28,7 +29,7 @@ export async function createProvider({tls,listen,publicKey,authorization,check})
         check(form.newid==="202" && form.name==="mobile-lab" && form.full==="1","Wrong full-clone target");
         check(!target.description,"Duplicate clone mutation");target.description=form.description;data=cloneTask;
       }
-      else if(method==="GET" && path.includes("/tasks/"))data={node:"pve-test",upid:path.includes("qmclone")?cloneTask:startTask,status:"stopped",exitstatus:"OK"};
+      else if(method==="GET" && path.includes("/tasks/"))data={node:"pve-test",upid:path.includes("qmclone")?cloneTask:path.includes("qmsnapshot")?snapshotTask:startTask,status:"stopped",exitstatus:"OK"};
       else if(method==="GET" && (path.endsWith("/qemu/202/config")||path.endsWith("/qemu/202/config?current=1")))data=target;
       else if(method==="PUT" && path.endsWith("/qemu/202/config")){
         check(!running,"Configured a running target");
@@ -54,20 +55,41 @@ export async function createProvider({tls,listen,publicKey,authorization,check})
       else if(method==="GET" && path.endsWith("/agent/network-get-interfaces"))data={result:[{name:"ens18","hardware-address":"bc:24:11:12:34:56","ip-addresses":[{"ip-address-type":"ipv4","ip-address":"192.0.2.42",prefix:24}]}]};
       else if(method==="POST" && path.endsWith("/agent/exec")){
         check(running && regenerated, "Guest probe before completed seed/start");
-        check(JSON.stringify(JSON.parse(body))===JSON.stringify({command:["/usr/bin/cloud-init","status","--format","json"]}),"Unexpected guest command");data={pid:42};
+        const command=JSON.parse(body).command;
+        if (JSON.stringify(command)===JSON.stringify(["/usr/bin/cloud-init","status","--format","json"])) data={pid:42};
+        else {
+          check(declared&&cloudObserved&&!packagesExecuted,"Unexpected, premature or duplicate package installation");
+          check(command[0]==="/usr/bin/timeout"&&command[2]==="900"&&command[8].includes("dpkg-query")&&command[8].includes("--no-remove"),"Wrong bounded package command");
+          check(JSON.stringify(command.slice(-2))===JSON.stringify(["build-essential","git=1:2.0-1"]),"Changed declared packages");
+          packagesExecuted=true;data={pid:43};
+        }
       }
       else if(method==="GET" && path.endsWith("/agent/exec-status?pid=42")){
+        cloudObserved=true;
         const stage={errors:[],recoverable_errors:{},start:10,finished:11};
         data={exited:1,exitcode:0,"out-data":JSON.stringify({status:"done",extended_status:"done",errors:[],recoverable_errors:{},"init-local":stage,init:stage,"modules-config":stage,"modules-final":stage})};
-      }else throw new Error(`Unexpected provider request: ${method} ${path}`);
+      }
+      else if(method==="GET"&&path.endsWith("/agent/exec-status?pid=43")){
+        check(declared&&packagesExecuted,"Package observation without installation");packagesObserved=true;data={exited:1,exitcode:0};
+      }
+      else if(method==="GET"&&path.endsWith("/feature?feature=snapshot")){check(declared,"Unexpected snapshot preflight");data={hasFeature:1};}
+      else if(method==="GET"&&path.endsWith("/qemu/202/snapshot")){check(declared,"Unexpected snapshot listing");data=snapshots;}
+      else if(method==="POST"&&path.endsWith("/qemu/202/snapshot")){
+        check(declared&&packagesObserved&&snapshots.length===0,"Premature or duplicate final snapshot");
+        check(/^ready_[0-9a-f]{32}$/.test(form.snapname)&&form.vmstate==="0","Wrong final snapshot identity/memory scope");
+        check(form.description===`VMAnyware provisioning ${form.snapname.slice(6)}\n${target.description.split("\n").slice(1).join("\n")}`,"Snapshot lost operation/definition/plan binding");
+        snapshots.push({name:form.snapname,description:form.description,vmstate:0,snaptime:1700000000});target.digest="b".repeat(40);data=snapshotTask;
+      }
+      else throw new Error(`Unexpected provider request: ${method} ${path}`);
       response.writeHead(200,{"content-type":"application/json"});response.end(JSON.stringify({data}));
     }catch(error){errors.push(error.message);response.writeHead(500);response.end(JSON.stringify({error:"owned_fixture_assertion"}));}
   });
   const port=await listen(server);
   return {server,port,requests,errors,assertComplete(){
     check(errors.length===0,`Provider fixture assertions: ${errors.join(", ")}`);
-    for(const [method,suffix] of [["POST","/qemu/9000/clone"],["PUT","/qemu/202/cloudinit"],["POST","/qemu/202/status/start"],["POST","/agent/exec"]])check(requests.filter(r=>r.method===method&&r.path.endsWith(suffix)).length===1,`Missing or duplicate provider stage: ${suffix}`);
+    for(const [method,suffix] of [["POST","/qemu/9000/clone"],["PUT","/qemu/202/cloudinit"],["POST","/qemu/202/status/start"],["POST","/agent/exec"]])check(requests.filter(r=>r.method===method&&r.path.endsWith(suffix)).length===(suffix==="/agent/exec"&&declared?2:1),`Missing or duplicate provider stage: ${suffix}`);
     check(requests.filter(r=>r.method==="PUT"&&r.path.endsWith("/qemu/202/config")).length===2,"Wrong configuration write count");
+    if(declared){check(packagesExecuted&&packagesObserved&&snapshots.length===1,"Declared workflow incomplete");check(requests.filter(r=>r.method==="POST"&&r.path.endsWith("/qemu/202/snapshot")).length===1,"Duplicate/missing final snapshot");}
     check(target.cores===2&&target.memory===2048&&target.balloon===0&&running&&regenerated,"Requested resources or final provider state differ");
   }};
 }

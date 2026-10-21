@@ -4,7 +4,7 @@
   const codes=['template','source_disk','cloud_init_drive','storage','storage_capacity','bridge','target_vmid','template_revision','execution_permissions','guest_readiness'];
   let connection=0,prepares=0,attempts=0,reads=0,retained,release;
   const environments=[{id,definitionName:'recreation-lab',providerReference:{scopeId:scope,node:'fixture-node',vmid:202},status:'deleted'},{id:'9'.repeat(32),definitionName:'active-lab',providerReference:{scopeId:scope,node:'fixture-node',vmid:204},status:'registered'}];
-  function review(){return {sourceInstanceId:id,sourceDefinitionHash:hash,sourceDefinitionRevision:1,definitionYaml:'<retained YAML literal>',plan:{definitionName:'recreation-lab',definitionHash:hash,planHash,providerScopeId:scope,creationEnabled:true,sshKeyCount:1,source:{templateVmid:9000,templateVersion:'fixture-v1'},target:{node:'fixture-node',vmid:203,storage:'local-lvm',bridge:'vmbr0',guestUser:'debian',resources:{cpu:2,memoryMiB:2048,diskGiB:8}}},restoresPreviousDiskContents:false,requiresNewInstanceIdentity:true,recreationEnabled:true,preflight:{planHash,creationEnabled:true,vmidReserved:false,checks:codes.map((code,index)=>({code,status:index<7?'passed':'unknown'}))}};}
+  function review(){return {sourceInstanceId:id,sourceDefinitionHash:hash,sourceDefinitionRevision:1,definitionYaml:'<retained YAML literal>',plan:{definitionName:'recreation-lab',definitionHash:hash,planHash,providerScopeId:scope,creationEnabled:true,sshKeyCount:1,packages:['git=1:2.0-1','g++'],snapshotAfterProvisioning:true,source:{templateVmid:9000,templateVersion:'fixture-v1'},target:{node:'fixture-node',vmid:203,storage:'local-lvm',bridge:'vmbr0',guestUser:'debian',resources:{cpu:2,memoryMiB:2048,diskGiB:8}}},restoresPreviousDiskContents:false,requiresNewInstanceIdentity:true,recreationEnabled:true,preflight:{planHash,creationEnabled:true,vmidReserved:false,checks:codes.map((code,index)=>({code,status:index<7?'passed':'unknown'}))}};}
   const queued=()=>({id:'e'.repeat(32),kind:'vm_provision',instanceId:newId,status:'queued',result:null});
   const success=()=>({...queued(),status:'succeeded',result:{instanceId:newId,providerScopeId:scope,planHash,guestReady:true,guest:{ipv4:'192.0.2.42',cloudInitExitCode:0,cloudInitClean:true}}});
   window.isTauri=true;window.__TAURI_INTERNALS__={invoke:async(command,args={})=>{
@@ -28,7 +28,7 @@
     }
     if(command==='read_remote_recreation_operation'){
       check(args.requestKey===retained.requestKey,'Wrong saved request key');reads++;
-      if(reads===1)return {...queued(),status:'uncertain'};
+      if(reads===1)return {...queued(),status:'uncertain',failure:'packages_timed_out',message:'PRIVATE_GUEST_STDERR'};
       if(reads===2){const value=success();value.result.guest.cloudInitClean=false;return value;}
       if(reads===3)return {...queued(),instanceId:id};
       return success();
@@ -51,13 +51,14 @@
     await prepare();check(text().includes('Recreation review changed the selected source')&&!text().includes('Reviewed recreation:'),'Changed source accepted');
     await prepare();check(!consent().checked&&button('Confirm recreation').disabled,'Preselected consent');
     check(text().includes('Previous disk contents and snapshots are not restored')&&text().includes('VM 203')&&text().includes('revision 1')&&text().includes('local-lvm')&&text().includes('<retained YAML literal>'),'Source/target/fresh disk review missing');
+    check(text().includes('Declared packages: git=1:2.0-1, g++')&&text().includes('Requested · disk-only'),'Retained feature summary missing');
     check(button('Prepare deletion for VM 204').disabled&&button('Prepare snapshot for VM 204').disabled,'Review allowed replacing target');
     consent().click();await click('Cancel recreation review');await prepare();check(!consent().checked&&button('Confirm recreation').disabled,'Consent survived cancellation');
     const original=retained.requestKey;consent().click();await click('Confirm recreation');await wait(()=>text().includes('No verified operation ID received'));
     check(consent().disabled&&!button('Cancel recreation review')&&document.getElementById('recreation-vmid').disabled,'Unknown submission editable');
     await click('Retry the same recreation request');await wait(()=>text().includes('Recreation status: queued'));
     const submits=calls.filter(call=>call.command==='confirm_remote_recreation');check(submits.length===2&&JSON.stringify(submits[0].args)===JSON.stringify(submits[1].args),'Retry changed request/consent');check(!button('Retry the same recreation request'),'Known ID offered POST');
-    await click('Refresh recreation status');await wait(()=>text().includes('Recreation status: uncertain'));check(!button('Acknowledge recreation result'),'Uncertain operation clearable');
+    await click('Refresh recreation status');await wait(()=>text().includes('Recreation status: uncertain'));check(!button('Acknowledge recreation result'),'Uncertain operation clearable');check(text().includes('Package installation exceeded its deadline')&&!text().includes('PRIVATE_'),'Recreation failure missing or exposed guest output');
     await click('Refresh recreation status');await wait(()=>text().includes('Recreation success lacks matching'));check(!button('Prepare SSH for recreated VM'),'False guest readiness offered SSH');
     await click('Refresh recreation status');await wait(()=>text().includes('distinct new instance'));check(text().includes('Recreation status: uncertain'),'Old identity reused');
     await click('Refresh recreation status');await wait(()=>text().includes('Recreation status: succeeded'));check(text().includes(newId)&&text().includes('192.0.2.42'),'New instance evidence missing');

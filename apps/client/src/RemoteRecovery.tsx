@@ -1,8 +1,9 @@
+import { ProvisioningFailure } from "./ProvisioningFailure";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
 
 type Summary = { id: string; status: string; instanceId: string | null; createdAt: string };
-type Recovered = { operation: { id: string; status: string; result: null | { guestReady: boolean; guest: { ipv4: string } } }; environment: { definitionName: string; providerReference: { node: string; vmid: number } } };
+type Recovered = { operation: { id: string; status: string; failure?: string | null; result: null | { guestReady: boolean; guest: { ipv4: string } } }; environment: { definitionName: string; providerReference: { node: string; vmid: number } } };
 export function RemoteRecovery({ connectionId, endpoint, disabled, onSshTarget }: { connectionId: number; endpoint: string; disabled: boolean; onSshTarget: (host: string, username: string) => void }) {
   const [recent, setRecent] = useState<Summary[] | null>(null), [operationId, setOperationId] = useState("");
   const [result, setResult] = useState<Recovered | null>(null), [busy, setBusy] = useState(false), [error, setError] = useState("");
@@ -43,6 +44,7 @@ export function RemoteRecovery({ connectionId, endpoint, disabled, onSshTarget }
         <p>Enter the guest account after inspecting its SSH host key. Recovery does not retain an SSH username.</p>
         <button type="button" disabled={disabled || busy} onClick={() => onSshTarget(result.operation.result!.guest.ipv4, "")}>Prepare SSH connection</button>
       </>}
+      {["failed", "interrupted", "uncertain"].includes(result.operation.status) && <ProvisioningFailure code={result.operation.failure} />}
       {result.operation.status === "failed" && <p role="alert">Creation failed. Inspect the retained target before requesting another action.</p>}
       <button type="button" disabled={disabled || busy} onClick={() => inspect(result.operation.id)}>Refresh recovered creation</button>
     </>}
