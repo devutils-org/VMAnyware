@@ -69,10 +69,10 @@ storage/network, verified TLS, least-privilege token and an approved disposable
 target. Start with the [template preparation guide](docs/debian-template.md) and
 [Proxmox setup](docs/proxmox-setup.md).
 
-The optional Linux Secret Service controls pass isolated real-daemon/native SSH
-and separate browser checks. The private key remains encrypted in application
-storage; macOS Keychain/Android Keystore and joined Linux WebView acceptance are
-still open. Current delivery files predate these new vault commands. See
+The optional Linux Secret Service controls pass isolated real-daemon/native SSH,
+browser and joined Linux WebView/production IPC/terminal checks. The private key
+remains encrypted in application storage; macOS Keychain/Android Keystore and
+normal deployment/platform acceptance remain open. Current delivery files predate these new vault commands. See
 [the decision and limits](docs/decisions/0087-linux-system-identity-unlock.md).
 
 ## Install

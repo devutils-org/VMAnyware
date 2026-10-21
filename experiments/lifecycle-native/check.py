@@ -15,6 +15,7 @@ import ssl
 import sqlite3
 import struct
 import subprocess
+import sys
 import tempfile
 import threading
 import time
@@ -35,6 +36,7 @@ def main():
     parser.add_argument('--prefix', type=Path, required=True, help='Verified package prefix containing sysroot/usr')
     parser.add_argument('--server-binary', type=Path, default=REPO / 'target/debug/vmanyware-server', help='Owned server executable, including an extracted local release package')
     modes = parser.add_mutually_exclusive_group()
+    modes.add_argument('--system-identity', action='store_true', help='Actual native system-store save/use/forget and SSH/PTY on an owned private vault')
     modes.add_argument('--manual-ssh', action='store_true', help='Existing-row native application-key SSH terminal against owned peer; no provider read')
     modes.add_argument('--lifecycle-recovery', action='store_true', help='Remote start/shutdown, restart app/server and recover both operations by GET only')
     modes.add_argument('--remote-lifecycle', action='store_true', help='Remote HTTPS native start/shutdown, lost replies and identical retries')
@@ -51,6 +53,7 @@ def main():
     args = parser.parse_args()
     server_binary = args.server_binary.resolve(strict=True)
     assert server_binary.is_file() and os.access(server_binary, os.X_OK)
+    args.manual_ssh = args.manual_ssh or args.system_identity
     args.remote_lifecycle = args.remote_lifecycle or args.lifecycle_recovery
     args.declared = args.declared_create or args.declared_recreation
     args.recreation = args.recreation or args.recreation_recovery or args.declared
@@ -72,6 +75,11 @@ def main():
                           ('XDG_DATA_HOME', 'data'), ('XDG_RUNTIME_DIR', 'runtime')]:
             (directory / name).mkdir(mode=0o700)
             env[key] = str(directory / name)
+        if args.system_identity:
+            assert (prefix / 'sysroot/usr/bin/gnome-keyring-daemon').is_file()
+            (directory / 'control').mkdir(mode=0o700)
+            (directory / 'owned-test-bus').write_text('Owned native vault fixture.\n')
+            env['VMANYWARE_OWNED_VAULT_TEST'] = str(directory)
         certificate, key = directory / 'ca.pem', directory / 'generated-key.pem'
         subprocess.run(['openssl', 'req', '-x509', '-newkey', 'ec', '-pkeyopt', 'ec_paramgen_curve:P-256',
                         '-nodes', '-days', '1', '-addext', 'basicConstraints=critical,CA:FALSE',
@@ -351,7 +359,7 @@ def main():
                 proxy.socket = tls.wrap_socket(proxy.socket, server_side=True)
                 threading.Thread(target=proxy.serve_forever, daemon=True).start()
                 env['VMANYWARE_SNAPSHOT_FIXTURE'] = json.dumps({'endpoint': f'https://localhost:{proxy.server_port}',
-                    'token': token, 'ca': certificate.read_text(), 'remoteLifecycle': args.remote_lifecycle, 'manualSsh': args.manual_ssh, 'creation': args.snapshot_create, 'restore': args.snapshot_restore, 'deletion': args.deletion_recovery, 'recreation': args.recreation, 'declared': args.declared, 'declaredCreate': args.declared_create, 'publicKey': demo_key if args.recreation else None})
+                    'token': token, 'ca': certificate.read_text(), 'remoteLifecycle': args.remote_lifecycle, 'manualSsh': args.manual_ssh, 'systemIdentity': args.system_identity, 'creation': args.snapshot_create, 'restore': args.snapshot_restore, 'deletion': args.deletion_recovery, 'recreation': args.recreation, 'declared': args.declared, 'declaredCreate': args.declared_create, 'publicKey': demo_key if args.recreation else None})
 
             display = str(1000 + secrets.randbelow(20000))
             authority = directory / 'Xauthority'
@@ -380,10 +388,13 @@ def main():
                         raise RuntimeError('Xvfb failed: ' + display_log.read())
                     time.sleep(0.02)
                 time.sleep(0.2)
-                result = subprocess.Popen(overlay + ['dbus-run-session', '--', str(REPO / 'target/debug/examples/lifecycle_smoke')],
+                native = [str(REPO / 'target/debug/examples/lifecycle_smoke')]
+                if args.system_identity:
+                    native = [sys.executable, str(REPO / 'experiments/identity-vault/check.py'), '--prefix', str(prefix), '--native-binary', native[0], '--inside']
+                result = subprocess.Popen(overlay + ['dbus-run-session', '--'] + native,
                                           env=env, stdout=subprocess.DEVNULL, stderr=subprocess.PIPE, text=True, start_new_session=True)
                 children.append(result)
-                _, output = result.communicate(timeout=55)
+                _, output = result.communicate(timeout=65 if args.system_identity else 55)
                 print(output[-10000:], end='')
                 if result.returncode != 0:
                     display_log.seek(0)
@@ -398,6 +409,8 @@ def main():
                         diagnostics = json.loads(provider_lines.get(timeout=5))
                         print('Owned provider diagnostics:', {name: diagnostics.get(name) for name in ('failure', 'errors')})
                 assert result.returncode == 0 and 'Native lifecycle smoke: passed' in output
+                if args.system_identity:
+                    assert 'Owned system vault: explicit production save/read/forget IPC' in output, 'System vault scenario was not active'
                 if args.lifecycle_recovery or args.snapshot_recovery or args.restore_recovery or args.deletion_recovery or args.recreation_recovery:
                     history = json.load(opener.open(root + '/api/v1/operations', timeout=5))
                     operations = [entry for entry in history if (entry['kind'] in ('vm_start', 'vm_shutdown') if args.lifecycle_recovery else entry['kind'] == ('vm_provision' if args.recreation_recovery else 'vm_delete' if args.deletion_recovery else 'vm_snapshot_restore' if args.restore_recovery else 'vm_snapshot_create'))]
@@ -577,7 +590,7 @@ def main():
             assert all('fixture-only-token' not in line and 'UPID:' not in line for line in lines)
             if remote_snapshot:
                 assert token not in output and all(token not in line for line in lines)
-            print('Real native React/WebKit -> Tauri IPC -> Axum -> generated HTTPS ' + ('declared create/packages/final snapshot/same-key retry' if args.declared_create else 'declared recreation/packages/final snapshot/same-key retry' if args.declared_recreation else 'manual SSH application-key/interactive terminal' if args.manual_ssh else 'remote lifecycle/app+server restart/GET-only recovery' if args.lifecycle_recovery else 'remote lifecycle/start-shutdown/identical retry' if args.remote_lifecycle else 'recreation/app+server restart/read-only recovery' if args.recreation_recovery else 'retained-definition recreation/same-key retry/new guest' if args.recreation else 'deletion/app+server restart/read-only recovery' if args.deletion_recovery else 'snapshot restore/app+server restart/read-only recovery' if args.restore_recovery else 'snapshot restore/same-key retry after lost HTTP reply' if args.snapshot_restore else 'snapshot create/app+server restart/read-only recovery' if args.snapshot_recovery else 'snapshot creation' if args.snapshot_create else 'snapshot listing' if args.snapshots else 'start/shutdown') + ': passed')
+            print('Real native React/WebKit -> Tauri IPC -> Axum -> generated HTTPS ' + ('declared create/packages/final snapshot/same-key retry' if args.declared_create else 'declared recreation/packages/final snapshot/same-key retry' if args.declared_recreation else 'system vault/save-use-forget/SSH interactive terminal' if args.system_identity else 'manual SSH application-key/interactive terminal' if args.manual_ssh else 'remote lifecycle/app+server restart/GET-only recovery' if args.lifecycle_recovery else 'remote lifecycle/start-shutdown/identical retry' if args.remote_lifecycle else 'recreation/app+server restart/read-only recovery' if args.recreation_recovery else 'retained-definition recreation/same-key retry/new guest' if args.recreation else 'deletion/app+server restart/read-only recovery' if args.deletion_recovery else 'snapshot restore/app+server restart/read-only recovery' if args.restore_recovery else 'snapshot restore/same-key retry after lost HTTP reply' if args.snapshot_restore else 'snapshot create/app+server restart/read-only recovery' if args.snapshot_recovery else 'snapshot creation' if args.snapshot_create else 'snapshot listing' if args.snapshots else 'start/shutdown') + ': passed')
         finally:
             for child in reversed(children):
                 # Reap remaining owned group members even if their leader exited.

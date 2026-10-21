@@ -12,11 +12,14 @@ ADR 0087 adds optional Linux Secret Service storage of the application SSH unloc
 passphrase: explicit save/unlock/forget, scoped lookup and SSH source selection.
 The private SSH key stays encrypted in the existing app file. Eighteen affected
 native SSH checks, a focused namespace check, two isolated real-daemon/vault/SSH
-cases and separate React/browser journeys pass. No personal vault is accessed.
+cases, React/browser journeys and joined Linux WebView/production IPC/vault/terminal
+acceptance pass. No personal vault is accessed.
 Clippy strict exposes one pre-existing unrelated argument-count lint; the client
-check passes with only that lint allowed. Source is not new GUI/device acceptance.
-Next: joined Linux WebView/production IPC/vault/terminal acceptance, then extend
-platform stores. Current server/Android delivery artifacts include ADR 0086 progress
+check passes with only that lint allowed. New GUI evidence is isolated Linux
+acceptance; device/normal-deployment gates stay open.
+Next: Android Keystore implementation using the existing native platform bridge,
+with source/compilation/device evidence distinguished. Current server/Android
+delivery artifacts include ADR 0086 progress
 but predate this new vault IPC/UI. Android runtime, real Proxmox, other OS stores,
 Windows/iOS parity, host deployment and local-provider acceptance remain open.
 The previous source/delivery checkpoint is retained in the dated entries below.
@@ -6774,3 +6777,51 @@ is pushed; Pages run `39652211141` succeeds (`.lab/identity-vault-site-deploy.lo
 The worktrees were clean after publication. No release tag or artifact rebuild was
 made. Next joined native fixture must build with `tauri/custom-protocol`, use only
 an owned private bus/XDG/keyring and retain exact host trust and terminal gates.
+
+
+## 2026-10-21 — Joined Linux system-vault UI/IPC/SSH acceptance
+
+Scope/acceptance: prove real React save/unlock/forget, five production vault commands,
+scoped private Secret Service, system identity selection, actual SSH/PTY shell and
+forgotten-secret refusal without a personal bus, keyring, agent or provider call.
+Added opt-in `--system-identity` to the existing owned Linux fixture. The vault
+launcher now supports this native binary inside the already private bus, validates
+its root marker/exact XDG paths, waits for name ownership without activating a
+second service and stops/reaps its daemon. Both native and outer runners require
+a distinct system-vault completion marker, so an old normal-SSH binary cannot pass.
+The example manages the same generated IdentityStore for IPC and SSH, registers the
+existing five commands and verifies the exact missing-secret error at completion.
+
+Verification: the current example builds with the verified prefix and
+`--features tauri/custom-protocol` (`.lab/native-deps/system-vault-native-build.log`).
+The actual Linux WebKit/Tauri/verified-HTTPS/API/owned SSH journey passes
+(`.lab/native-deps/system-vault-native-check.log`): unchecked save consent,
+passphrase/consent cleared, explicit vault read, separately reviewed host trust,
+fresh source consent, public-key selection, real shell stdout, matching PTY resize,
+terminal disconnect, explicit forget/read refusal and changed-host rejection with
+saved trust unchanged. The peer still proves exactly one session channel and PTY/
+shell/resize requests. The control-plane/provider side records zero provider calls;
+no VM or existing credential is touched. Two affected native/backend vault cases
+also pass through the adapted private launcher
+(`.lab/native-deps/system-vault-affected-runner.log`).
+
+Python/JS syntax, IPC-manifest consistency (82 production commands) and diff review
+pass. No production source, dependency, schema, browser bundle, server binary or
+artifact packaging changed in this slice. Earlier source/browser checks retain
+their recorded evidence; they were not rerun. Normal manual-SSH shared-driver
+regression and publication are recorded below when complete.
+
+Limits: this is owned Linux runtime acceptance, not normal installed desktop service,
+current APK/device, real guest or other OS store acceptance. The private key remains
+an encrypted app file and only its unlock passphrase is in Secret Service. Current
+delivery artifacts still predate vault commands. Next autonomous slice: implement
+Android Keystore-backed protection for the same app-owned unlock use case through
+the existing Android/JNI bridge, without creating/starting an AVD or reading personal
+credentials. Keep no-silent-fallback, scope binding, explicit save/use/forget,
+host-trust-first and backup exclusions; require independent runtime acceptance.
+
+
+The affected normal manual-key SSH journey also passes through the shared driver
+(`.lab/native-deps/system-vault-affected-manual-ssh.log`), retaining manual passphrase,
+PTY/stdout/resize/disconnect and changed-host refusal without enabling a test vault.
+No unrelated server, browser or native suite reran for these fixture-only changes.

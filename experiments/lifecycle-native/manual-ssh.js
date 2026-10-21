@@ -9,13 +9,26 @@
   const config=window.__snapshotFixture;
   await wait(()=>document.getElementById('connection-mode'),'mount');const mode=document.getElementById('connection-mode');mode.value='remote';mode.dispatchEvent(new Event('change',{bubbles:true}));
   await wait(()=>document.getElementById('remote-token'),'remote form');input('remote-endpoint',config.endpoint);input('remote-token',config.token);input('remote-ca',config.ca);await new Promise(resolve=>setTimeout(resolve,50));document.querySelector('.remote-connection form').requestSubmit();
+  if(config.systemIdentity){
+   await wait(()=>document.getElementById('remember-identity-consent'),'native vault controls');document.querySelector('details.app-identity').open=true;
+   check(!document.getElementById('remember-identity-consent').checked&&button('Remember SSH unlock secret').disabled,'Vault save pre-consented');
+   input('identity-passphrase',config.sshPassphrase);document.getElementById('remember-identity-consent').click();await click('Remember SSH unlock secret');
+   await wait(()=>text().includes('Unlock secret saved in the system key store'),'production save IPC to private vault');
+   check(document.getElementById('identity-passphrase').value===''&&!document.getElementById('remember-identity-consent').checked,'Save retained passphrase/consent');
+   await click('Unlock using system key store');await wait(()=>text().includes('Identity unlocked using the system key store'),'native vault read');
+  }
   await click('Load remote workspace');await click('Prepare SSH for VM 202');await wait(()=>document.getElementById('ssh-host'),'manual host form');
   check(document.getElementById('ssh-host').value===''&&!document.getElementById('ssh-username'),'Endpoint/account inferred');check(text().includes('has not verified that endpoint'),'Manual endpoint qualification absent');
   input('ssh-host',config.sshHost);input('ssh-port',config.sshPort);await new Promise(resolve=>setTimeout(resolve,50));await click('Inspect host key');
   await wait(()=>text().includes(config.sshFingerprint)&&button('Trust this host key'),'unknown native key');check(button('Trust this host key').disabled&&!document.getElementById('ssh-username'),'Unknown key bypassed consent');
   document.querySelector('.remote-ssh-target input[type="checkbox"]').click();await click('Trust this host key');await wait(()=>text().includes('Saved host-key trust'),'native trust persisted');check(!document.getElementById('ssh-username'),'Trust automatically enabled auth');
   await click('Inspect host key');await wait(()=>document.getElementById('ssh-username'),'fresh trusted native handshake');check(document.getElementById('ssh-username').value==='','Account inferred from VM association');
-  input('ssh-username','fixture');input('ssh-key-passphrase',config.sshPassphrase);
+  input('ssh-username','fixture');
+  if(config.systemIdentity){
+   await wait(()=>[...document.getElementById('ssh-source').options].some(option=>option.value==='system'),'system identity choice');
+   const source=document.getElementById('ssh-source');source.value='system';source.dispatchEvent(new Event('change',{bubbles:true}));
+   await wait(()=>!document.getElementById('ssh-key-passphrase'),'system source without renderer passphrase');check(button('Unlock connection identity').disabled,'System source restored consent');
+  }else input('ssh-key-passphrase',config.sshPassphrase);
   document.getElementById('ssh-username').closest('form').querySelector('input[type="checkbox"]').click();
   await click('Unlock connection identity');await wait(()=>document.querySelector('input[name="ssh-identity"]'),'application identity selection');
   check(button('Open terminal').disabled,'Identity preselected');document.querySelector('input[name="ssh-identity"]').click();await click('Open terminal');
@@ -27,6 +40,12 @@
   const rows=document.querySelector('.xterm-rows').children.length;check(rows>0&&rows<24,'Renderer did not resize');
   type('stty size\n');await wait(()=>new RegExp(`\\b${rows} [1-9][0-9]*\\b`).test(screen()),'remote PTY resize');
   [...document.querySelector('.ssh-terminal').parentElement.querySelectorAll('button')].find(node=>node.textContent==='Disconnect').click();await wait(()=>text().includes('Disconnected'),'terminal closed');
+  if(config.systemIdentity){
+   check(button('Forget saved SSH unlock secret').disabled,'Forget pre-consented');document.getElementById('forget-identity-consent').click();await click('Forget saved SSH unlock secret');
+   await wait(()=>text().includes('Saved unlock secret forgotten'),'native vault forget');check(!document.getElementById('forget-identity-consent').checked,'Forget consent retained');
+   await click('Unlock using system key store');await wait(()=>text().includes('System key store unavailable or unable to open this identity'),'forgotten secret read refused');
+   check(!document.getElementById('identity-public-key'),'Forgotten secret retained a public identity result');
+  }
   const rotated=await window.__TAURI_INTERNALS__.invoke('smoke_rotate_host');check(rotated!==config.sshFingerprint,'Owned rotation did not change key');
   await click('Inspect host key');await wait(()=>text().includes('This host key differs'),'changed native host refused');check(!button('Trust this host key')&&!document.getElementById('ssh-username'),'Changed key allowed login/trust');
   await click('Disconnect');await window.__TAURI_INTERNALS__.invoke('smoke_report',{ok:true,failure:null});

@@ -11,6 +11,7 @@ mod ssh_fixture;
 use tauri::Manager;
 #[cfg(target_os = "linux")]
 struct ManualSsh {
+    system_identity: bool,
     peer: ssh_fixture::Fixture,
     directory: std::sync::Mutex<Option<tempfile::TempDir>>,
     trusted: std::sync::Mutex<Option<Vec<u8>>>,
@@ -96,6 +97,10 @@ fn smoke_report(app: tauri::AppHandle, ok: bool, failure: Option<String>) {
                 "Changed key overwrote trust"
             );
         }
+        if ok && state.system_identity {
+            assert_eq!(state.identity.unlock_system().err().as_deref(), Some("No saved unlock secret for this application SSH identity."));
+            eprintln!("Owned system vault: explicit production save/read/forget IPC, native SSH source and forgotten-secret refusal");
+        }
         state.peer.shutdown();
         drop(directory);
         if ok {
@@ -154,8 +159,14 @@ fn main() {
         config["sshHost"] = "127.0.0.1".into();
         config["sshPort"] = peer.port.into();
         config["sshFingerprint"] = fingerprint.into();
+        let system_identity = config["systemIdentity"].as_bool().unwrap_or(false);
+        if system_identity {
+            let root = std::path::PathBuf::from(std::env::var("VMANYWARE_OWNED_VAULT_TEST").expect("Owned vault root required"));
+            assert!(root.join("owned-test-bus").is_file());
+        }
         snapshots = Some(config.to_string());
         Some(ManualSsh {
+            system_identity,
             peer,
             directory: std::sync::Mutex::new(Some(directory)),
             identity,
@@ -216,6 +227,11 @@ fn main() {
         .invoke_handler(tauri::generate_handler![
             runtime_platform,
             ssh::identity_support,
+            ssh::system_identity_support,
+            ssh::remember_app_identity,
+            ssh::unlock_system_app_identity,
+            ssh::forget_app_identity,
+            ssh::list_system_ssh_identity,
             remote_connection::lifecycle_recovery::read_remote_lifecycle_history,
             remote_connection::lifecycle_recovery::recover_remote_lifecycle,
             remote_connection::lifecycle::prepare_remote_lifecycle,
@@ -282,6 +298,7 @@ fn main() {
                 let path = state.directory.lock().unwrap().as_ref().unwrap().path().join("trust");
                 let hosts = ssh::HostManager::new(path.clone());
                 let agents = ssh::AgentManager::new(hosts.clone(), Some(path.join("no-personal-agent"))).with_identity(state.identity.clone());
+                app.manage(state.identity.clone());
                 app.manage(ssh::SessionManager::new(agents.clone()));
                 app.manage(agents);
                 app.manage(hosts);

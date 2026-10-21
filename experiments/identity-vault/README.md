@@ -29,3 +29,11 @@ public-key authentication with generated owned keys, not WebView IPC, a packaged
 client, another desktop service, a hardware key or another OS. The unit-test guard
 is an additional misuse check; the runner's explicit child environment/private bus
 and temporary directories provide the isolation.
+
+The same launcher also has an internal native-binary mode used by
+`experiments/lifecycle-native/check.py --system-identity`. It runs inside that
+harness's already private D-Bus session and validates the owned root marker and
+all four XDG directories before starting its daemon. It must see both native
+application success and the system-vault-specific completion marker. The test-binary
+mode still requires exactly one passed ignored case per private session. Neither
+mode activates another Secret Service while polling startup.

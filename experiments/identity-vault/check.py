@@ -11,12 +11,14 @@ import time
 
 parser = argparse.ArgumentParser()
 parser.add_argument('--prefix', type=Path, required=True)
-parser.add_argument('--test-binary', type=Path, required=True)
+binaries = parser.add_mutually_exclusive_group(required=True)
+binaries.add_argument('--test-binary', type=Path)
+binaries.add_argument('--native-binary', type=Path, help='Owned native fixture, inside its private D-Bus session only')
 parser.add_argument('--inside', action='store_true', help=argparse.SUPPRESS)
 parser.add_argument('--case', help=argparse.SUPPRESS)
 args = parser.parse_args()
 prefix = args.prefix.resolve(strict=True)
-binary = args.test_binary.resolve(strict=True)
+binary = (args.test_binary or args.native_binary).resolve(strict=True)
 daemon = prefix / 'sysroot/usr/bin/gnome-keyring-daemon'
 assert daemon.is_file() and os.access(binary, os.X_OK)
 cases = [
@@ -27,9 +29,12 @@ if args.inside:
     def stop(_signal, _frame):
         raise SystemExit('Owned vault runner interrupted')
     signal.signal(signal.SIGTERM, stop)
-    assert args.case in cases
+    assert args.native_binary is not None or args.case in cases
     root = Path(os.environ['VMANYWARE_OWNED_VAULT_TEST'])
+    assert root.is_absolute() and root.name.startswith(('vmanyware-vault-', 'vmanyware-lifecycle-native-'))
     assert root.joinpath('owned-test-bus').is_file()
+    for variable, name in [('XDG_CONFIG_HOME', 'config'), ('XDG_CACHE_HOME', 'cache'), ('XDG_DATA_HOME', 'data'), ('XDG_RUNTIME_DIR', 'runtime')]:
+        assert Path(os.environ[variable]).resolve() == root / name
     assert os.environ['DBUS_SESSION_BUS_ADDRESS'].startswith('unix:path=')
     with root.joinpath('daemon.log').open('w+') as log:
         service = subprocess.Popen([str(daemon), '--foreground', '--unlock', '--components=secrets',
@@ -40,19 +45,22 @@ if args.inside:
             service.stdin.close()
             deadline = time.monotonic() + 10
             while True:
-                ready = subprocess.run(['gdbus', 'call', '--session', '--dest', 'org.freedesktop.secrets',
-                                        '--object-path', '/org/freedesktop/secrets', '--method', 'org.freedesktop.DBus.Peer.Ping'],
+                ready = subprocess.run(['gdbus', 'call', '--session', '--dest', 'org.freedesktop.DBus',
+                                        '--object-path', '/org/freedesktop/DBus', '--method', 'org.freedesktop.DBus.NameHasOwner', 'org.freedesktop.secrets'],
                                        capture_output=True, timeout=2)
-                if ready.returncode == 0:
+                if ready.returncode == 0 and b'true' in ready.stdout:
                     break
                 if service.poll() is not None or time.monotonic() > deadline:
                     raise RuntimeError('Owned Secret Service did not start')
                 time.sleep(0.05)
-            result = subprocess.run([str(binary), args.case, '--exact', '--ignored', '--nocapture'], capture_output=True, text=True, timeout=90)
+            command = [str(binary)] if args.native_binary else [str(binary), args.case, '--exact', '--ignored', '--nocapture']
+            result = subprocess.run(command, capture_output=True, text=True, timeout=90)
             print(result.stdout, end='')
-            if result.returncode != 0:
-                print(result.stderr, end='', file=sys.stderr)
-            assert result.returncode == 0 and 'running 1 test' in result.stdout and '1 passed' in result.stdout, 'Owned vault test did not pass exactly one case'
+            print(result.stderr, end='', file=sys.stderr)
+            if args.native_binary:
+                assert result.returncode == 0 and 'Native lifecycle smoke: passed' in result.stderr and 'Owned system vault: explicit production save/read/forget IPC' in result.stderr, 'Owned native vault journey failed'
+            else:
+                assert result.returncode == 0 and 'running 1 test' in result.stdout and '1 passed' in result.stdout, 'Owned vault test did not pass exactly one case'
         finally:
             if service.poll() is None:
                 os.killpg(service.pid, signal.SIGTERM)
@@ -62,6 +70,7 @@ if args.inside:
                     os.killpg(service.pid, signal.SIGKILL)
                     service.wait()
 else:
+    assert args.native_binary is None, 'Launch native mode from the owned lifecycle runner'
     for case in cases:
         with tempfile.TemporaryDirectory(prefix='vmanyware-vault-') as temporary:
             root = Path(temporary)

@@ -1,7 +1,7 @@
 # 0087 — Optional Linux system key store for SSH unlock
 
-Status: native backend/owned Secret Service/SSH and React-browser checks pass;
-joined production IPC/WebView and other-platform acceptance remain open.
+Status: native backend/owned Secret Service/SSH, React-browser and joined Linux
+WebView/production IPC/vault/terminal checks pass. Other platforms remain open.
 
 ## Decision
 
@@ -56,8 +56,15 @@ secret clearing, consent, fixed errors and no implicit SSH. STATE.md records log
 
 No personal bus, credential, real VM or production key store is accessed. macOS,
 Android, iOS and Windows system-store implementations are absent. Current APKs
-predate these new commands; no new device/GUI acceptance or artifact rebuild is
-inferred. The next slice is joined Linux WebView/production IPC/vault/terminal proof.
+predate these new commands; no new device acceptance or artifact rebuild is inferred.
+The joined Linux check now also uses the real React save/unlock/forget controls,
+all five production IPC commands and the system SSH source against the private
+keyring. It requires interactive shell stdout, matching remote PTY resize, closed
+connections, unchanged trust after a rotated-host refusal, cleared consent/input
+and the exact missing-secret error after forgetting. Normal manual-key SSH remains
+a separate affected regression check. Neither establishes a normal desktop daemon
+configuration, hardware key protection or another OS store. Next: Android Keystore
+source implementation and its own compilation/runtime gates.
 
 ## References
 

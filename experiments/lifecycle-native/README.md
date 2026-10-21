@@ -449,3 +449,28 @@ independent SSH handoff. The extra calls are GET-only and must not change the
 expected provider mutations. The default uses current debug server/example binaries. To exercise an extracted
 owned release archive, pass `--server-binary /path/to/extracted/bin/vmanyware-server`.
 This does not install a host service or execute an Android APK.
+
+## Owned Linux system key store and actual native SSH
+
+```sh
+# Build the example with the verified prefix and tauri/custom-protocol first.
+python3 experiments/lifecycle-native/check.py --prefix .lab/native-deps --system-identity
+```
+
+This opts into the existing-instance manual SSH journey with a real Secret Service.
+The owned bus launcher starts the verified-prefix GNOME Keyring daemon in a private
+D-Bus session and temporary XDG directories. It waits for bus-name ownership without
+activating another service. Native mode requires the fixture root marker and exact
+owned XDG paths, stops/reaps the daemon on completion and never connects to a
+personal desktop bus, keyring or SSH agent.
+
+The real React driver uses unchecked save consent, saves the generated identity's
+passphrase through production IPC, clears the input and explicitly unlocks through
+the system key store. It independently reviews the SSH host key, switches to the
+system identity source, submits no passphrase in SSH-selection IPC, grants fresh
+connection consent, selects the key and opens the real owned PTY/shell. The existing
+stdout/resize/disconnect/changed-host assertions still apply. Explicit forget must
+clear its consent and a subsequent UI read must fail; a native final check requires
+the exact missing-secret error before deleting the generated identity. A distinct
+native completion marker prevents an old normal-SSH binary from satisfying this mode.
+This is an opt-in owned fixture, not personal credential or real VM authorization.
