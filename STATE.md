@@ -6390,3 +6390,28 @@ scan found only the explicit invalid key rejection fixture (literal "fixture"),
 not a private key. Website synchronization incorporates upstream TypeScript/French
 changes instead of replacing them. Its current build/type/targeted-render results
 and actual push outcomes are recorded in the session delivery report.
+
+
+## 2026-10-21 — Published source and website checkpoint
+
+Accumulated source/docs were committed as 8cc1594 and pushed successfully to main.
+GitHub redirected the former moha-bekh remote to devutils-org/VMAnyware; origin now
+uses that canonical HTTPS URL. Existing gh HTTPS authentication handled the push;
+no credential file or SSH verification policy was changed.
+
+The website was fast-forwarded to its newer TypeScript/bilingual baseline, and
+concurrent upstream changes were incorporated before pushing its VMAnyware-only
+status commit 50abc4a. English/French landing pages, tool summaries and site README
+now distinguish source/API/native evidence from actual guest/platform/release gates.
+Website typecheck, build/prerender and 12 targeted site/render tests pass. Logs:
+/tmp/vmanyware-site-status-types.log, /tmp/vmanyware-site-status-build.log and
+/tmp/vmanyware-site-status-tests.log. The type/layout issues from transferring the
+old JS page were corrected against current Page types and language-parity tests.
+Generated output and node_modules were not committed. No unrelated application
+suite reran for these documentation/public-copy edits. Website deployment result is
+separate from successful Git push and is reported from its workflow status.
+
+Next implementation: client-native plan validation and explicit create/recreate
+review/form support for declared packages/final snapshots, followed by owned native
+integration and refreshed APKs. The full roadmap remains active; real home Proxmox
+acceptance awaits the user's future server. No real VM operation occurred here.
