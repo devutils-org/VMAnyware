@@ -7116,3 +7116,19 @@ credential operations occurred. No unrelated application test suite was rerun.
 Scoped server library/test Clippy with warnings denied and cargo fmt check pass
 (`.lab/native-deps/snapshot-schema-clippy.log`); diff review passes. Next CI result
 is pending push/observation, not assumed green.
+
+
+## 2026-10-23 — Windows native compilation gate
+
+Scope/acceptance: establish actual Windows compilation evidence for the existing
+client before expanding its unsupported SSH/store boundary. Added a path-filtered
+Windows client source workflow using standard windows-2025 x64, existing pinned
+checkout/setup-node actions, read-only permissions, two Cargo jobs, debug symbols
+disabled and a 30-minute limit. It records Windows/architecture/Rust, builds locked
+frontend dependencies and the actual Tauri executable with bundled assets. No
+app launch, credential operation, custom VM, installer or parity claim. GitHub's
+official runner reference confirms windows-2025 is a standard public x64 label.
+Workflow diff reviewed; execution is pending push/observation. No local application
+suite repeated for this CI-only change. Next: observe Windows build and correct
+actual target-specific failures. Local checks 40030173686 for 1247440 is in progress;
+continue observing its handle, not restarting. Android approval is unchanged.

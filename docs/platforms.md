@@ -61,6 +61,17 @@ observed. Runtime/OS prompts, signing identity, locked store, isolated keychain
 roundtrip and system-source SSH still need a real approved macOS target. Neither
 metadata compilation nor a native build closes these gates. See ADR 0090.
 
+## Windows compilation baseline — 2026-10-23
+
+The path-filtered `Windows client source` workflow targets the standard
+`windows-2025` x64 runner with the repository-pinned Rust/Node versions. It builds
+the actual Tauri client and bundled frontend using `tauri/custom-protocol`, without
+launching the app, installing it or accessing a credential store. Workflow
+preparation alone is not compilation evidence; the observed result is in STATE.md.
+SSH, encrypted application identities and OS-backed secret storage still report
+unsupported on Windows. A successful build does not establish those capabilities,
+GUI/runtime behavior, signed installers or release support.
+
 ## Reproduce the current development checks
 
 | Tool | Tested version/configuration |
