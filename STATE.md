@@ -40,16 +40,25 @@ runtime remains unproven.
 Local checks run 40030230911 completed successfully for ee14eae: frontend,
 server formatting, strict all-target Clippy and server/local TLS/process tests.
 The historical-schema fixture correction is now validated in hosted CI too.
-Windows build run 40030231001 failed in the Tauri build script because icon.ico
-was absent. The icon is now generated from the existing source.svg with the locked
-Tauri CLI. The next affected Windows build must be observed; no native compilation
-success or runtime support is inferred.
+Session paused at the user's request on 2026-10-24. All implementation changes
+are committed/pushed through fea5f91. Windows native CI 40030829324 completed
+successfully for 00439c4 after adding icon.ico: actual bundled Tauri client build
+passes. This proves compilation/linking, not Windows launch, SSH or secure storage.
+Local checks 40031022048 for fea5f91 is still in progress; its changes selector and
+frontend job have succeeded, server result remains to be observed. The selector
+change itself conservatively runs both application jobs.
 
-Next: finish observing Windows compilation and address actual failures, then
-advance its missing SSH/store support with requirement-specific native evidence.
-Android target/operation approval remains unanswered: do not create/start an AVD
-or install/reset apps without that concrete approval. No sibling repository was
-modified. No completion percentage is audited.
+Next session: observe that exact Local checks run, record Windows compilation in
+docs/platforms.md, then prepare the actual unsigned iOS simulator application build
+on hosted macOS. No iOS workflow or generated project has been created yet. CLI
+2.12.3 source confirms ios build supports --no-sign, aarch64-sim and forwarded
+Cargo args; proposed commands: ios init --ci --skip-targets-install, then ios build
+--debug --target aarch64-sim --no-sign --ci -- --locked, with the simulator Rust
+target installed. Verify tool prerequisites and actual build results before claims.
+No simulator boot, app install, signing credential or Keychain operation is approved
+by this preparation. Android target/operation approval remains unanswered; do not
+create/start an AVD or install/reset apps. No sibling repository was modified.
+No completion percentage is audited.
 
 
 
@@ -7188,3 +7197,20 @@ locally. The workflow/selector change itself deliberately selects both in CI.
 Windows run 40030829324 is confirmed live in its actual-client build step after
 the icon correction; no result is inferred. Next: observe that exact Windows run
 and the first selector-enabled Local checks run. No VM/device/credential operation.
+
+
+## 2026-10-24 — User-requested session pause
+
+Windows run 40030829324 is now confirmed completed/successful for 00439c4, proving
+the actual bundled Windows client compiles/links with the supplied icon resource.
+Local checks 40031022048 remains live; selector and frontend succeeded, server
+was still running at the last detailed observation. Continue that exact run; do
+not restart on observation timeout. Local watch session 67310 only observes the
+now-terminal Windows run and may already have exited; no build depends on it.
+
+iOS build investigation only: official Tauri CLI 2.12.3 build.rs source was read
+into ignored `.lab/native-deps/tauri-ios-build-2.12.3.rs`. It confirms unsigned
+simulator build flags and Cargo argument forwarding. Linux CLI cannot expose ios
+commands; hosted macOS is needed. No iOS source/workflow/project edits occurred.
+No VM/device, signing or credential operation occurred. Scope remains incomplete.
+Only this documentation checkpoint changed; diff review is the required check.
