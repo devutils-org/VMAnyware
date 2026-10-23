@@ -37,10 +37,19 @@ The focused test passes (one test, six fixture versions). Full native macOS buil
 and scope-only test remain proven by CI 40028754564 for 26eb8a2; real Keychain/GUI
 runtime remains unproven.
 
-Next: observe Local checks after this fixture correction, then implement the next
-missing platform/build slice. Android target/operation approval remains unanswered:
-do not create/start an AVD or install/reset apps without that concrete approval.
-No sibling repository was modified. No completion percentage is audited.
+Local checks run 40030230911 completed successfully for ee14eae: frontend,
+server formatting, strict all-target Clippy and server/local TLS/process tests.
+The historical-schema fixture correction is now validated in hosted CI too.
+Windows native build run 40030231001 is confirmed live, compiling the actual
+bundled Tauri client. Continue observing this exact run; do not restart it merely
+because observation times out. Its workflow is path-filtered, so evidence-only
+STATE/docs changes do not rebuild the Windows client.
+
+Next: finish observing Windows compilation and address actual failures, then
+advance its missing SSH/store support with requirement-specific native evidence.
+Android target/operation approval remains unanswered: do not create/start an AVD
+or install/reset apps without that concrete approval. No sibling repository was
+modified. No completion percentage is audited.
 
 
 
@@ -7132,3 +7141,15 @@ Workflow diff reviewed; execution is pending push/observation. No local applicat
 suite repeated for this CI-only change. Next: observe Windows build and correct
 actual target-specific failures. Local checks 40030173686 for 1247440 is in progress;
 continue observing its handle, not restarting. Android approval is unchanged.
+
+
+## 2026-10-23 — Hosted server/frontend CI recovered
+
+Observed Local checks run 40030230911 completed successfully for ee14eae:
+frontend dependency install/typecheck/build, server format, strict all-target
+Clippy and the server/local TLS/process test step all passed. This includes the
+corrected historical-schema test. Watch session 98462 exited successfully; log:
+`.lab/native-deps/local-checks-ee14eae-watch.log`. Windows compilation remains
+active in run 40030231001, job 120676388603, actual bundled-client build step.
+No local suites were repeated during observation. No VM/device or credential
+operation occurred. Next: observe that exact native build before claiming success.
