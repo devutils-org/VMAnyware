@@ -282,19 +282,49 @@ mod tests {
     use super::*;
     #[test]
     fn snapshot_schema_keeps_foreign_key_enforcement_after_fresh_and_migrated_open() {
-        let directory = tempfile::tempdir().unwrap();
-        let path = directory.path().join("fk.sqlite");
-        for version in [None, Some(10), Some(11), Some(12), Some(13), Some(14)] {
-            if let Some(version) = version {
-                rusqlite::Connection::open(&path)
-                    .unwrap()
-                    .pragma_update(None, "user_version", version)
-                    .unwrap();
+        let migrations = [
+            include_str!("../../../migrations/0001_definitions.sql"),
+            include_str!("../../../migrations/0002_operations.sql"),
+            include_str!("../../../migrations/0003_instances.sql"),
+            include_str!("../../../migrations/0004_instance_observations.sql"),
+            include_str!("../../../migrations/0005_lifecycle_operations.sql"),
+            include_str!("../../../migrations/0006_provisioning_intent.sql"),
+            include_str!("../../../migrations/0007_resource_dispatch.sql"),
+            include_str!("../../../migrations/0008_disk_dispatch.sql"),
+            include_str!("../../../migrations/0009_cloud_init_dispatch.sql"),
+            include_str!("../../../migrations/0010_seed_regeneration.sql"),
+            include_str!("../../../migrations/0011_snapshot_creation.sql"),
+            include_str!("../../../migrations/0012_snapshot_restore.sql"),
+            include_str!("../../../migrations/0013_deletion_intent.sql"),
+            include_str!("../../../migrations/0014_instance_retirement.sql"),
+        ];
+        for version in [0, 10, 11, 12, 13, 14] {
+            let directory = tempfile::tempdir().unwrap();
+            let path = directory.path().join("fk.sqlite");
+            let fixture = rusqlite::Connection::open(&path).unwrap();
+            // Build the actual historical schema, rather than relabeling a newer one.
+            for migration in &migrations[..version] {
+                fixture.execute_batch(migration).unwrap();
             }
+            fixture
+                .pragma_update(None, "user_version", version as i64)
+                .unwrap();
+            drop(fixture);
             let store = Store::open(&path).unwrap();
             let connection = store.0.lock().unwrap();
             assert!(connection
                 .pragma_query_value(None, "foreign_keys", |r| r.get::<_, bool>(0))
+                .unwrap());
+            assert_eq!(
+                connection
+                    .pragma_query_value(None, "user_version", |r| r.get::<_, u32>(0))
+                    .unwrap(),
+                15
+            );
+            assert!(!connection
+                .prepare("PRAGMA foreign_key_check")
+                .unwrap()
+                .exists([])
                 .unwrap());
             assert!(connection.execute("INSERT INTO provisioning_intents(operation_id,catalog_yaml,plan_json) VALUES ('orphan','test','{}')",[]).is_err());
         }

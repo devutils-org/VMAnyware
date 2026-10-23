@@ -26,20 +26,21 @@ explicit concrete approval under AGENTS.md. No live task handle remains pending.
 Next: obtain that approval, then execute the exact plan and record actual runtime
 results; otherwise continue other source work without starting a VM.
 
-Session checkpoint (user requested session closure): macOS Keychain source is
-committed/pushed in 26eb8a2. Full native macOS client build/link and scope-only test
-passed in hosted CI run 40028754564. No Keychain/GUI runtime acceptance is implied.
-Server formatting was fixed in 0d37e05; subsequent CI 40028869036 passed frontend
-but exposed five server test-source Clippy errors. Those are now corrected without
-behavior changes: move preflight tests after production items, remove three needless
-PathBuf borrows and negate a boolean assertion. Strict all-target server Clippy and
-format checks pass locally. The next pushed CI result must still be observed.
+Goal resumed: do everything feasible in this environment. Latest push ed05c64
+passed frontend, formatting and server Clippy in CI 40029310966, but one server
+unit test failed (177 passed). The snapshot foreign-key migration test relabeled
+an already-current database as older, causing schema 14 to recreate an existing
+index. It now builds separate real schema fixtures for fresh/10/11/12/13/14 using
+the committed migrations, then checks version 15, foreign-key enforcement,
+foreign_key_check and orphan rejection. Production migration code is unchanged.
+The focused test passes (one test, six fixture versions). Full native macOS build
+and scope-only test remain proven by CI 40028754564 for 26eb8a2; real Keychain/GUI
+runtime remains unproven.
 
-Next task: inspect Local checks for the session-close commit, fixing only actual
-failures if any; then resume the roadmap with real platform acceptance still open.
-Android target/operation approval remains unanswered: do not start/create an AVD,
-install/reset apps or repeat the pending approval request. No sibling repository
-was modified during this closure. No local command remains running.
+Next: observe Local checks after this fixture correction, then implement the next
+missing platform/build slice. Android target/operation approval remains unanswered:
+do not create/start an AVD or install/reset apps without that concrete approval.
+No sibling repository was modified. No completion percentage is audited.
 
 
 
@@ -7099,3 +7100,19 @@ only test item order, generic argument borrows and boolean assertion syntax chan
 (log: `.lab/native-deps/server-ci-clippy-close.log`). Scoped formatting and diff
 review pass. No unrelated application tests, VM or credential operations ran.
 The new push triggers existing Local checks; observe its actual result next session.
+
+
+## 2026-10-23 — Correct historical migration fixtures
+
+Scope: fix the demonstrated CI unit-test setup without changing production SQL or
+weakening foreign-key assertions. Each fixture now uses a separate database with
+the actual committed migrations through its historical version; previously the
+same schema-15 database was repeatedly relabeled with older version numbers.
+The focused snapshot_schema_keeps_foreign_key_enforcement_after_fresh_and_migrated_open
+test passes across fresh and versions 10–14, checking final version 15, enforcement,
+foreign_key_check and rejected orphan provisioning intent. Log:
+`.lab/native-deps/snapshot-schema-fixtures.log`. No VM, device, infrastructure or
+credential operations occurred. No unrelated application test suite was rerun.
+Scoped server library/test Clippy with warnings denied and cargo fmt check pass
+(`.lab/native-deps/snapshot-schema-clippy.log`); diff review passes. Next CI result
+is pending push/observation, not assumed green.
