@@ -214,28 +214,42 @@ struct Evidence {
 enum TaskStatus {
     Succeeded,
 }
+// Borrow only recorded validation data; this context carries no submission consent.
+pub(super) struct RestoreContext<'a> {
+    pub instance_id: &'a str,
+    pub provider_scope_id: &'a str,
+    pub node: &'a str,
+    pub vmid: u32,
+    pub request: &'a Request,
+    pub snapshot_config_hash: Option<&'a str>,
+}
 impl Operation {
     fn valid(&self, review: &Review, expected: Option<&str>) -> bool {
         self.valid_context(
-            &review.instance_id,
-            &review.provider_scope_id,
-            &review.node,
-            review.vmid,
-            &review.request,
-            review.snapshot_config_hash.as_deref(),
+            RestoreContext {
+                instance_id: &review.instance_id,
+                provider_scope_id: &review.provider_scope_id,
+                node: &review.node,
+                vmid: review.vmid,
+                request: &review.request,
+                snapshot_config_hash: review.snapshot_config_hash.as_deref(),
+            },
             expected,
         )
     }
     pub(super) fn valid_context(
         &self,
-        instance_id: &str,
-        provider_scope_id: &str,
-        node: &str,
-        vmid: u32,
-        request: &Request,
-        snapshot_config_hash: Option<&str>,
+        context: RestoreContext<'_>,
         expected: Option<&str>,
     ) -> bool {
+        let RestoreContext {
+            instance_id,
+            provider_scope_id,
+            node,
+            vmid,
+            request,
+            snapshot_config_hash,
+        } = context;
         if !hex(&self.id, 32)
             || self.kind != "vm_snapshot_restore"
             || (self.status == Status::Queued && self.provider_task_known)

@@ -2,7 +2,7 @@
 use super::{
     hex, identifier,
     snapshot_create::valid_name,
-    snapshot_restore::{Failure, Operation, Request, Status},
+    snapshot_restore::{Failure, Operation, Request, RestoreContext, Status},
     RemoteConnection,
 };
 use serde::{Deserialize, Serialize};
@@ -111,12 +111,14 @@ impl Recovered {
             && self.request.valid()
             && hex(&self.snapshot_config_hash, 64)
             && self.operation.valid_context(
-                instance_id,
-                &target.provider_scope_id,
-                &target.node,
-                target.vmid,
-                &self.request,
-                Some(&self.snapshot_config_hash),
+                RestoreContext {
+                    instance_id,
+                    provider_scope_id: &target.provider_scope_id,
+                    node: &target.node,
+                    vmid: target.vmid,
+                    request: &self.request,
+                    snapshot_config_hash: Some(&self.snapshot_config_hash),
+                },
                 Some(operation_id),
             )
             && self

@@ -26,6 +26,13 @@ explicit concrete approval under AGENTS.md. No live task handle remains pending.
 Next: obtain that approval, then execute the exact plan and record actual runtime
 results; otherwise continue other source work without starting a VM.
 
+The known strict native-library Clippy blocker is now resolved by grouping restore
+validation inputs into a borrowed, non-serialized context. Fourteen restore and
+nine saved-recovery tests pass, plus strict client-library Clippy without an allow.
+The Android runtime approval remains pending. Next independent source task:
+macOS Keychain unlock-secret backend and scoped compilation evidence, without
+accessing an existing login keychain or requiring a VM.
+
 The full roadmap remains active/incomplete: real Proxmox, Android runtime/SSH/IME,
 other platform stores/parity, deployment and release gates remain open. No audited
 completion percentage is claimed.
@@ -6962,3 +6969,38 @@ change, real VM or provider access occurred. Four cases are compiled, not passed
 The plan report retains runtimeValidated=false and full APK/platform acceptance is
 not changed. Next task: execute on the explicitly approved disposable runtime, then
 record actual failures/success and continue Android system-source SSH/rotation.
+
+
+## 2026-10-23 — Restore validation context and strict native Clippy
+
+Scope/acceptance: resolve the known too_many_arguments failure in restore validation
+without suppressing it or weakening operation/target/snapshot proof checks. Replaced
+six positional validation fields with one borrowed RestoreContext, used by live
+review and saved-operation recovery. It carries only recorded validation data,
+not preparation state, consent or a serialized execution request. Expected operation
+ID remains explicit. The original predicate and failure/state logic are unchanged.
+No provider, persistence, protocol, API/IPC or frontend behavior is added.
+
+Verification: 14 affected snapshot-restore native tests pass
+(`.lab/native-deps/restore-context-tests.log`), including exact target/snapshot/
+stopped evidence, known-task uncertainty, same-key retry, authentication and stale
+reply/no-replay guards. Nine saved restore recovery tests pass
+(`.lab/native-deps/restore-context-recovery-tests.log`), covering cross-target proof,
+fixed GET-only reads, no restored intent, corruption/dispatch refusal and private
+error fields. Strict `cargo clippy --locked -p vmanyware-client --lib -- -D warnings`
+now passes with the owned native prefix (`restore-context-clippy.log` in that
+directory), without any allow/disable for the old lint. Scoped Rust format and diff
+review pass. No new tests mirroring the refactor were added; existing security/
+protocol cases cover the changed callers. No unrelated server/frontend suite ran.
+
+All commands are terminal. No VM, app/device or credential mutation occurred.
+No package was rebuilt for this internal predicate-input refactor: reviewed Android
+plan/APKs remain the earlier exact Keystore candidate, not runtime evidence for the
+new restore source. No percentage or platform acceptance is inferred.
+
+Next: keep the single pending Android target/operation approval intact; do not infer
+it from an automatic continuation or repeat the approval request. Meanwhile implement
+the absent macOS Keychain unlock-secret source through the existing explicit APIs,
+using target-specific compilation where possible and clearly retaining real macOS
+runtime/Keychain acceptance. No personal login keychain may be inspected or changed
+by the agent. Windows/iOS, real infrastructure and deployment/release gates remain.
