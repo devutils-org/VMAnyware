@@ -333,7 +333,11 @@ pub async fn list_app_ssh_identity(
 
 #[tauri::command]
 pub fn system_identity_support() -> bool {
-    cfg!(any(target_os = "linux", target_os = "android"))
+    cfg!(any(
+        target_os = "linux",
+        target_os = "android",
+        target_os = "macos"
+    ))
 }
 #[tauri::command]
 pub async fn remember_app_identity(
@@ -365,7 +369,7 @@ async fn system_identity_action(
     forget: bool,
     confirmed: bool,
 ) -> Result<serde_json::Value, String> {
-    #[cfg(any(target_os = "linux", target_os = "android"))]
+    #[cfg(any(target_os = "linux", target_os = "android", target_os = "macos"))]
     {
         use tauri::Manager;
         let passphrase = passphrase.map(zeroize::Zeroizing::new);
@@ -384,7 +388,7 @@ async fn system_identity_action(
         .await
         .map_err(|_| "System SSH identity unavailable")?
     }
-    #[cfg(not(any(target_os = "linux", target_os = "android")))]
+    #[cfg(not(any(target_os = "linux", target_os = "android", target_os = "macos")))]
     {
         let _ = (app, passphrase, forget, confirmed);
         Err("System SSH identity storage is unavailable on this platform".into())
@@ -398,13 +402,13 @@ pub async fn list_system_ssh_identity(
     port: u16,
     username: String,
 ) -> Result<Selection, String> {
-    #[cfg(any(target_os = "linux", target_os = "android"))]
+    #[cfg(any(target_os = "linux", target_os = "android", target_os = "macos"))]
     {
         manager
             .list_system_application(window.label(), &host, port, &username)
             .await
     }
-    #[cfg(not(any(target_os = "linux", target_os = "android")))]
+    #[cfg(not(any(target_os = "linux", target_os = "android", target_os = "macos")))]
     {
         let _ = (window, manager, host, port, username);
         Err("System SSH identity storage is unavailable on this platform".into())

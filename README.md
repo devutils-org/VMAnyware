@@ -74,7 +74,9 @@ The optional Linux Secret Service controls pass isolated real-daemon/native SSH,
 browser and joined Linux WebView/production IPC/terminal checks. The private key
 remains encrypted in application storage. Android Keystore now compiles/packages
 for both ABIs, with scoped ciphertext and JNI checks; actual device behavior, macOS
-Keychain and normal deployment/platform acceptance remain open. Current Android
+Keychain source now passes an isolated Apple Silicon typecheck; full macOS build
+and Keychain/runtime acceptance remain open. Normal deployment/platform acceptance
+also remains open. Current Android
 APKs include the vault commands but have not been executed. See
 [Linux decision](docs/decisions/0087-linux-system-identity-unlock.md) and
 [Android decision and limits](docs/decisions/0088-android-keystore-identity-unlock.md).

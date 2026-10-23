@@ -60,7 +60,7 @@ export function AppIdentity({ disabled, onUse }: { disabled: boolean; onUse: (pu
     </form>
     {systemSupported && <fieldset disabled={disabled || busy} className="identity-vault">
       <legend>System key store</legend>
-      <p>Optionally protect this key's unlock passphrase with the operating system key store (Linux Secret Service or Android Keystore). The SSH key remains encrypted in application storage. Access depends on this device and key store; keep the passphrase for recovery.</p>
+      <p>Optionally protect this key's unlock passphrase with the operating system key store (Linux Secret Service, Android Keystore or macOS Keychain). The SSH key remains encrypted in application storage. Access depends on this device and key store; keep the passphrase for recovery.</p>
       <label><input id="remember-identity-consent" type="checkbox" checked={rememberConsent} onChange={event => setRememberConsent(event.target.checked)} /> Save the entered passphrase for this application SSH identity.</label>
       <button type="button" disabled={!rememberConsent || passphrase.length < 16} onClick={() => vault("remember")}>Remember SSH unlock secret</button>
       <button type="button" onClick={() => vault("unlock")}>Unlock using system key store</button>

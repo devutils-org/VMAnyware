@@ -26,12 +26,16 @@ explicit concrete approval under AGENTS.md. No live task handle remains pending.
 Next: obtain that approval, then execute the exact plan and record actual runtime
 results; otherwise continue other source work without starting a VM.
 
-The known strict native-library Clippy blocker is now resolved by grouping restore
-validation inputs into a borrowed, non-serialized context. Fourteen restore and
-nine saved-recovery tests pass, plus strict client-library Clippy without an allow.
-The Android runtime approval remains pending. Next independent source task:
-macOS Keychain unlock-secret backend and scoped compilation evidence, without
-accessing an existing login keychain or requiring a VM.
+The known strict native-library Clippy blocker is resolved. macOS Keychain source
+now implements the existing explicit unlock-secret actions. The real identity/
+backend module typechecks for Apple Silicon without Apple SDK/framework linking;
+a scope-only host test, affected frontend/browser and strict Linux Clippy pass.
+A path-filtered real macOS CI build/scope-only test is prepared; its result is not
+yet known. No personal keychain is accessed. Existing repository CI is independently
+failing server formatting before its Clippy/tests; do not label the overall CI green.
+Next: observe the new macOS CI result, then address its actual failures or the known
+server-formatting gate. Android runtime approval is still pending; do not repeat it.
+
 
 The full roadmap remains active/incomplete: real Proxmox, Android runtime/SSH/IME,
 other platform stores/parity, deployment and release gates remain open. No audited
@@ -7004,3 +7008,57 @@ the absent macOS Keychain unlock-secret source through the existing explicit API
 using target-specific compilation where possible and clearly retaining real macOS
 runtime/Keychain acceptance. No personal login keychain may be inspected or changed
 by the agent. Windows/iOS, real infrastructure and deployment/release gates remain.
+
+
+## 2026-10-23 — macOS Keychain unlock-secret source (ADR 0090)
+
+Scope/acceptance: implement explicit save/read/forget for the existing encrypted SSH
+identity, exact scope binding, no secret export/fallback, and targeted compilation
+with the available tools. Added a macOS-only backend using one default SecKeychain
+handle per action, fixed service and purpose/canonical-directory/public-fingerprint
+SHA-256 account. Only correct manual verification precedes save; only item-not-found
+allows add; readback confirms save. Forget requires consent and exact item-not-found
+after delete before success. No unrestricted keychain search, enumeration, creation,
+unlock, default/search-list modification or process-global interaction policy change.
+Native OS prompts can follow explicit user actions; runtime/prompt/signing/locked-store
+behavior is unproven. Framework buffers are freed; full memory erasure/device-only/
+biometric/hardware protection is not claimed. The SSH private key stays encrypted
+in its application file. Five existing API/caller cfgs now include macOS, with 82
+unchanged production commands. A pinned, macOS-only security-framework dependency
+reuses version 3.7.0 already in Cargo.lock, default features disabled; no new package
+versions or unrelated TLS features are requested.
+
+Verification: one focused Linux-host scope test passes
+(`.lab/native-deps/macos-keychain-scope.log`) using fresh encrypted fixture files,
+without a Keychain. The actual IdentityStore/macOS backend module passes Rust
+metadata typechecking for aarch64-apple-darwin with production-locked versions and
+checksums (`macos-keychain-typecheck.log` in that directory). The target std was
+installed through rustup; no Apple SDK, framework link or Tauri app is supplied by
+this probe. Initial probe-only missing serde derive dependency was fixed; the final
+check passes. scripts/check-macos-identity-source.py generates a small ignored
+isolated check crate, not a production workspace abstraction or mock backend.
+
+Affected frontend build/typecheck (`.lab/macos-keychain-ui-build.log`) and real React/
+Firefox simulated-IPC scenario (`.lab/macos-keychain-ui-check.log`) pass. Strict Linux
+client-library Clippy passes (`.lab/native-deps/macos-keychain-clippy.log`), along with
+scoped Rust/Python syntax/format, diff and unchanged command manifest consistency.
+No unrelated server suite, native GUI, Android artifact build, VM/device or credential
+operation ran. Existing reviewed Android Keystore artifacts/approval remain unchanged.
+
+Read-only CI inspection found no macOS client job. Added path-filtered macos-source
+workflow: pinned existing checkout/setup-node actions, read-only permissions, actual
+OS/architecture/Xcode/toolchain recording, bundled frontend, full native client build
+with tauri/custom-protocol, then only the no-Keychain scope test. macos-15 is the
+current standard Apple Silicon label; the repository is public. This is ordinary
+hosted CI compilation/test work, not a user VM/AVD or credential operation. Debug
+symbols are disabled and Cargo jobs limited to two for the standard runner. Its
+actual build/link result is pending until pushed/observed. No macOS GUI or Keychain
+acceptance is inferred even from a successful build.
+
+Existing Local checks CI run 40026821590 for 3d423c3 failed server formatting and
+passed frontend, before server Clippy/tests; logs are retained in
+`.lab/native-deps/baseline-ci-format.log`. The first reported formatting diff is in
+server/src/lib.rs. This predates the Mac slice. Keep the overall CI failure visible;
+resolve it as the next bounded diff rather than skipping or weakening the check.
+No real private keychain has been inspected/changed. macOS runtime, iOS/Windows,
+Android approved runtime, real Proxmox and deployment/release gates remain open.

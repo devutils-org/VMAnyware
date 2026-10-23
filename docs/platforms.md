@@ -41,6 +41,26 @@ source and refreshed APKs now compile/package independently (ADR 0088); the wrap
 key, ciphertext, restart and SSH behavior still need actual device acceptance.
 See [ADR 0087](decisions/0087-linux-system-identity-unlock.md).
 
+## macOS Keychain source — 2026-10-23
+
+The explicit save/use/forget backend is implemented through one default Keychain
+handle, exact service/scoped account and fixed errors, with save/forget confirmation.
+The real identity/backend module typechecks for aarch64-apple-darwin using the pinned
+Rust target and production-locked dependency versions. No Apple SDK/framework link,
+Tauri build, Keychain call, GUI or macOS runtime is involved in this Linux-host probe:
+
+```sh
+rustup target add aarch64-apple-darwin
+python3 scripts/check-macos-identity-source.py
+```
+
+The probe creates only ignored .lab files and checks all selected dependency
+versions/checksums against Cargo.lock. The real macOS application build is covered
+by a separate path-filtered CI workflow; its result is recorded in STATE.md when
+observed. Runtime/OS prompts, signing identity, locked store, isolated keychain
+roundtrip and system-source SSH still need a real approved macOS target. Neither
+metadata compilation nor a native build closes these gates. See ADR 0090.
+
 ## Reproduce the current development checks
 
 | Tool | Tested version/configuration |

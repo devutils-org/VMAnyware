@@ -2,6 +2,9 @@
 #[cfg(any(target_os = "android", all(test, target_os = "linux")))]
 #[path = "identity_android.rs"]
 mod android;
+#[cfg(any(target_os = "macos", all(test, target_os = "linux")))]
+#[path = "identity_macos.rs"]
+mod macos;
 #[cfg(target_os = "linux")]
 #[path = "identity_vault.rs"]
 pub(super) mod vault;
