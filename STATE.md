@@ -7167,3 +7167,24 @@ ICO header/directory bounds and file format check pass. No Linux/mobile suite wa
 rerun for this Windows resource. Next: observe the affected Windows compilation
 after push; later Rust/link errors are not ruled out. Hosted frontend/server CI
 40030230911 remains successful for the unchanged application source.
+
+
+## 2026-10-24 — Diff-selected local CI jobs
+
+Scope: apply the user's diff-only verification rule to Local checks, which was
+rebuilding server and frontend for every STATE/doc/native-icon push. A dependency-
+free selector now reads the complete NUL-delimited Git diff with renames disabled
+(so both removed and added paths count). Server/migrations select server; frontend
+files select frontend; src-tauri is handled by the separate native workflows;
+documentation selects neither. Shared/unknown inputs select both. Missing/invalid
+SHAs/history, initial pushes and manual dispatch run both, without suppressing any
+existing formatter, Clippy or test command. Read-only checkout supplies full history.
+
+Verification: eight path/mixed/shared/unknown scenarios, four manual/invalid/initial/
+missing-history fallbacks and matching stdout/GITHUB_OUTPUT pass. Three actual
+historical diffs produce server-only, docs-only and native-icon-only as intended.
+Workflow YAML parses; diff review passes. No unrelated application suites ran
+locally. The workflow/selector change itself deliberately selects both in CI.
+Windows run 40030829324 is confirmed live in its actual-client build step after
+the icon correction; no result is inferred. Next: observe that exact Windows run
+and the first selector-enabled Local checks run. No VM/device/credential operation.
