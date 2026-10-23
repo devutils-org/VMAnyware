@@ -11,9 +11,9 @@ pub use cloud_init::{CloudInitObservation, CloudInitRequest, SeedPreflight, Seed
 mod disk;
 pub use disk::{DiskObservation, DiskRequest};
 pub(crate) mod deletion;
-mod deletion_management;
 mod deletion_absence;
 mod deletion_dispatch;
+mod deletion_management;
 pub use deletion_absence::{DeletionAbsence, DeletionCompletion};
 mod dispatch;
 pub use deletion::{DeletionVolume, DeletionVolumeEffect};

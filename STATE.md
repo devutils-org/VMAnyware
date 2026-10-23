@@ -7062,3 +7062,21 @@ server/src/lib.rs. This predates the Mac slice. Keep the overall CI failure visi
 resolve it as the next bounded diff rather than skipping or weakening the check.
 No real private keychain has been inspected/changed. macOS runtime, iOS/Windows,
 Android approved runtime, real Proxmox and deployment/release gates remain open.
+
+
+## 2026-10-23 — Unblock the existing server CI formatting gate
+
+Scope/acceptance: fix only the three formatting differences reported by the failed
+Local checks CI, preserve token-level behavior and pass its exact formatting check.
+Rustfmt wraps the new provisioning-progress route and sorts existing module
+statements in server/src/lib.rs, proxmox.rs and store.rs (seven added/four removed
+lines). No predicate, route, field, SQL, dependency or mutation behavior changes.
+`cargo fmt --check -p vmanyware-server` and diff review pass
+(`.lab/native-deps/server-ci-format-check.log`). No application suite was rerun
+locally for this format-only diff. The existing CI still performs its required
+server Clippy/tests after push; observe the result rather than assume it passes.
+
+macOS client source CI run 40028754564 is confirmed in progress for backend commit
+26eb8a2. This server-only formatting commit does not match its path filter and
+should not rebuild/cancel that independent platform gate. The actual result is
+pending. Android approval remains unanswered; no AVD/device operation is authorized.
