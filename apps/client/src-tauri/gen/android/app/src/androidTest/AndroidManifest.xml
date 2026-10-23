@@ -1,0 +1,5 @@
+<?xml version="1.0" encoding="utf-8"?>
+<manifest xmlns:android="http://schemas.android.com/apk/res/android">
+    <!-- Installable only as an explicit test artifact, never a normal app release. -->
+    <application android:testOnly="true" android:allowBackup="false" />
+</manifest>

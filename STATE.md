@@ -1,6 +1,6 @@
 # VMAnyware — current state
 
-Updated: 2026-10-22. Historical evidence and decisions are in Git and docs.
+Updated: 2026-10-23. Historical evidence and decisions are in Git and docs.
 
 Naming note: historical lab resource identifiers below are normalized to the
 current VMAnyware name. External resources were not renamed; use VMIDs and
@@ -8,22 +8,27 @@ ignored local lab records to verify actual identifiers before operations.
 
 ## Latest resume point
 
-User-requested session checkpoint: finish this slice, commit/push and stop here.
-ADR 0088 implements Android Keystore wrapping for the optional application SSH
-unlock secret. ARM64/x86_64 Rust, Kotlin/JNI and both signed debug APKs compile/package;
-helper presence, native hashes, descriptors, initializer exports and existing
-manifest constraints pass. A focused scope test and affected browser journey pass.
-This is compiled/packaged implementation, not actual Android runtime acceptance.
-The SSH private key stays in its passphrase-encrypted app file. Linux Secret Service
-already has joined native UI/vault/SSH acceptance (ADR 0087). macOS Keychain,
-Windows/iOS parity, exact APK/device/Keystore behavior, real Proxmox and deployment
-acceptance remain open. No full-roadmap completion or audited percentage is claimed.
+Goal resumed 2026-10-23. Android Keystore production source and both debug APKs
+compile/package (ADR 0088). ADR 0089 now prepares a separate test-only instrumented
+APK (four real-Keystore cases), an exact-artifact read-only plan and the packaged
+IPC save/read/restart/forget scenario. Three host-only fake-ADB refusal checks pass.
+The test APK compiles; signatures, target/runner/test-only metadata and matching
+main/test signer verify. No runtime case has been executed. No emulator was created,
+started, installed/reset or contacted; no personal credential was read/changed.
 
-Resume next with an explicitly approved owned Android runtime: save/read/restart,
-tamper/wrong-scope and missing/invalidated wrapping-key refusal, forget/read refusal,
-then host-trust-first SSH/PTY using the system source. Do not start a VM, AVD or
-personal credential operation just because source/build checks pass. All task
-processes are terminal; no pending build or test needs restarting.
+Reviewable plan: `.lab/android-keystore/plan.json`, SHA-256
+`47d7cc257434b038f7be1b62b8f8f5f4635565ef20acb63e9bd976c41b4798bf`.
+It requires the named already booted x86_64 QEMU AVD, serial emulator-5580, ADB 5047,
+installs only the two hashed APKs and resets only dev.vmanyware.client. Proposed
+creation/start uses a fresh owned API-35/Pixel-6 AVD in the task-local Android user
+directory, 2 vCPUs/2048 MiB RAM/2 GiB data. These VM/app operations still require
+explicit concrete approval under AGENTS.md. No live task handle remains pending.
+Next: obtain that approval, then execute the exact plan and record actual runtime
+results; otherwise continue other source work without starting a VM.
+
+The full roadmap remains active/incomplete: real Proxmox, Android runtime/SSH/IME,
+other platform stores/parity, deployment and release gates remain open. No audited
+completion percentage is claimed.
 
 
 Latest source slice: production HTTP admission now has a global burst-120,
@@ -6902,3 +6907,58 @@ then continue other source/platform work. User asked to stop at this checkpoint;
 do not start another slice in this session. Website remains at the accepted Linux
 checkpoint `11dcb6c`; Android source/package evidence is now in this repo and should
 be synchronized on the next publication pass, without claiming device validation.
+
+
+## 2026-10-23 — Prepared owned Android Keystore acceptance (ADR 0089)
+
+Scope/acceptance: compile an isolated test APK and prepare a reviewed, opt-in
+save/read/process-restart/forget plus negative Keystore scenario; enforce target/
+artifact/reset gates without launching a VM or reading personal credentials.
+Added four AndroidJUnit4 instrumented cases using only generated random scopes,
+explicit owned-fixture argument and emulator hardware/package guards. Tests exercise
+roundtrip/reopened helper/forget, authenticated ciphertext tamper/wrong scope,
+wrapping-key loss with no silent regeneration and explicit forget/resave, malformed
+scope/version/size and byte-array clearing. They add no production corruption/key
+hook, do not enumerate aliases and clean only their own generated scopes.
+
+The native Android harness gains --keystore with a mandatory local APK whose digest
+must match the installed standalone APK before data reset. Actual IPC scenario
+requires explicit save/forget confirmation, correct passphrase, unchanged public
+identity, system unlock before/after process restart, forgotten-secret read refusal
+and preserved manual identity. The separate planner verifies packages/signatures,
+shared signer, main x86_64 ABI and test-only instrumentation target, hashes APKs and
+host controllers, and records exact target/operations. Execution rechecks the plan
+before ADB and checks AVD name/QEMU/boot/ABI before any installation. It requires all
+four instrumented cases and matching native report; it removes only the test APK it
+installed and stops the owned app. It does not create/start an emulator.
+
+Verification: the targeted test APK assembles successfully
+(`.lab/android-toolchain/keystore-test-apk-build.log`). Initial direct Gradle attempt
+reached the unchanged native Rust hook needing a live Tauri CLI options server;
+correct targeted build excludes :app:rustBuildX86_64Debug and reuses the existing
+ADR-0088 verified library. Main Rust/Kotlin crypto source is unchanged. AndroidTest
+uses pinned JUnit 1.3.0/runner 1.7.0; the unused generated Espresso dependency is
+removed. A manifest now explicitly marks the artifact testOnly=true/allowBackup=false;
+its absence was caught/refused by the first plan attempt before any ADB operation.
+
+The read-only final plan passes SDK signature/manifest/ABI/signer/hash checks
+(`.lab/android-toolchain/keystore-plan-check.log`). Main APK SHA-256 remains
+`0aa58facc6a8d659e76f64cdcc738c44ac2072ddac55c3429c9643d3a072ab47`.
+Test APK is 400436 bytes, SHA-256
+`9f5447e94d2123d2686d05afa1d26a7d0fc196b6273cab96b2d1be1ec1ba264a`.
+Plan SHA-256 is `47d7cc257434b038f7be1b62b8f8f5f4635565ef20acb63e9bd976c41b4798bf`.
+The three host-only refusal cases pass (`.lab/android-keystore/host-guards.log`):
+missing artifact causes zero fake-ADB calls, wrong AVD and changed installed APK
+cause only guarded reads and no reset/install/force-stop. Python/JS syntax, diff
+review and unchanged IPC manifest consistency (82 commands) pass. No unrelated
+server/browser/Rust suite or production APK rebuild reran for this test-only slice.
+
+Read-only SDK inspection confirms an API-35 Google APIs x86_64 image and Pixel-6
+definition are already available; configured owned AVD listing is empty. This is
+not VM creation/start authorization. Proposed setup and exact app/test operations
+are reviewable in the plan and experiments/android-native/README.md. Runtime
+approval remains pending; no ADB call against an emulator, installation, credential
+change, real VM or provider access occurred. Four cases are compiled, not passed.
+The plan report retains runtimeValidated=false and full APK/platform acceptance is
+not changed. Next task: execute on the explicitly approved disposable runtime, then
+record actual failures/success and continue Android system-source SSH/rotation.

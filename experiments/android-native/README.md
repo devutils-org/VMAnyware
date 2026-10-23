@@ -273,3 +273,81 @@ The artifact verifier checks actual signatures, package/version/ABI/SDK declarat
 and exact embedded-native-library equality to the current target build. Historical
 launch/create/SSH reports elsewhere in this document do not validate these new APK
 hashes. Fresh exact-artifact runtime and physical ARM64 acceptance remain open.
+
+## Android Keystore acceptance plan (opt-in, not run by default)
+
+The Keystore fixture has two separate proofs: actual packaged Tauri IPC across
+process restart, and a separate instrumented test APK for authenticated ciphertext,
+wrong scope, missing wrapping key, explicit recovery, version/bounds and input
+clearing. No corruption or key-deletion test command is added to production IPC.
+The test APK only touches newly generated random scopes, refuses a physical target
+and requires the explicit owned-fixture argument. Its manifest is test-only and
+disables backup. Four cases must pass; a zero-test or partial run is rejected.
+
+Build only the test APK after the current production native libraries have already
+passed the regular Android build/content checks (ADR 0088):
+
+```sh
+source .lab/android-toolchain/env.sh
+apps/client/src-tauri/gen/android/gradlew \
+  -p apps/client/src-tauri/gen/android \
+  :app:assembleX86_64DebugAndroidTest -x :app:rustBuildX86_64Debug --no-daemon
+```
+
+The excluded task is the unchanged native build requiring a live Tauri CLI options
+server; this command still compiles Kotlin/test dependencies and packages the test
+APK. It does not build, install or claim a new production native artifact. Tests use
+pinned AndroidX JUnit 1.3.0/runner 1.7.0; the unused generated Espresso dependency is
+removed. Runtime application dependencies and production commands are unchanged.
+
+Produce a concrete artifact plan without ADB or an emulator:
+
+```sh
+node experiments/android-native/keystore-plan.mjs --plan-only \
+  --sdk "$ANDROID_HOME" \
+  --apk .lab/packages/android/vmanyware-0.1.0-android-x86_64-debug.apk \
+  --test-apk apps/client/src-tauri/gen/android/app/build/outputs/apk/androidTest/x86_64/debug/app-x86_64-debug-androidTest.apk \
+  --output .lab/android-keystore/plan.json
+node --test experiments/android-native/keystore-guards.test.mjs
+```
+
+The plan verifies both APK signatures/package identities, the shared signer,
+production x86_64 ABI, test-only instrumentation/target and SHA-256 values. It also
+binds the three host controller files. Execution recomputes the plan before any ADB
+call and refuses changed artifacts/controller/target. The three host regression
+cases use a fake ADB and prove refusal for missing artifact, wrong AVD and changed
+installed APK before reset/install/force-stop. They are not Android runtime tests.
+
+Only after explicit approval of the concrete disposable emulator and operations:
+
+```sh
+node experiments/android-native/keystore-plan.mjs \
+  --run-approved .lab/android-keystore/plan.json --reset-owned-app
+```
+
+The runner requires the already booted AVD `vmanyware-native-smoke`, serial
+`emulator-5580`, isolated ADB port 5047, QEMU property and x86_64 ABI. It installs only
+the two reviewed APKs, clears only the application data, runs production IPC
+save/read/restart/forget and then four instrumented cases, force-stops the owned app
+and removes the test APK it installed. The main APK and reports remain. It never
+creates/starts an AVD, accesses a physical device or contacts a real VM/provider.
+Successful output is scoped Keystore evidence, not full APK/platform acceptance.
+
+### Proposed disposable runtime setup
+
+Approval for app tests is distinct from approval to create/start a VM. For the next
+owned run, the reviewed proposed setup is a fresh `vmanyware-native-smoke` AVD in
+`.lab/android-keystore/android-user/avd`, API 35 Google APIs x86_64, Pixel 6,
+2 vCPUs, 2048 MiB RAM and a 2 GiB data partition. Use the existing owned SDK image;
+no personal AVD, SDK user directory or credential is reused. An isolated
+`ANDROID_USER_HOME=.lab/android-keystore/android-user` and matching
+`ANDROID_AVD_HOME` confine generated state. Do not overwrite an existing AVD.
+After approved creation, start with ports 5580/5581, ADB server 5047, headless
+SwiftShader, no audio/boot animation/snapshots, hardware acceleration and gRPC 8558
+with JWT enabled. The earlier start recipe documents the exact flags. No gRPC token
+is inspected. The source-preparation/plan commands above do none of this.
+
+Remaining runtime gates: actual Keystore/IPC/instrumented test execution, activity
+recreation and system-source SSH/PTY, physical device/security level/biometrics and
+OEM backup behavior. No APK or roadmap item is marked accepted merely by compiling
+the test APK or generating a plan.
