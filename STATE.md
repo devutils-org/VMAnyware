@@ -1,6 +1,6 @@
 # VMAnyware — current state
 
-Updated: 2026-10-23. Historical evidence and decisions are in Git and docs.
+Updated: 2026-10-24. Historical evidence and decisions are in Git and docs.
 
 Naming note: historical lab resource identifiers below are normalized to the
 current VMAnyware name. External resources were not renamed; use VMIDs and
@@ -40,10 +40,10 @@ runtime remains unproven.
 Local checks run 40030230911 completed successfully for ee14eae: frontend,
 server formatting, strict all-target Clippy and server/local TLS/process tests.
 The historical-schema fixture correction is now validated in hosted CI too.
-Windows native build run 40030231001 is confirmed live, compiling the actual
-bundled Tauri client. Continue observing this exact run; do not restart it merely
-because observation times out. Its workflow is path-filtered, so evidence-only
-STATE/docs changes do not rebuild the Windows client.
+Windows build run 40030231001 failed in the Tauri build script because icon.ico
+was absent. The icon is now generated from the existing source.svg with the locked
+Tauri CLI. The next affected Windows build must be observed; no native compilation
+success or runtime support is inferred.
 
 Next: finish observing Windows compilation and address actual failures, then
 advance its missing SSH/store support with requirement-specific native evidence.
@@ -7153,3 +7153,17 @@ corrected historical-schema test. Watch session 98462 exited successfully; log:
 active in run 40030231001, job 120676388603, actual bundled-client build step.
 No local suites were repeated during observation. No VM/device or credential
 operation occurred. Next: observe that exact native build before claiming success.
+
+
+## 2026-10-24 — Windows resource build failure
+
+Windows run 40030231001 is terminal/failed, not live: the actual Tauri build script
+requires icons/icon.ico, absent from the repository. Logs retained in
+`.lab/native-deps/windows-ee14eae-failed.log`; watch session 49657 exited 1.
+Generated the ICO from the existing committed icons/source.svg with the locked
+local Tauri CLI into ignored .lab/windows-icons, copying only icon.ico into source.
+No new design, dependency, configuration, command permission or runtime behavior.
+ICO header/directory bounds and file format check pass. No Linux/mobile suite was
+rerun for this Windows resource. Next: observe the affected Windows compilation
+after push; later Rust/link errors are not ruled out. Hosted frontend/server CI
+40030230911 remains successful for the unchanged application source.
