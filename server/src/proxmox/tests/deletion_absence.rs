@@ -451,14 +451,11 @@ async fn deletion_completion_rolls_back_retirement_on_failure_and_survives_reope
             .id,
         operation.id
     );
-    assert!(
-        connection
-            .prepare("PRAGMA foreign_key_check")
-            .unwrap()
-            .exists([])
-            .unwrap()
-            == false
-    );
+    assert!(!connection
+        .prepare("PRAGMA foreign_key_check")
+        .unwrap()
+        .exists([])
+        .unwrap());
     assert!(connection
         .execute(
             "UPDATE instances SET status='registered' WHERE id=?1",

@@ -3139,7 +3139,7 @@ async fn resource_executor_restart_reconciles_without_task_or_new_creation_capab
         .begin_provisioning_resources(&operation.id, &job.approval, &"d".repeat(40))
         .unwrap();
     drop(store);
-    let reopened = crate::store::Store::open(&directory.path().join("clone.sqlite")).unwrap();
+    let reopened = crate::store::Store::open(directory.path().join("clone.sqlite")).unwrap();
     assert_eq!(reopened.recover_interrupted_operations().unwrap(), 1);
     assert!(run_resources(&reopened, Some(&provider), None, false)
         .await
@@ -3664,7 +3664,7 @@ async fn disk_executor_restart_reconciles_only_known_task_by_get_with_creation_d
                 .unwrap();
         }
         drop(store);
-        let reopened = crate::store::Store::open(&directory.path().join("clone.sqlite")).unwrap();
+        let reopened = crate::store::Store::open(directory.path().join("clone.sqlite")).unwrap();
         assert_eq!(reopened.recover_interrupted_operations().unwrap(), 1);
         assert_eq!(
             run_disk(&reopened, Some(&provider), None, false)
@@ -4296,7 +4296,7 @@ async fn cloud_init_executor_restart_uses_only_get_without_creation_capability_o
         )
         .unwrap();
     drop(store);
-    let reopened = crate::store::Store::open(&directory.path().join("clone.sqlite")).unwrap();
+    let reopened = crate::store::Store::open(directory.path().join("clone.sqlite")).unwrap();
     assert_eq!(reopened.recover_interrupted_operations().unwrap(), 1);
     assert!(run_cloud_init(&reopened, Some(&provider), None, false)
         .await

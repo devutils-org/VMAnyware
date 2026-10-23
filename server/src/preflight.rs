@@ -174,21 +174,6 @@ fn disk_bytes(value: &str) -> Option<u64> {
     digits.parse::<u64>().ok()?.checked_mul(multiplier)
 }
 
-#[cfg(test)]
-mod tests {
-    use super::*;
-    #[test]
-    fn metadata_parsers_are_conservative() {
-        assert_eq!(disk_bytes("8192M"), Some(8 * 1024_u64.pow(3)));
-        assert_eq!(disk_bytes("8G"), Some(8 * 1024_u64.pow(3)));
-        assert_eq!(disk_bytes("8.5G"), None);
-        assert_eq!(disk_bytes("18446744073709551615T"), None);
-        assert!(is_drive("ide2"));
-        assert!(!is_drive("description"));
-        assert_eq!(flag(&serde_json::json!(2)), None);
-    }
-}
-
 impl Report {
     /// Clone-only observational gates. Later permissions/image/readiness remain unproven.
     pub(crate) fn clone_revision(&self, expected_plan: &str) -> Option<&str> {
@@ -210,5 +195,20 @@ impl Report {
             }))
         .then_some(self.source_revision.as_deref())
         .flatten()
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    #[test]
+    fn metadata_parsers_are_conservative() {
+        assert_eq!(disk_bytes("8192M"), Some(8 * 1024_u64.pow(3)));
+        assert_eq!(disk_bytes("8G"), Some(8 * 1024_u64.pow(3)));
+        assert_eq!(disk_bytes("8.5G"), None);
+        assert_eq!(disk_bytes("18446744073709551615T"), None);
+        assert!(is_drive("ide2"));
+        assert!(!is_drive("description"));
+        assert_eq!(flag(&serde_json::json!(2)), None);
     }
 }

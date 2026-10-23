@@ -26,15 +26,21 @@ explicit concrete approval under AGENTS.md. No live task handle remains pending.
 Next: obtain that approval, then execute the exact plan and record actual runtime
 results; otherwise continue other source work without starting a VM.
 
-The known strict native-library Clippy blocker is resolved. macOS Keychain source
-now implements the existing explicit unlock-secret actions. The real identity/
-backend module typechecks for Apple Silicon without Apple SDK/framework linking;
-a scope-only host test, affected frontend/browser and strict Linux Clippy pass.
-A path-filtered real macOS CI build/scope-only test is prepared; its result is not
-yet known. No personal keychain is accessed. Existing repository CI is independently
-failing server formatting before its Clippy/tests; do not label the overall CI green.
-Next: observe the new macOS CI result, then address its actual failures or the known
-server-formatting gate. Android runtime approval is still pending; do not repeat it.
+Session checkpoint (user requested session closure): macOS Keychain source is
+committed/pushed in 26eb8a2. Full native macOS client build/link and scope-only test
+passed in hosted CI run 40028754564. No Keychain/GUI runtime acceptance is implied.
+Server formatting was fixed in 0d37e05; subsequent CI 40028869036 passed frontend
+but exposed five server test-source Clippy errors. Those are now corrected without
+behavior changes: move preflight tests after production items, remove three needless
+PathBuf borrows and negate a boolean assertion. Strict all-target server Clippy and
+format checks pass locally. The next pushed CI result must still be observed.
+
+Next task: inspect Local checks for the session-close commit, fixing only actual
+failures if any; then resume the roadmap with real platform acceptance still open.
+Android target/operation approval remains unanswered: do not start/create an AVD,
+install/reset apps or repeat the pending approval request. No sibling repository
+was modified during this closure. No local command remains running.
+
 
 
 The full roadmap remains active/incomplete: real Proxmox, Android runtime/SSH/IME,
@@ -7080,3 +7086,16 @@ macOS client source CI run 40028754564 is confirmed in progress for backend comm
 26eb8a2. This server-only formatting commit does not match its path filter and
 should not rebuild/cancel that independent platform gate. The actual result is
 pending. Android approval remains unanswered; no AVD/device operation is authorized.
+
+
+## 2026-10-23 — Session-close verification checkpoint
+
+Observed macOS source CI run 40028754564 completed successfully for 26eb8a2:
+actual bundled native client build/link and scope-only test. README, ADR 0090 and
+roadmap status now distinguish this from unexecuted Keychain/GUI runtime checks.
+Server CI 40028869036 exposed five strict Clippy errors after formatting was fixed;
+only test item order, generic argument borrows and boolean assertion syntax changed.
+`cargo clippy --locked -p vmanyware-server --all-targets -- -D warnings` passes
+(log: `.lab/native-deps/server-ci-clippy-close.log`). Scoped formatting and diff
+review pass. No unrelated application tests, VM or credential operations ran.
+The new push triggers existing Local checks; observe its actual result next session.

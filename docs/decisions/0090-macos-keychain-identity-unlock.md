@@ -1,7 +1,7 @@
 # 0090 — macOS Keychain unlock-secret backend
 
-Status: source and isolated Apple Silicon typecheck pass; full macOS CI build/link
-is prepared. No Keychain/runtime/GUI acceptance is inferred.
+Status: source, isolated Apple Silicon typecheck and full macOS CI build/link
+plus the scope-only test pass. No Keychain/runtime/GUI acceptance is inferred.
 
 ## Decision
 
@@ -55,7 +55,9 @@ A separate path-filtered macos-15 CI workflow builds the actual client with bund
 assets/frameworks and runs only the scope test (no Keychain access). It records its
 actual OS/architecture/Xcode/Rust environment. No app launch, credential operation,
 AVD or Proxmox operation is included. CI evidence is recorded only after observing
-the job's result. Full runtime acceptance must use an explicitly approved disposable
+the job's result. Run [40028754564](https://github.com/devutils-org/VMAnyware/actions/runs/40028754564)
+succeeded for source commit 26eb8a2, including the full client build and scope test.
+Full runtime acceptance must use an explicitly approved disposable
 keychain/store target, not a personal login-keychain test. Windows/iOS and real
 infrastructure/deployment gates remain open.
 
