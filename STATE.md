@@ -6,6 +6,17 @@ Naming note: historical lab resource identifiers below are normalized to the
 current VMAnyware name. External resources were not renamed; use VMIDs and
 ignored local lab records to verify actual identifiers before operations.
 
+## 2026-10-25 — Retain exact unsigned iOS bundle for acceptance
+
+Scope: extend the proven iOS workflow to tar the generated application (preserving
+bundle modes/symlinks), verify SHA-256 and include source commit metadata, then
+upload with the official upload-artifact v4 action pinned to its resolved commit.
+Retention is 14 days and missing output fails the job. Workflow YAML/diff reviewed;
+actual upload/download remains pending the affected CI run. No simulator launch,
+credential operation or real Proxmox mutation is included. Next: observe upload,
+download and independently check the exact archive/hash/bundle structure before
+preparing any separately approved runtime plan.
+
 ## 2026-10-25 — Actual iOS simulator application compilation succeeded
 
 Exact run 40144274220 completed/successful for e4a39c9. Full log inspected:

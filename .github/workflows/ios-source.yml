@@ -59,3 +59,19 @@ jobs:
       - name: Build actual unsigned iOS simulator application
         working-directory: apps/client
         run: npm run tauri -- ios build --debug --target aarch64-sim --no-sign --ci -- --locked
+      - name: Archive simulator bundle and record its digest
+        run: |
+          test -d apps/client/src-tauri/gen/apple/build/arm64-sim/VMAnyware.app
+          mkdir -p ios-artifact
+          tar -czf ios-artifact/vmanyware-ios-simulator-arm64.tar.gz -C apps/client/src-tauri/gen/apple/build/arm64-sim VMAnyware.app
+          cd ios-artifact
+          shasum -a 256 vmanyware-ios-simulator-arm64.tar.gz > SHA256SUMS
+          shasum -a 256 -c SHA256SUMS
+          printf '%s\n' "$GITHUB_SHA" > source-commit.txt
+      - name: Retain unsigned simulator bundle
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4
+        with:
+          name: vmanyware-ios-simulator-arm64
+          path: ios-artifact/
+          if-no-files-found: error
+          retention-days: 14
