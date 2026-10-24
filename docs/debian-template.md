@@ -5,7 +5,10 @@ unbooted preparation path was executed on the disposable nested x86 Proxmox
 lab on 2026-10-18; see [exact target and evidence](x86-template.md). A separate
 [static-network clone smoke](x86-clone.md) booted and verified real SSH/resources;
 Cloud-Init completed with a deprecation warning, so clean readiness remains open.
-VMAnyware currently previews and checks plans; it cannot execute provisioning.
+VMAnyware implements opt-in confirmed provisioning through its production API and
+worker, including guest readiness. Generated-provider tests cover that integration;
+acceptance against this exact real template remains required. See the
+[home-server acceptance plan](home-proxmox-acceptance.md).
 
 Run the host commands manually in Bash on the selected Proxmox node, not on the
 Mac running VMAnyware. Creating/importing/resizing/converting a VM changes that
@@ -135,8 +138,18 @@ Before conversion, inspect these exact properties:
 - No password, personal SSH key, custom Cloud-Init snippet, host passthrough,
   hook script or unintended extra disk is configured.
 
-Do not enable the QEMU guest agent unless its installation and use have actually
-been validated. A Cloud-Init disk alone does not prove guest Cloud-Init works.
+This basic import procedure alone is insufficient for production application
+provisioning. Its readiness executor requires the QEMU guest agent installed and
+enabled inside the image and enabled in the VM configuration. Establish and
+record that preparation before declaring the template application-ready; enabling
+the Proxmox agent option alone does not install the guest service. A Cloud-Init
+disk alone does not prove guest Cloud-Init works.
+
+Confirmed application creation also requires the exact image's default-user
+attestation in the catalog. Inspect the locked default account and absence of
+inherited authorized keys, then record imageDefaultUser with the matching name
+and templateVersion as described in [the catalog contract](provisioning-plan.md#opt-in-image-default-cloud-init-user).
+The catalog example below is sufficient for preview, not confirmed creation.
 Convert the still-unbooted VM only after reviewing the configuration:
 
 ```sh
@@ -268,13 +281,16 @@ Review every preflight result. Storage can be invisible to a restricted token;
 unknown does not mean available. The current checker recognizes standard
 Cloud-Init volume names and integer disk sizes only. Revision identity, DHCP,
 guest readiness and execution permissions remain unknown even when observable
-checks pass. No VMID is reserved and no VM creation action is enabled.
+checks pass. These read-only checks reserve no VMID and authorize no creation.
+Creation is separately enabled with VMANYWARE_PROVISIONING_ENABLED=true and
+requires a supported mapping, saved definition and exact explicit confirmation;
+see [the confirmed create API](provisioning-plan.md#confirmed-minimum-create-api).
 
 Record the tested Proxmox version, template revision/image hash, node/VMID,
 storage/bridge, trusted CA method, effective read-only ACLs and actual results.
 Keep credentials and private material out of the repository. Only then can the
 live read-only feasibility milestone be assessed; provisioning acceptance still
-requires implementing and testing application execution with concrete approval.
+requires testing the implemented application execution with concrete approval.
 
 ## Official references
 

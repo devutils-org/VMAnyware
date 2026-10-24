@@ -1,10 +1,116 @@
 # VMAnyware — current state
 
-Updated: 2026-10-24. Historical evidence and decisions are in Git and docs.
+Updated: 2026-10-25. Historical evidence and decisions are in Git and docs.
 
 Naming note: historical lab resource identifiers below are normalized to the
 current VMAnyware name. External resources were not renamed; use VMIDs and
 ignored local lab records to verify actual identifiers before operations.
+
+## 2026-10-25 — Revalidate hosted CI before iOS execution
+
+Read-only GitHub inspection confirms Local checks 40031022048 is terminal/cancelled,
+not live. Later 40031373475 succeeded for 63a7041, but only its changes selector
+ran; server/frontend were skipped. Do not treat this docs-only run as fresh
+application evidence. Windows run 40030829324 remains confirmed successful for
+00439c4. Repository now resolves to devutils-org/VMAnyware via the old remote.
+Next: push the prepared unsigned iOS workflow on a work branch and observe its
+exact run. No simulator launch or credential operation is included.
+
+## 2026-10-25 — Prepare actual unsigned iOS compilation gate
+
+Scope: add the missing iOS source CI using the existing pinned actions and
+macos-15 runner, locked dependencies, generated Xcode project and unsigned
+Apple Silicon simulator build. Official CLI docs and exact CLI 2.12.3 upstream
+build source confirm no-sign and forwarded Cargo arguments. Local Mac has only
+Command Line Tools selected, no working xcodebuild/CocoaPods; no local application
+build is claimed. Workflow syntax/diff review is the preparation check. No CI
+execution is claimed until pushed/observed. No simulator/device was started,
+installed or contacted, no signing or credential-store action occurred.
+
+Proxmox runtime remains dependent on pending DHCP/forwarding observations and
+explicit disposable-ID/operation approval. Previous turn made documentation
+progress, not infrastructure progress. Next independent step: execute/observe
+the iOS compilation gate and fix actual compiler failures; home Proxmox acceptance
+remains the first real-infrastructure task once its prerequisites are available.
+
+## 2026-10-25 — Correct current Proxmox preparation guidance
+
+Scope: remove obsolete current-status claims in the Debian template and provisioning
+plan guides, while retaining explicitly historical implementation milestones.
+Verified current route /api/v1/provisioning/create, production worker stage calls
+and RemoteCreate.tsx source. Guides now distinguish implemented opt-in execution
+from pending real-template acceptance, and spell out required guest-agent and
+image-default-user attestation preparation. The basic import/catalog example is
+not advertised as sufficient for confirmed creation. Preview remains read-only.
+
+Verification: documentation diff/whitespace review only; no application tests,
+credentials, VM, network or ACL operations. Existing uncommitted home acceptance
+plan and earlier STATE changes remain separate prior work. Next: collect pending
+DHCP/forwarding observations and disposable-ID confirmation, then prepare concrete
+home template/network changes. Full roadmap goal remains active/incomplete.
+
+## 2026-10-25 — Full roadmap goal resumed, home acceptance preparation
+
+User requests completion of Proxmox work followed by the full roadmap. Previous
+turn made progress by recording actual user-run read-only probe evidence; it did
+not authorize VM writes. Prepared docs/home-proxmox-acceptance.md with exact known
+target, preservation boundary, proposed IDs and required real application proofs.
+Source inspection confirms production Cloud-Init currently requires DHCP and
+readiness requires QEMU guest-agent execution/network support. Home bridge DHCP,
+forwarding, guest reachability and template prerequisites remain unverified.
+Do not claim a manual static clone proves the application provisioning workflow.
+
+Verification: documentation diff review only, no live access or credential reads.
+Public official API schema review also identifies required guest-agent unrestricted
+execution for readiness, root-path Sys.Audit for the current HA deletion preflight,
+and adapter-required Datastore.Allocate for complete post-delete volume inventory.
+Recorded these boundaries in the home acceptance plan; they are not installed-
+version minimum-role proof. No ACLs were changed. Do not promise complete workflow
+isolation using VM-only grants on shared storage.
+Next: obtain ID reservation response, inspect existing DHCP/routing without secret
+configuration dumps, then prepare concrete template/network/ACL changes for approval.
+The full objective remains active; all real guest and remaining platform gates stay
+open. Do not mark completion based on existing generated-provider tests.
+
+## 2026-10-25 — Home Proxmox read-only connection proven
+
+Scope/acceptance: record the user-executed Rust probe against the selected home
+endpoint; documentation only. User reports successful verified-TLS curl reaching
+HTTP 401, then successful proxmox_probe output: Proxmox 9.2.21 (release 9.2),
+node debian-btw online. Endpoint is https://192.168.1.36:8006; the public cluster
+CA is configured locally. User confirmed creating the dedicated API token after
+the privilege-separated setup instructions. Exact ACLs/expiry were not inspected.
+No templates were printed; this proves only token-visible inventory, not absence
+of resources. No agent read credential files or executed infrastructure requests.
+
+User-provided host inventory shows running Debian VM 100, no templates, local
+and local-lvm storage, and private bridge vmbr0 (10.10.10.1/24) behind the host's
+Wi-Fi LAN connection. Guest routing/readiness and effective NAT remain unverified.
+VM 100 remains outside the mutation scope. Disposable VMIDs and all VM mutations
+remain unapproved. Do not copy pasted network configuration into repository files.
+
+Next task: confirm preservation of VM 100 and a reserved disposable VMID range,
+then prepare a concrete separate Debian Cloud-Init template/access plan for review.
+Existing source/runtime/platform gates below remain open. Verification for this
+slice is documentation diff review only; the live probe evidence is user-reported.
+
+## 2026-10-25 — Resume review and home Proxmox onboarding
+
+Scope/acceptance: review the latest checkpoint and document the next real-target
+access prerequisites; no application or infrastructure changes. Workspace was clean
+at review. User reports a new home Proxmox server; endpoint, version, node,
+template, storage, network and disposable VMIDs are not supplied yet. No access,
+credential creation or VM mutation is authorized by this report. Existing lab
+credentials must not be assumed valid or reused for the home server.
+
+Next task: obtain non-secret target metadata and a concrete read-only scope,
+prepare dedicated privilege-separated token ACLs and verified TLS configuration,
+then run the opt-in inventory probe only after the target is explicitly selected.
+Token secrets must remain outside chat and repository output; agents must not
+inspect local credential files. Later clone/start/snapshot/restore/delete tests
+require concrete target/operation approval. Latest CI result and platform runtime
+claims remain as recorded below; no CI observation or application tests ran in
+this documentation-only review.
 
 ## Latest resume point
 

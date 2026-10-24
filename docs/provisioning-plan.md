@@ -1,9 +1,9 @@
 # Explicit template mappings and read-only provisioning checks
 
-This slice prepares a reviewable plan. It does not clone, configure, start,
-reserve or delete anything in Proxmox. It does not save a definition, enqueue a
-job or persist a plan through these preview endpoints. A plan is a deterministic description of intended inputs,
-not authorization to execute them.
+The preview and preflight endpoints prepare a reviewable plan. They do not clone,
+configure, start, reserve or delete anything in Proxmox. They do not save a
+definition, enqueue a job or persist a plan. A plan is a deterministic description
+of intended inputs, not authorization to execute them.
 
 ## Configure the catalog
 
@@ -94,8 +94,8 @@ for existing mappings remains unchanged.
 This avoids the known scalar-user deprecation without silently choosing a guest
 account from its distribution name. Generated previews do not prove attached
 seed contents, installed image defaults or successful first boot. Strict readiness
-and real-template testing remain mandatory; the production create worker/API
-is not yet wired. See [ADR 0037](decisions/0037-attested-image-default-user.md).
+and real-template testing remain mandatory. The production create API and worker
+are integrated and require this attestation for confirmed creation. See [ADR 0037](decisions/0037-attested-image-default-user.md).
 
 ## API
 
@@ -128,8 +128,10 @@ Successful HTTP 200 responses include:
   field order. YAML comments/formatting do not affect it; declared input changes do.
 
 Public key contents are not repeated in the plan; their configuration is bound
-by `definitionHash`. Steps describe future behavior: package installation,
-snapshots and guest readiness are not implemented yet. The clone stage has a locally tested executor, without a production enqueue caller.
+by `definitionHash`. Steps describe intended behavior. The production worker
+implements clone, resources, disk expansion, Cloud-Init/seed, start, readiness,
+optional packages and optional final snapshot. Previewing those steps executes
+none of them and does not prove real-template support or guest readiness.
 
 HTTP 422 errors use fixed safe codes: `invalid_definition`, `image_not_mapped`,
 `invalid_target_vmid`, `disk_shrink_unsupported` or `invalid_plan`. Unknown JSON
@@ -190,9 +192,10 @@ concrete disposable target and operations.
 
 ## Earlier implementation milestones
 
-The following boundaries record intermediate evidence. The production integration
-is now described in [the confirmed create API](#confirmed-minimum-create-api);
-old statements about missing callers are historical.
+The following boundaries record intermediate evidence, including statements about
+callers and executors missing at those earlier milestones. They do not describe
+current runtime capability. The production integration is now described in
+[the confirmed create API](#confirmed-minimum-create-api).
 
 ### Fixed clone transport preparation
 
@@ -274,8 +277,9 @@ schema-10 journal. The standalone start executor requires that proof and repeats
 stopped-target/settings/seed checks before a separately recorded power submission.
 Known target-bound start tasks reconcile with GET only; lost replies never permit
 another POST. Task success plus running power completes start_vm only, explicitly
-not guest readiness or the whole create workflow. These stages now run through the opt-in production worker. Remote controls and
-real infrastructure validation remain pending. See [ADR 0039](decisions/0039-durable-seed-regeneration.md)
+not guest readiness or the whole create workflow. These stages now run through
+the opt-in production worker. Remote creation controls are implemented; exact
+platform and real infrastructure validation remain pending. See [ADR 0039](decisions/0039-durable-seed-regeneration.md)
 and [ADR 0040](decisions/0040-durable-provisioning-start.md).
 
 The standalone readiness executor now persists a five-minute deadline, probe
@@ -284,7 +288,8 @@ submissions are not repeated. Completed pending probes may be refreshed without
 extending the deadline. A minimal workflow finishes only after clean Cloud-Init
 and usable MAC-bound IPv4 evidence; later declared stages keep the operation
 running. This does not prove SSH authentication/reachability. See
-[ADR 0042](decisions/0042-durable-guest-readiness.md). Production enqueue/worker are now integrated; remote creation controls remain pending.
+[ADR 0042](decisions/0042-durable-guest-readiness.md). Production enqueue/worker and remote creation controls are integrated; actual
+real-template and guest acceptance remain open.
 
 
 ## Confirmed minimum create API
