@@ -1,0 +1,61 @@
+name: iOS client source
+
+'on':
+  push:
+    paths:
+      - 'apps/client/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - '.github/workflows/ios-source.yml'
+  pull_request:
+    paths:
+      - 'apps/client/**'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - '.github/workflows/ios-source.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ios-source-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  client:
+    runs-on: macos-15
+    timeout-minutes: 30
+    env:
+      CARGO_BUILD_JOBS: '2'
+      CARGO_PROFILE_DEV_DEBUG: '0'
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - uses: actions/setup-node@249970729cb0ef3589644e2896645e5dc5ba9c38 # v6
+        with:
+          node-version: '26.11.1'
+          cache: npm
+          cache-dependency-path: apps/client/package-lock.json
+      - name: Record actual Apple build environment
+        run: |
+          sw_vers
+          uname -m
+          test "$(uname -m)" = arm64
+          xcodebuild -version
+          xcrun --sdk iphonesimulator --show-sdk-version
+          pod --version
+          rustup show active-toolchain
+      - name: Prepare locked frontend dependencies and simulator target
+        run: |
+          npm --prefix apps/client ci
+          rustup target add aarch64-apple-ios-sim
+      - name: Generate iOS project without signing credentials
+        working-directory: apps/client
+        run: npm run tauri -- ios init --ci --skip-targets-install
+      - name: Build actual unsigned iOS simulator application
+        working-directory: apps/client
+        run: npm run tauri -- ios build --debug --target aarch64-sim --no-sign --ci -- --locked

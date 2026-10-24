@@ -66,11 +66,29 @@ metadata compilation nor a native build closes these gates. See ADR 0090.
 The path-filtered `Windows client source` workflow targets the standard
 `windows-2025` x64 runner with the repository-pinned Rust/Node versions. It builds
 the actual Tauri client and bundled frontend using `tauri/custom-protocol`, without
-launching the app, installing it or accessing a credential store. Workflow
-preparation alone is not compilation evidence; the observed result is in STATE.md.
+launching the app, installing it or accessing a credential store. Actual bundled-client compilation/linking succeeded in run 40030829324 for
+00439c4 on 2026-10-24; this is compilation evidence only.
 SSH, encrypted application identities and OS-backed secret storage still report
 unsupported on Windows. A successful build does not establish those capabilities,
 GUI/runtime behavior, signed installers or release support.
+
+## iOS simulator compilation preparation — 2026-10-25
+
+The path-filtered `iOS client source` workflow prepares an actual unsigned
+Apple Silicon simulator application with the locked Tauri CLI, frontend and Cargo
+dependencies. It generates the Xcode project on the runner, targets
+aarch64-apple-ios-sim, checks Xcode/simulator SDK/CocoaPods availability, and runs
+`ios build --debug --target aarch64-sim --no-sign --ci -- --locked`.
+No simulator boot, installation, app launch, signing credential or secure-store
+operation is part of this workflow. Its first observed successful execution is
+still required before claiming iOS compilation. It has not been pushed or run.
+
+Local inspection on 2026-10-25 found only Apple Command Line Tools selected and
+no usable xcodebuild or CocoaPods command; no local iOS build was attempted.
+The installed Tauri CLI is 2.12.3; its matching upstream source confirms no-sign
+and forwarded Cargo arguments. Official references:
+[Tauri CLI](https://v2.tauri.app/reference/cli/) and
+[iOS prerequisites](https://v2.tauri.app/start/prerequisites/).
 
 ## Reproduce the current development checks
 
