@@ -8,8 +8,8 @@ targets must be proven separately; upstream Tauri support alone is insufficient.
 | --- | --- | --- |
 | macOS 27.0.1 arm64, Apple M1 | Native dev launch/bridge; workspace tests/release executable; real Tauri/IPC/bundled-terminal/disposable-agent/shell smoke | Normal startup with deliberately selected real agent/guest, physical keyboard, signing/installers |
 | Linux | Arch Linux x86_64: frontend build/23 Node tests; workspace fmt/Clippy and 122 tests (104 server, 18 native HTTP) using a temporary signed-package WebKitGTK prefix. Isolated software-rendered native React/WebKit/Tauri IPC -> actual Axum -> generated-HTTPS start/shutdown passes. Earlier Debian 12 arm64 container checks passed; Ubuntu CI prepared | Normal packaged/native startup, GPU rendering, Linux SSH terminal and first CI run |
-| Windows | Portable source plus Ctrl-C handling prepared | MSVC/WebView2 setup, compilation, launch, process/terminal tests |
-| iOS | No application build/runtime evidence | Full Xcode, signing, simulator/device and SSH/terminal/lifecycle proof |
+| Windows | Actual bundled Tauri client compiles/links on windows-2025 x64 (run 40030829324) | Launch, SSH/identity implementation, process/terminal tests and release packaging |
+| iOS | Actual unsigned ARM64 simulator application builds on hosted macOS (run 40144274220) | Launch, simulator/device SSH/terminal/lifecycle, secure storage, signing and release proof |
 | Android | ARM64/x86_64 debug APKs build; Android 15/API 35 x86_64 emulator launches the packaged app with actual Tauri bridge, encrypted identity/restart, native guard and painted-layout proof; current APK SSH/PTY/input/rotation/reconnect pass via owned ADB tunnel | Direct-network remote create journey, full software IME/suspend-resume, physical ARM64, current WebView parity, iOS-independent proof and release packaging |
 | Browser | Vite build/preview | Native bridge intentionally unavailable; this is not the product's native runtime |
 
@@ -72,7 +72,7 @@ SSH, encrypted application identities and OS-backed secret storage still report
 unsupported on Windows. A successful build does not establish those capabilities,
 GUI/runtime behavior, signed installers or release support.
 
-## iOS simulator compilation preparation — 2026-10-25
+## iOS simulator compilation evidence — 2026-10-25
 
 The path-filtered `iOS client source` workflow prepares an actual unsigned
 Apple Silicon simulator application with the locked Tauri CLI, frontend and Cargo
@@ -80,8 +80,14 @@ dependencies. It generates the Xcode project on the runner, targets
 aarch64-apple-ios-sim, checks Xcode/simulator SDK/CocoaPods availability, and runs
 `ios build --debug --target aarch64-sim --no-sign --ci -- --locked`.
 No simulator boot, installation, app launch, signing credential or secure-store
-operation is part of this workflow. Its first observed successful execution is
-still required before claiming iOS compilation. It has not been pushed or run.
+operation is part of this workflow.
+
+[Run 40144274220](https://github.com/devutils-org/VMAnyware/actions/runs/40144274220)
+succeeded for e4a39c9. Logs confirm `Finished 1 iOS Bundle` and the generated
+`gen/apple/build/arm64-sim/VMAnyware.app`. Actual environment: macOS 15.7.9 ARM64,
+Xcode 16.4 (16F6), simulator SDK 18.5, CocoaPods 1.17.0 and Rust 1.99.1.
+This proves application compilation/packaging, not launch or runtime behavior.
+The workflow did not retain the app as a downloadable artifact.
 
 Local inspection on 2026-10-25 found only Apple Command Line Tools selected and
 no usable xcodebuild or CocoaPods command; no local iOS build was attempted.

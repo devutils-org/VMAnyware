@@ -6,6 +6,34 @@ Naming note: historical lab resource identifiers below are normalized to the
 current VMAnyware name. External resources were not renamed; use VMIDs and
 ignored local lab records to verify actual identifiers before operations.
 
+## 2026-10-25 — Actual iOS simulator application compilation succeeded
+
+Exact run 40144274220 completed/successful for e4a39c9. Full log inspected:
+`Finished 1 iOS Bundle` at gen/apple/build/arm64-sim/VMAnyware.app. Environment:
+macOS 15.7.9 ARM64, Xcode 16.4 (16F6), simulator SDK 18.5, CocoaPods 1.17.0,
+Rust 1.99.1. Generated project and actual unsigned application build succeeded.
+No simulator boot, installation, app launch, signing or secure-store operation.
+App was not uploaded as a downloadable artifact; no runtime proof is inferred.
+Local checks 40144274136 also completed/successful: selector, frontend and server
+jobs all ran and passed. No local application suite was repeated.
+
+Updated platform evidence table and detailed iOS section; documentation diff
+review passes. Previous turn was verified progress (workflow push and live CI).
+Next: retain the unsigned app as a CI artifact for later exact-artifact simulator
+acceptance, without launching a simulator; real Proxmox prerequisite responses
+and target/operation approval remain pending. Full roadmap is incomplete.
+
+## 2026-10-25 — iOS workflow published and running
+
+Prepared changes committed on codex/home-proxmox-ios: 29fca10 (home acceptance
+and corrected Proxmox guidance), e4a39c9 (iOS workflow/platform evidence). Push
+succeeded. Exact iOS run 40144274220 is confirmed in progress for e4a39c9,
+with checkout/setup-node succeeded and Apple environment recording in progress.
+Local checks run 40144274136 also exists/in progress. No result is inferred.
+Continue observing these exact handles, do not restart on a polling timeout.
+No app/simulator launch, signing or Proxmox mutation occurred. Next: inspect iOS
+run results and fix demonstrated failures; full roadmap remains incomplete.
+
 ## 2026-10-25 — Revalidate hosted CI before iOS execution
 
 Read-only GitHub inspection confirms Local checks 40031022048 is terminal/cancelled,
