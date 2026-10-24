@@ -6,6 +6,25 @@ Naming note: historical lab resource identifiers below are normalized to the
 current VMAnyware name. External resources were not renamed; use VMIDs and
 ignored local lab records to verify actual identifiers before operations.
 
+## 2026-10-25 — Downloadable exact iOS simulator artifact verified
+
+Run 40144618222 completed/successful for debed94, including archive digest check
+and upload. Artifact 12579559677 (vmanyware-ios-simulator-arm64) downloaded to
+ignored .lab/packages/ios/run-40144618222. Independent SHA-256 check passes:
+a94ac374b698a6938907caee9ec0e2456a160a3a1532973201a20d10d639a497.
+Source metadata matches debed94bef076bcaae7fd3b9940dc0b8827baacc. Archive paths
+are contained within VMAnyware.app; executable mode retained; file identifies
+ARM64 Mach-O. Plist identifier dev.vmanyware.client, platform iPhoneSimulator,
+minimum OS declaration 15.0. No runtime/minimum-OS compatibility claim. Initial
+local archive-path assertion rejected the root directory name without slash;
+corrected the inspection predicate and reran successfully, no artifact changed.
+Local checks 40144618128 also completed/successful. No simulator launched,
+credential or Proxmox change. Diff review passes for documentation updates.
+
+Next: obtain concrete runtime-target approval for an exact-artifact iOS simulator
+launch when full Xcode is available, while home Proxmox DHCP/routing and target
+reservation responses remain pending. Full roadmap remains incomplete.
+
 ## 2026-10-25 — Retain exact unsigned iOS bundle for acceptance
 
 Scope: extend the proven iOS workflow to tar the generated application (preserving

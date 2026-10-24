@@ -87,7 +87,15 @@ succeeded for e4a39c9. Logs confirm `Finished 1 iOS Bundle` and the generated
 `gen/apple/build/arm64-sim/VMAnyware.app`. Actual environment: macOS 15.7.9 ARM64,
 Xcode 16.4 (16F6), simulator SDK 18.5, CocoaPods 1.17.0 and Rust 1.99.1.
 This proves application compilation/packaging, not launch or runtime behavior.
-The workflow did not retain the app as a downloadable artifact.
+That initial run did not retain a downloadable artifact. Follow-up
+[run 40144618222](https://github.com/devutils-org/VMAnyware/actions/runs/40144618222)
+for debed94 succeeds with artifact `vmanyware-ios-simulator-arm64` (14-day
+retention). Its downloaded tar archive passes SHA-256 verification and contains
+an executable ARM64 Mach-O plus bundle identifier dev.vmanyware.client and platform
+iPhoneSimulator. The plist declares minimum OS 15.0; runtime compatibility at that
+minimum is untested. Archive SHA-256:
+`a94ac374b698a6938907caee9ec0e2456a160a3a1532973201a20d10d639a497`.
+Local copy: ignored .lab/packages/ios/run-40144618222/. No app was launched.
 
 Local inspection on 2026-10-25 found only Apple Command Line Tools selected and
 no usable xcodebuild or CocoaPods command; no local iOS build was attempted.
