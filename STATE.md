@@ -202,8 +202,27 @@ Token control-plane: VMAnywareSource on 9000, Create+Snapshot on 9001–9010
 Local Mac lab DB archived to .lab/home-proxmox/archive/ (local dev server no
 longer used). Logo/app icon now the devutils mark (99dc418).
 
-Next: full journey through the app on the deployed server (create 9001 with
-app key → SSH → snapshot → modify → restore → delete → recreate).
+Journey in progress: user created lab-1 on VM 9001 via the app (packages git,
+tree + final snapshot) and opened a native terminal (lab-1, 12G disk, 2 GiB);
+packages stage was transiently uncertain (normal while the probe runs).
+Fixed: provisioning steps flicker (c1fe6ee).
+
+Architecture review (user-requested, report in $TMPDIR, not committed) then
+implemented all candidates:
+- d9cd43d Keychain + machine Console + tabbed Sessions; native list/forget
+  trusted hosts (exact fingerprint); creation uses KeyPicker (no create).
+- ac6a942 schema 17 lastGuest (ADR 0096); native validates it.
+- 04f32fc reviewedOperation module + Node tests (ADR 0097); five actions moved.
+- e31bbf2 Activity timeline (global + per machine) (ADR 0098 for the IA).
+Checks: server all tests/Clippy/fmt; client 190 native tests, 33 Node tests,
+Clippy, examples, tsc/build, 87-command permission check; preview screenshots.
+NOT yet deployed: VM 110 still runs schema 16. Use the new non-destructive
+.lab/home-proxmox/deploy/upgrade.sh (backup, rebuild, migrate, restart).
+lab-1 (9001) has no lastGuest until a new readiness proof (created before 17).
+
+Next: user redeploys with upgrade.sh, relaunches the app, validates Console /
+Sessions / Keychain / Activity on lab-1, then snapshot → restore → delete →
+recreate through the app.
 
 Next: user relaunches and validates the streamlined actions; then UI delete/recreate with the app key; then registered-VMID defect fix and template
 r2 (empty machine-id). Deletion via app needs temporary grants again.
