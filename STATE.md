@@ -46,6 +46,31 @@ explicit ./LocalCreation.tsx import replaced cached removed localCreation.ts pat
 then same probe reports Local workspace rendered. Build/typecheck/diff passed.
 No personal WebView state was read or cleared.
 
+### Resource wire-format fix verified; restart pending
+
+User supplied actual pvesh JSON: matching 9001 marker/tag/name and stopped power,
+2 cores/2 vcpus/1 socket/balloon 0, but memory:"2048" and cpulimit:"0" are strings.
+Resource PUT was applied; numeric-only observation caused uncertainty. Sanitized
+user evidence retained in .lab/home-proxmox/resource-observed.json.
+
+Changed resource observation to accept canonical unsigned integer text as well
+as integer JSON fields; CPU limit additionally accepts exact text "0", retaining
+existing numeric-zero semantics. Signs/padding/whitespace/expressions/floats for
+integer settings and different values are refused; revision/tag/pending/power
+checks unchanged. Existing GET-only restart reconciliation regression, changed
+to actual provider string shapes, fails Uncertain vs Succeeded before fix and
+passes afterward. All 8 resource-filter tests plus 2 affected disk/Cloud-Init
+checks, strict server library/test Clippy, fmt and diff review pass. No provider
+mutation was replayed or manual VM repair performed. Client local step-view
+follow-up was only inspected, not implemented before this diagnosis.
+
+User intervention requested: Ctrl+C local server and relaunch same
+.lab/home-proxmox/run-server.sh --provision with token prompt. Keep same DB and
+operation. Do not create again. On server_listening, poll the same operation and
+progress; worker should reconcile recorded resources by GET then continue the
+already-approved disk/Cloud-Init/start/readiness stages. No real recovery-success
+claim before that exact operation advances.
+
 ### Separate test-lint slice completed locally
 
 Resolved the five existing client test-target Clippy errors without suppression:
