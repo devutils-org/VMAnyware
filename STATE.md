@@ -6,6 +6,23 @@ Naming note: historical lab resource identifiers below are normalized to the
 current VMAnyware name. External resources were not renamed; use VMIDs and
 ignored local lab records to verify actual identifiers before operations.
 
+## 2026-10-25 — Scoped privilege probe CI verified
+
+Exact Local checks run 40145053948 completed/successful for b1d4ac7. Selector and
+server jobs passed (format, strict Clippy, server/local TLS/process tests); frontend
+was intentionally skipped. Full log inspected. No run remains live for this slice.
+Public API schema comparison of clone response, Cloud-Init regeneration response
+and guest-agent exec/status shapes found no demonstrated transport mismatch; this
+is source review only, not installed-version or real-guest validation. No code
+change was justified by this comparison. Previous goal turn made source progress;
+this turn observed the same queued/live CI through its terminal successful result.
+
+Next real Proxmox action remains the pending DHCP/forwarding observations and
+confirmation of disposable VMIDs, followed by concrete mutation approval. No VM
+or credential operation is authorized by goal continuation. The rest of the
+roadmap still includes Windows SSH/identity implementation, platform runtime,
+real deployment and release gates; none is claimed complete by this CI success.
+
 ## 2026-10-25 — Scoped read-only token privilege probe
 
 Scope/acceptance: add optional effective-VM-privilege observation to the existing
