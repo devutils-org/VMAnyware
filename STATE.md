@@ -110,7 +110,25 @@ files + .ssh, no marker), cloud-init done. Real home journey now covers
 create → ready → SSH → snapshot → modify → restore → delete → recreate → SSH
 (server API for snapshot/restore/delete/recreate; native app for SSH).
 
-Next: remaining MVP
+Deployed control plane (user-run, approved "ok go" for VM 110): VM 110
+vmanyware-cp, clone of 9000, 4 CPU/4 GiB/24 GiB, static 10.10.10.110,
+onboot, tag control-plane, admin key = user's public sim.pub; host key
+SHA256:hGThW0NZmMrPDHVmRSqPCvopgjz+d526QlX/V15pYF4 matched via guest agent and
+Mac keyscan. Mac routes 10.10.10.0/24 (+ifscope en0) via 192.168.1.36 (not
+persistent). Ignored .lab/home-proxmox/deploy/deploy-control-plane.sh built the
+release package on the VM: check-server-package passed fully; install.sh,
+sysusers, server.env (provisioning/lifecycle/snapshots/restores true, deletions
+false), Caddy `tls internal` for https://10.10.10.110 (root CA SHA-256
+F6:4F:F3:61:…:68:31, copied public cert to ~/.config/vmanyware/vmanyware-cp-ca.pem).
+vmanyware.service active under systemd (server_listening); unauthenticated
+/api/v1/health over verified TLS returns 401. New token
+vmanyware@pve!control-plane (privsep) with Source/Storage/Bridge roles and
+Create+Snapshot on /vms/9003-9004 (user too). Its secret was pasted into chat;
+user accepted the risk for local dev — rotate before any non-lab use.
+
+Next: native app remote mode against https://10.10.10.110, then full UI journey
+on 9003 (create→SSH→snapshot→restore), deletion needs temporary grants again.
+Remaining MVP
 gaps per docs/roadmap-status.md: HTTPS remote-mode UI on real infra, mobile,
 platform secret stores, real server deployment, release.
 
