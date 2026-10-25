@@ -143,8 +143,22 @@ schema status for never-provisioned associations (not `deleted`, which offers
 recreation) plus migration; do not hand-edit the deployed SQLite. Workaround:
 user retries on VM 9004 as home-remote-3.
 
-Next: UI creation on 9004 → SSH → snapshot → restore via app; then fix the
-defect above. Deletion via app needs temporary grants again.
+Real UI creation via deployed server: home-remote-3 on VM 9004 (packages tree,
+git, tmux, neovim, btop + final snapshot) → operation
+c8afc72e967f98e71af5135c6759e938 succeeded (transient uncertain during
+readiness as designed), guest 10.10.10.205, host key
+SHA256:/Q6EtHoTrZ1a6+VPUctYJrh3bx4v89o51rj9bBC8Qbk (qm guest exec verified).
+
+Lab DHCP defect found: 9002 and 9004 both held 10.10.10.205. dnsmasq journal
+offered .205 to the new MAC 3 min after 9002 renewed; clones of template 9000
+share /etc/machine-id cd1dc1f4… (9004 and 110 verified), so systemd-networkd
+sends the same DHCP client-id. User stopped 9002 and, with approval, added
+`dhcp-ignore-clid` to /etc/vmanyware-dhcp.conf (backup .bak), syntax OK,
+service restarted active. Proper fix pending: template r2 with emptied
+/etc/machine-id as a new catalog templateVersion (do not silently alter 9000).
+
+Next: in app — list 9004 snapshots, replace host key ...ZSM→...Qbk, terminal
+package check; then snapshot/restore via UI; then registered-VMID defect fix. Deletion via app needs temporary grants again.
 Remaining MVP
 gaps per docs/roadmap-status.md: HTTPS remote-mode UI on real infra, mobile,
 platform secret stores, real server deployment, release.
