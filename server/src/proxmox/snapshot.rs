@@ -238,33 +238,6 @@ impl Proxmox {
             complete,
         })
     }
-    pub(crate) async fn snapshot_support_at(
-        &self,
-        target: &VmReference,
-        name: &str,
-    ) -> Result<bool, Error> {
-        if !crate::snapshot::valid_name(name) {
-            return Err(Error::Configuration);
-        }
-        #[derive(Deserialize)]
-        struct Feature {
-            #[serde(rename = "hasFeature", deserialize_with = "super::deserialize_flag")]
-            supported: u8,
-        }
-        let feature: Feature = self
-            .get_query(
-                &[
-                    "nodes",
-                    target.node(),
-                    "qemu",
-                    &target.vmid().to_string(),
-                    "feature",
-                ],
-                &[("feature", "snapshot".into()), ("snapname", name.into())],
-            )
-            .await?;
-        Ok(feature.supported == 1)
-    }
 }
 
 impl Proxmox {

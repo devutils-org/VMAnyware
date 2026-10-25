@@ -78,7 +78,7 @@ fn preflight(routes: &mut Vec<(String, String)>, variant: &str, after: bool) {
     if variant != "missing" {
         add("snapshot/before-work/config", json!({"data":saved.clone()}));
         add(
-            "feature?feature=snapshot&snapname=before-work",
+            "feature?feature=snapshot",
             json!({"data":{"hasFeature":variant!="unsupported"}}),
         );
         add("snapshot/before-work/config", json!({"data":saved}));

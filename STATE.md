@@ -50,7 +50,34 @@ Real native terminal proven after relaunch (user-reported): "Open terminal" on
 9001 shows the Debian login banner; `hostname; whoami; ip -brief -4 address;
 cloud-init status` → home-smoke, debian, eth0 10.10.10.205/24, status: done.
 
-Next: snapshot/restore/delete/recreate on 9001 only, each made concrete first.
+Snapshot ACL: user created role VMAnywareSnapshot (VM.Snapshot
+VM.Snapshot.Rollback) on /vms/9001 only, nonpropagating, for vmanyware@pve and
+token dev-readonly; effective token table confirms. Ignored launcher gained
+`--snapshots` mode (lifecycle/snapshots/restores true; provisioning/deletions
+false); user restarted server in it.
+
+Real snapshot via server API (native UI snapshot exists only in HTTPS remote
+mode, local server is HTTP): preflight 9/9 passed, includesRam false; approval
++ key persisted in ignored .lab/home-proxmox/snapshot-request.json before one
+POST → 202 operation bb15c656706a519f2a8e45e3bd05f8cf → succeeded; snapshot
+list shows accept-base (disk-only, parent null). Do not resubmit.
+
+Real restore proven (user approved by writing the marker): guest
+~/marker written after snapshot; API shutdown a8287cdc… succeeded (stopped).
+Restore preflight first failed only restore_snapshot_storage: user pvesh shows
+feature=snapshot hasFeature 1 for current, 0 with snapname=accept-base
+(LVM-thin). ADR 0092: check current-state support. New fixtures fail 8 old
+restore tests, 46 snapshot/restore tests pass after; fmt and strict server
+Clippy pass. After server restart: preflight passed, restore 8646e864… succeeded
+(stopped), start ef0e4456… running, host key unchanged, user SSH shows
+~/marker absent, cloud-init done. Request records (key before single POST) in
+ignored .lab/home-proxmox/{shutdown,restore,start}-request.json.
+
+Next: deletion then recreation of 9001 (destructive; concrete proposal and
+user approval first). Deletion preflight needs root-path Sys.Audit (HA read)
+and Datastore.Allocate on local-lvm per docs/home-proxmox-acceptance.md —
+review before granting. Remote-mode UI snapshot/restore still unproven on
+real infra (needs HTTPS server).
 
 ### Earlier real operation — inspect, never resubmit
 

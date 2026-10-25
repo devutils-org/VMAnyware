@@ -75,7 +75,7 @@ async fn fixture(variant: &str) -> Fixture {
                 json!({"data":snapshot}).to_string(),
             ),
             (
-                "/api2/json/nodes/pve-lab/qemu/202/feature?feature=snapshot&snapname=before-work",
+                "/api2/json/nodes/pve-lab/qemu/202/feature?feature=snapshot",
                 json!({"data":{"hasFeature":variant!="unsupported"}}).to_string(),
             ),
             (

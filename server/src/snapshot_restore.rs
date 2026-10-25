@@ -66,7 +66,9 @@ impl Summary {
             let marker=format!("vmanyware-{}",self.id);
             let (before,after,supported)=if selected.is_some() {
                 let before=provider.restore_snapshot_identity(&target,&request.snapshot_name,&marker).await.map_err(ObservationError::Provider)?;
-                let supported=provider.snapshot_support_at(&target,&request.snapshot_name).await.map_err(ObservationError::Provider)?;
+                // Proxmox reports snapshot features per state; LVM-thin reports none for an existing
+                // snapshot (snapname) although rollback works. Observe the current storage instead.
+                let supported=provider.snapshot_supported(&target).await.map_err(ObservationError::Provider)?;
                 let after=provider.restore_snapshot_identity(&target,&request.snapshot_name,&marker).await.map_err(ObservationError::Provider)?;
                 (Some(before),Some(after),supported)
             } else {(None,None,false)};
