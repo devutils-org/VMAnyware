@@ -140,15 +140,93 @@ async fn real_handshake_confirmation_reopen_changed_and_no_authentication() {
     *fixture.key.lock().unwrap() = key();
     let changed = fixture.inspect(&reopened, "main").await;
     assert_eq!(changed.status, "changed");
-    assert!(changed.challenge_id.is_none());
+    assert_eq!(
+        changed.previous_fingerprint.as_deref(),
+        Some(unknown.fingerprint.as_str())
+    );
+    assert_ne!(changed.fingerprint, unknown.fingerprint);
     assert_eq!(
         before,
         std::fs::read(manager.inner.path.join("trust.json")).unwrap()
     );
     assert_eq!(fixture.auth.load(Ordering::SeqCst), 0);
-    let serialized = serde_json::to_value(changed).unwrap();
-    assert!(serialized.get("challengeId").unwrap().is_null());
+    let serialized = serde_json::to_value(&changed).unwrap();
     assert!(serialized.get("publicKey").is_none());
+    let id = changed.challenge_id.clone().unwrap();
+    // First-use confirmation never consumes or approves a replacement challenge.
+    assert!(reopened
+        .confirm("main", &id, &changed.fingerprint)
+        .await
+        .is_err());
+    assert_eq!(
+        before,
+        std::fs::read(manager.inner.path.join("trust.json")).unwrap()
+    );
+    let replaced = reopened
+        .replace("main", &id, &unknown.fingerprint, &changed.fingerprint)
+        .await
+        .unwrap();
+    assert_eq!(replaced.fingerprint, changed.fingerprint);
+    assert!(reopened
+        .replace("main", &id, &unknown.fingerprint, &changed.fingerprint)
+        .await
+        .is_err());
+    let trusted = fixture.inspect(&reopened, "main").await;
+    assert_eq!(trusted.status, "trusted");
+    assert!(trusted.previous_fingerprint.is_none());
+    assert_eq!(fixture.auth.load(Ordering::SeqCst), 0);
+}
+#[tokio::test]
+async fn replacement_requires_replace_challenge_and_both_fingerprints() {
+    let fixture = Fixture::start().await;
+    let (_root, manager) = manager();
+    let unknown = fixture.inspect(&manager, "main").await;
+    let id = unknown.challenge_id.unwrap();
+    // A first-use challenge cannot be used to replace.
+    assert!(manager
+        .replace("main", &id, &unknown.fingerprint, &unknown.fingerprint)
+        .await
+        .is_err());
+    manager
+        .confirm("main", &id, &unknown.fingerprint)
+        .await
+        .unwrap();
+    let trusted = std::fs::read(manager.inner.path.join("trust.json")).unwrap();
+    *fixture.key.lock().unwrap() = key();
+    for (previous, current) in [
+        ("SHA256:incorrect", None),
+        (unknown.fingerprint.as_str(), Some("SHA256:incorrect")),
+    ] {
+        let changed = fixture.inspect(&manager, "main").await;
+        assert!(manager
+            .replace(
+                "main",
+                &changed.challenge_id.unwrap(),
+                previous,
+                current.unwrap_or(&changed.fingerprint),
+            )
+            .await
+            .is_err());
+        assert_eq!(
+            trusted,
+            std::fs::read(manager.inner.path.join("trust.json")).unwrap()
+        );
+    }
+    let changed = fixture.inspect(&manager, "main").await;
+    expire(&manager, "main");
+    assert!(manager
+        .replace(
+            "main",
+            &changed.challenge_id.unwrap(),
+            &unknown.fingerprint,
+            &changed.fingerprint
+        )
+        .await
+        .is_err());
+    assert_eq!(
+        trusted,
+        std::fs::read(manager.inner.path.join("trust.json")).unwrap()
+    );
 }
 #[tokio::test]
 async fn owner_fingerprint_expiry_cancel_and_new_inspection_bind_challenges() {

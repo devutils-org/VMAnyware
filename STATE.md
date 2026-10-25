@@ -73,11 +73,39 @@ Clippy pass. After server restart: preflight passed, restore 8646e864… succeed
 ~/marker absent, cloud-init done. Request records (key before single POST) in
 ignored .lab/home-proxmox/{shutdown,restore,start}-request.json.
 
-Next: deletion then recreation of 9001 (destructive; concrete proposal and
-user approval first). Deletion preflight needs root-path Sys.Audit (HA read)
-and Datastore.Allocate on local-lvm per docs/home-proxmox-acceptance.md —
-review before granting. Remote-mode UI snapshot/restore still unproven on
-real infra (needs HTTPS server).
+Deletion: user approved temporary grants (roles VMAnywareClusterAudit Sys.Audit
+on / and VMAnywareStorageDelete Datastore.Allocate on /storage/local-lvm, both
+nonpropagating, user+token) plus VMAnywareCreate+VMAnywareSnapshot on /vms/9002
+(destroy removes /vms/9001 ACLs). Launcher gained `--delete-recreate` mode.
+Delete preflight 16/16 after API shutdown 50f1caf9…; plan: vm-9001-disk-0,
+vm-9001-cloudinit, snapshot accept-base, purge=0, no unreferenced-disk
+destruction. User said go; Claude Code auto-mode classifier denied the agent's
+POST, so the user ran the same submit.py (.lab/home-proxmox/submit.py with
+delete-approval.json) → operation 04343b50f79008ff5c533e36c6a38077 succeeded:
+vmAbsenceVerified, volumesAbsenceVerified, associationRetired, definition kept.
+
+Recreation 9002: preflight plan d0dd9428… (same definition, clone 9000,
+2 CPU/2048 MiB/12 GiB, DHCP), 7 metadata checks passed, 3 deliberate unknowns.
+User revoked temporary Sys.Audit / Datastore.Allocate ACLs (token table on
+local-lvm back to Audit/AllocateSpace; roles kept, unassigned). User ran
+submit.py for /recreate → operation 716cead0bdb6c856739457fd0866b11e,
+instance e9b3356408903205140f403f22e6a186, VM 9002: transient `uncertain`
+(guest_readiness_unconfirmed is non-terminal while the retained probe runs,
+ADR 0042; submit.py stopped polling early), then succeeded: guestReady,
+cloudInitClean, eth0 10.10.10.205 (same DHCP address). 9001 env status deleted.
+
+9002 host key SHA256:57czQED8sdHajlSExdWGYKpvWkHaBFoev8JX/QBeZSM (agent
+ssh-keyscan) differs from pinned 9001 key on 10.10.10.205:22; app had no
+replacement path. Implemented ADR 0093 explicit replacement (distinct challenge
++ replace_ssh_host IPC echoing previous and new fingerprints; storage swaps only
+while reviewed previous key is pinned; UI shows both). 30 ssh:: tests (2 new +
+extended changed-key test), strict client Clippy, examples check, tsc + vite
+build, 85 command/capability allow-list consistency pass.
+
+Next: user verifies 9002 fingerprint independently (qm guest exec ssh-keygen),
+relaunches app, replaces key in UI, SSH terminal on 9002. Then remaining MVP
+gaps per docs/roadmap-status.md: HTTPS remote-mode UI on real infra, mobile,
+platform secret stores, real server deployment, release.
 
 ### Earlier real operation — inspect, never resubmit
 

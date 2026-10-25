@@ -8,6 +8,7 @@ type Inspection = {
   algorithm: string;
   fingerprint: string;
   status: "unknown" | "trusted" | "changed";
+  previousFingerprint: string | null;
   challengeId: string | null;
   expiresInSeconds: number;
 };
@@ -97,7 +98,7 @@ export function SshHostTrust({ native, initialHost = "", initialUsername = "" }:
   }
 
   async function confirm() {
-    if (!inspection || inspection.status !== "unknown" || !verified || busy || Date.now() >= deadline || !challenge.current) return;
+    if (!inspection || inspection.status === "trusted" || !verified || busy || Date.now() >= deadline || !challenge.current) return;
     const challengeId = challenge.current;
     const requestGeneration = generation.current;
     challenge.current = null;
@@ -106,7 +107,10 @@ export function SshHostTrust({ native, initialHost = "", initialUsername = "" }:
     // A confirmation is consumed locally before IPC; retry requires inspection.
     setInspection({ ...inspection, challengeId: null });
     try {
-      const result = await invoke<Confirmation>("confirm_ssh_host", { challengeId, fingerprint: inspection.fingerprint });
+      // Replacement is a distinct native command that also binds the previous key.
+      const result = inspection.status === "changed"
+        ? await invoke<Confirmation>("replace_ssh_host", { challengeId, previousFingerprint: inspection.previousFingerprint, fingerprint: inspection.fingerprint })
+        : await invoke<Confirmation>("confirm_ssh_host", { challengeId, fingerprint: inspection.fingerprint });
       if (requestGeneration !== generation.current) return;
       if (result.host !== inspection.host || result.port !== inspection.port || result.fingerprint !== inspection.fingerprint) {
         setError("The confirmation did not match the inspected endpoint and fingerprint. Inspect again.");
@@ -143,7 +147,19 @@ export function SshHostTrust({ native, initialHost = "", initialUsername = "" }:
         <dt>Algorithm</dt><dd>{inspection.algorithm}</dd>
         <dt>SHA-256 fingerprint</dt><dd className="operation-id">{inspection.fingerprint}</dd>
       </dl>
-      {inspection.status === "changed" && <p role="alert" className="error">This host key differs from the trusted key. Connection is refused. Verify the change with the host administrator through an independent trusted channel.</p>}
+      {inspection.status === "changed" && <>
+        <p role="alert" className="error">This host key differs from the trusted key. Connection is refused. A changed key can mean the host was rebuilt, or that someone is intercepting the connection.</p>
+        <dl className="plan-details">
+          <dt>Previously trusted fingerprint</dt><dd className="operation-id">{inspection.previousFingerprint}</dd>
+        </dl>
+        <p>Replace the trusted key only if you know why it changed, for example after recreating this VM, and you verified the new fingerprint through an independent trusted channel.</p>
+        <p>{seconds > 0 && inspection.challengeId ? `Replacement expires in ${seconds} seconds.` : "This replacement is unavailable or expired. Inspect again to request a new one."}</p>
+        <label><input type="checkbox" checked={verified} disabled={busy || seconds === 0 || !inspection.challengeId} onChange={event => setVerified(event.target.checked)} /> I verified the new fingerprint for this endpoint through an independent trusted channel and want to replace the previously trusted key.</label>
+        <div className="connection-fields">
+          <button type="button" disabled={!verified || busy || seconds === 0 || !inspection.challengeId} onClick={confirm}>Replace trusted host key</button>
+          <button type="button" disabled={busy} onClick={invalidate}>Cancel</button>
+        </div>
+      </>}
       {inspection.status === "trusted" && <>
         <p role="status">The observed key matches the trusted key for this endpoint. No login or shell was opened.</p>
         <SshAuthentication key={`${inspection.host}:${inspection.port}`} host={inspection.host} port={inspection.port} initialUsername={inspection.host === initialHost ? initialUsername : ""} />

@@ -95,6 +95,22 @@ impl Confirmation {
         &self.fingerprint
     }
 }
+/// Opaque observation, only produced when an endpoint presents a key other than its pinned key.
+pub struct Replacement {
+    endpoint: Endpoint,
+    previous_public_key: String,
+    previous_fingerprint: String,
+    public_key: String,
+    fingerprint: String,
+}
+impl Replacement {
+    pub fn fingerprint(&self) -> &str {
+        &self.fingerprint
+    }
+    pub fn previous_fingerprint(&self) -> &str {
+        &self.previous_fingerprint
+    }
+}
 pub enum Inspection {
     Trusted,
     Unknown(Confirmation),
@@ -209,6 +225,50 @@ impl Store {
             })),
         }
     }
+    /// Observes a changed key for explicit replacement; never alters storage.
+    pub fn replacement(&self, endpoint: Endpoint, key: &PublicKey) -> Result<Replacement, Error> {
+        if Endpoint::new(&endpoint.host, endpoint.port)? != endpoint {
+            return Err(Error::InvalidEndpoint);
+        }
+        let _lock = self.lock()?;
+        let public_key = canonical_key(&key.to_openssh().map_err(|_| Error::InvalidStore)?)?;
+        let document = self.read()?;
+        let record = document
+            .entries
+            .iter()
+            .find(|r| r.endpoint == endpoint && r.public_key != public_key)
+            .ok_or(Error::ConfirmationMismatch)?;
+        let previous =
+            PublicKey::from_openssh(&record.public_key).map_err(|_| Error::InvalidStore)?;
+        Ok(Replacement {
+            previous_public_key: record.public_key.clone(),
+            previous_fingerprint: previous.fingerprint(HashAlg::Sha256).to_string(),
+            endpoint,
+            public_key,
+            fingerprint: key.fingerprint(HashAlg::Sha256).to_string(),
+        })
+    }
+    /// Replaces the pinned key only while the reviewed previous key is still pinned.
+    pub fn replace(&self, observed: Replacement, accepted_fingerprint: &str) -> Result<(), Error> {
+        if observed.fingerprint != accepted_fingerprint {
+            return Err(Error::ConfirmationMismatch);
+        }
+        let _lock = self.lock()?;
+        let mut document = self.read()?;
+        let record = document
+            .entries
+            .iter_mut()
+            .find(|r| r.endpoint == observed.endpoint)
+            .ok_or(Error::ConfirmationMismatch)?;
+        if record.public_key == observed.public_key {
+            return Ok(());
+        }
+        if record.public_key != observed.previous_public_key {
+            return Err(Error::ChangedKey);
+        }
+        record.public_key = observed.public_key;
+        self.write(&document)
+    }
     pub fn confirm(&self, observed: Confirmation, accepted_fingerprint: &str) -> Result<(), Error> {
         if observed.fingerprint != accepted_fingerprint {
             return Err(Error::ConfirmationMismatch);
@@ -233,7 +293,10 @@ impl Store {
             endpoint: observed.endpoint,
             public_key: observed.public_key,
         });
-        let bytes = serde_json::to_vec(&document).map_err(|_| Error::InvalidStore)?;
+        self.write(&document)
+    }
+    fn write(&self, document: &Document) -> Result<(), Error> {
+        let bytes = serde_json::to_vec(document).map_err(|_| Error::InvalidStore)?;
         if bytes.len() as u64 > MAX_BYTES {
             return Err(Error::InvalidStore);
         }
@@ -465,5 +528,67 @@ mod tests {
                 1
             );
         });
+    }
+    #[test]
+    fn replacement_requires_current_pinned_key_and_exact_fingerprint() {
+        let (_root, store) = setup();
+        let endpoint = Endpoint::new("10.10.10.205", 22).unwrap();
+        let (first, second, third) = (ephemeral_key(), ephemeral_key(), ephemeral_key());
+        // No pinned key or the same key is never a replacement.
+        assert_eq!(
+            store
+                .replacement(endpoint.clone(), first.public_key())
+                .err(),
+            Some(Error::ConfirmationMismatch)
+        );
+        accept(
+            &store,
+            observation(&store, endpoint.clone(), first.public_key()),
+        )
+        .unwrap();
+        assert_eq!(
+            store
+                .replacement(endpoint.clone(), first.public_key())
+                .err(),
+            Some(Error::ConfirmationMismatch)
+        );
+        let to_second = store
+            .replacement(endpoint.clone(), second.public_key())
+            .unwrap();
+        let to_third = store
+            .replacement(endpoint.clone(), third.public_key())
+            .unwrap();
+        assert_eq!(
+            to_second.previous_fingerprint(),
+            first.public_key().fingerprint(HashAlg::Sha256).to_string()
+        );
+        assert_eq!(
+            store.replace(to_second, "SHA256:incorrect"),
+            Err(Error::ConfirmationMismatch)
+        );
+        let to_second = store
+            .replacement(endpoint.clone(), second.public_key())
+            .unwrap();
+        let fingerprint = to_second.fingerprint().to_owned();
+        store.replace(to_second, &fingerprint).unwrap();
+        assert!(matches!(
+            store
+                .inspect(endpoint.clone(), second.public_key())
+                .unwrap(),
+            Inspection::Trusted
+        ));
+        // A replacement reviewed against the old key cannot overwrite the new pin.
+        let fingerprint = to_third.fingerprint().to_owned();
+        assert_eq!(
+            store.replace(to_third, &fingerprint),
+            Err(Error::ChangedKey)
+        );
+        assert!(matches!(
+            Store::open(&store.directory)
+                .unwrap()
+                .inspect(endpoint, second.public_key())
+                .unwrap(),
+            Inspection::Trusted
+        ));
     }
 }

@@ -38,6 +38,7 @@ pub struct HostInspection {
     algorithm: String,
     fingerprint: String,
     status: &'static str,
+    previous_fingerprint: Option<String>,
     challenge_id: Option<String>,
     expires_in_seconds: u64,
 }
@@ -82,6 +83,37 @@ pub async fn confirm_ssh_host(
     #[cfg(not(unix))]
     {
         let _ = (window, manager, challenge_id, fingerprint);
+        Err("SSH host inspection is unavailable on this platform".into())
+    }
+}
+#[tauri::command]
+pub async fn replace_ssh_host(
+    window: tauri::WebviewWindow,
+    manager: tauri::State<'_, HostManager>,
+    challenge_id: String,
+    previous_fingerprint: String,
+    fingerprint: String,
+) -> Result<HostConfirmation, String> {
+    #[cfg(unix)]
+    {
+        manager
+            .replace(
+                window.label(),
+                &challenge_id,
+                &previous_fingerprint,
+                &fingerprint,
+            )
+            .await
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = (
+            window,
+            manager,
+            challenge_id,
+            previous_fingerprint,
+            fingerprint,
+        );
         Err("SSH host inspection is unavailable on this platform".into())
     }
 }

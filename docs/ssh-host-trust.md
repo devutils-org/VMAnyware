@@ -26,7 +26,11 @@ and confirmation controls; its manual walkthrough is a separate verification ste
 A changed key is a separate failure, not another first-use prompt. The first-use
 confirmation API cannot overwrite an existing different key, including when
 another process accepted a key after a challenge was created. There is no key
-replacement, automatic rotation or trust reset action in this slice.
+automatic rotation or trust reset. A changed key can only be replaced through
+the separate explicit replacement operation (ADR 0093): the inspection returns
+the previously trusted and newly observed fingerprints with a distinct native
+challenge, and replacement requires echoing both fingerprints. Storage replaces
+the pin only while the reviewed previous key is still pinned.
 
 The native UI displays the intended host, port, key algorithm and
 SHA-256 fingerprint and asks the user to compare it through an independent

@@ -21,7 +21,13 @@ const STALE_INSPECTION: &str = "SSH inspection superseded; inspect the current e
 struct Challenge {
     id: String,
     endpoint: trust::Endpoint,
-    observation: trust::Confirmation,
+    observation: Pending,
+}
+// A first-use challenge can never replace a key, and a replacement challenge
+// can never be approved as first use.
+enum Pending {
+    Trust(trust::Confirmation),
+    Replace(trust::Replacement),
 }
 struct Owner {
     generation: Uuid,
@@ -192,10 +198,21 @@ impl HostManager {
             .get_mut(owner)
             .filter(|v| v.generation == generation && v.expires > Instant::now())
             .ok_or(STALE_INSPECTION)?;
-        let (status, challenge_id, expires_in_seconds) = match observed.inspection {
-            Checked::Trusted => ("trusted", None, 0),
-            Checked::Changed => ("changed", None, 0),
-            Checked::Unknown(observation) => {
+        let (status, pending, previous_fingerprint) = match observed.inspection {
+            Checked::Trusted => ("trusted", None, None),
+            Checked::Changed(replacement) => {
+                let previous = replacement.previous_fingerprint().to_owned();
+                (
+                    "changed",
+                    Some(Pending::Replace(replacement)),
+                    Some(previous),
+                )
+            }
+            Checked::Unknown(observation) => ("unknown", Some(Pending::Trust(observation)), None),
+        };
+        let (challenge_id, expires_in_seconds) = match pending {
+            None => (None, 0),
+            Some(observation) => {
                 let id = Uuid::new_v4().to_string();
                 current.challenge = Some(Challenge {
                     id: id.clone(),
@@ -203,7 +220,7 @@ impl HostManager {
                     observation,
                 });
                 current.expires = Instant::now() + TTL;
-                ("unknown", Some(id), TTL.as_secs())
+                (Some(id), TTL.as_secs())
             }
         };
         Ok(HostInspection {
@@ -212,6 +229,7 @@ impl HostManager {
             algorithm: observed.algorithm,
             fingerprint: observed.fingerprint,
             status,
+            previous_fingerprint,
             challenge_id,
             expires_in_seconds,
         })
@@ -222,13 +240,38 @@ impl HostManager {
         id: &str,
         fingerprint: &str,
     ) -> Result<HostConfirmation, String> {
-        if id.len() > 64 || fingerprint.len() > 128 {
+        self.approve(owner, id, fingerprint, None).await
+    }
+    /// Explicit replacement of a changed pinned key. The caller must echo both the
+    /// previously trusted and the newly observed fingerprint.
+    pub async fn replace(
+        &self,
+        owner: &str,
+        id: &str,
+        previous_fingerprint: &str,
+        fingerprint: &str,
+    ) -> Result<HostConfirmation, String> {
+        self.approve(owner, id, fingerprint, Some(previous_fingerprint))
+            .await
+    }
+    async fn approve(
+        &self,
+        owner: &str,
+        id: &str,
+        fingerprint: &str,
+        previous_fingerprint: Option<&str>,
+    ) -> Result<HostConfirmation, String> {
+        if id.len() > 64
+            || fingerprint.len() > 128
+            || previous_fingerprint.is_some_and(|value| value.len() > 128)
+        {
             return Err(INVALID_CHALLENGE.into());
         }
         let inner = self.inner.clone();
         let owner = owner.to_owned();
         let id = id.to_owned();
         let fingerprint = fingerprint.to_owned();
+        let previous_fingerprint = previous_fingerprint.map(str::to_owned);
         // Consuming the challenge commits approval; later cancellation cannot revoke
         // this operation. Never hold the owner-state mutex across filesystem I/O.
         tokio::task::spawn_blocking(move || {
@@ -240,8 +283,12 @@ impl HostManager {
                 .get_mut(&owner)
                 .filter(|v| v.expires > Instant::now())
                 .ok_or(INVALID_CHALLENGE)?;
-            if current.challenge.as_ref().map(|c| c.id.as_str()) != Some(&id) {
-                return Err(INVALID_CHALLENGE.into());
+            // The approval kind must match the pending observation before it is consumed.
+            match (&current.challenge, &previous_fingerprint) {
+                (Some(c), None) if c.id == id && matches!(c.observation, Pending::Trust(_)) => {}
+                (Some(c), Some(_))
+                    if c.id == id && matches!(c.observation, Pending::Replace(_)) => {}
+                _ => return Err(INVALID_CHALLENGE.into()),
             }
             let challenge = current.challenge.take().ok_or(INVALID_CHALLENGE)?;
             drop(owners);
@@ -251,10 +298,25 @@ impl HostManager {
                 .map_err(|_| "Host trust storage unavailable")?
                 .clone()
                 .ok_or("Host trust storage unavailable")?;
-            let confirmed_fingerprint = challenge.observation.fingerprint().to_owned();
-            store
-                .confirm(challenge.observation, &fingerprint)
-                .map_err(|error| error.to_string())?;
+            let confirmed_fingerprint = match challenge.observation {
+                Pending::Trust(observation) => {
+                    let confirmed = observation.fingerprint().to_owned();
+                    store
+                        .confirm(observation, &fingerprint)
+                        .map_err(|error| error.to_string())?;
+                    confirmed
+                }
+                Pending::Replace(replacement) => {
+                    if previous_fingerprint.as_deref() != Some(replacement.previous_fingerprint()) {
+                        return Err(trust::Error::ConfirmationMismatch.to_string());
+                    }
+                    let confirmed = replacement.fingerprint().to_owned();
+                    store
+                        .replace(replacement, &fingerprint)
+                        .map_err(|error| error.to_string())?;
+                    confirmed
+                }
+            };
             Ok(HostConfirmation {
                 host: challenge.endpoint.host().into(),
                 port: challenge.endpoint.port(),
@@ -283,7 +345,7 @@ impl HostManager {
 }
 enum Checked {
     Trusted,
-    Changed,
+    Changed(trust::Replacement),
     Unknown(trust::Confirmation),
 }
 struct Observed {
@@ -309,10 +371,14 @@ impl client::Handler for ProbeClient {
         let endpoint = self.endpoint.clone();
         let store = self.store.clone();
         let result = tokio::task::spawn_blocking(move || {
-            let inspection = match store.inspect(endpoint, &key) {
+            let inspection = match store.inspect(endpoint.clone(), &key) {
                 Ok(trust::Inspection::Trusted) => Checked::Trusted,
                 Ok(trust::Inspection::Unknown(c)) => Checked::Unknown(c),
-                Err(trust::Error::ChangedKey) => Checked::Changed,
+                Err(trust::Error::ChangedKey) => Checked::Changed(
+                    store
+                        .replacement(endpoint, &key)
+                        .map_err(|error| error.to_string())?,
+                ),
                 Err(error) => return Err(error.to_string()),
             };
             Ok(Observed {

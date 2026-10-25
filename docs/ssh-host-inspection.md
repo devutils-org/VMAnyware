@@ -33,8 +33,8 @@ Editing host/port, starting a new inspection or cancelling clears the displayed
 result and verification choice. Responses that arrive for superseded inputs or
 request generations are hidden. A two-minute confirmation countdown disables
 expired approval; the native side remains authoritative for expiry. A changed
-key must not be approved as another first use. Legitimate rotations need a
-separately designed recovery operation, outside this slice. Once explicit
+key must not be approved as another first use. Legitimate rotations, such as a
+recreated VM on the same address, use the explicit replacement flow (ADR 0093). Once explicit
 confirmation has consumed its challenge, later edits or navigation do not undo
 that approved write; cancellation discards pending approvals only.
 
