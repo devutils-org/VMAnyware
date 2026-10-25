@@ -8,30 +8,55 @@ ignored local lab records to verify actual identifiers before operations.
 
 ## Latest resume point — 2026-10-25 home Proxmox acceptance
 
-Goal: fin VMAnyware; full roadmap remains incomplete. Branch codex/home-proxmox-ios.
+Goal: user authorizes all necessary project work, follow the full roadmap and
+request intervention only when needed. Full roadmap remains incomplete.
+Branch codex/home-proxmox-ios.
 Recent home-server work is user-executed; no authenticated agent host channel or
 provider secret is available. Never inspect credential files or request secrets.
 
-### Current approved action and frontend recovery
+### Current real operation — inspect, never resubmit
 
-User explicitly replied “oui go” to application clone/start 9000 -> 9001,
-home-smoke, 2 CPUs/2048 MiB/12 GiB local-lvm, DHCP vmbr0, selected public key,
-fixed guest readiness checks. No packages/snapshot; preserve source/VM100.
-Do not request this same approval again. No real creation has started yet; the
-server write flags are still false. User immediately reported a white frontend.
+User restarted server via ignored .lab/home-proxmox/run-server.sh --provision;
+provisioning=true, other writes=false. Script prompts on /dev/tty, never stores
+secret. Agent can access the configured local API without reading provider
+credentials. Exact fresh plan/hash/scope/resources and seven metadata checks were
+asserted before one POST. Intent/key persisted BEFORE submission in ignored
+.lab/home-proxmox/creation-request.json. Do not replace that key or POST again.
 
-Diagnosed/reproduced with an isolated nonpersistent macOS WKWebView, simulated
-IPC and the user's already-running Vite at 127.0.0.1:1420. Original probe reports
-Blank workspace, text length 0. Vite transformed ProvisioningPreview import into
-the removed /src/localCreation.ts path (stale resolver cache after helper rename
-on the case-insensitive Mac filesystem); that URL returned HTML instead of JS.
-Changed only the import to explicit ./LocalCreation.tsx. Same live-server WebKit
-probe now reports Local workspace rendered; transformed import is correct.
-Frontend TypeScript/production build and diff review also pass.
-No user WebView storage/credentials or provider requests were inspected/executed.
-Diagnostic harness is clearly isolated under ignored .lab/local-creation-diagnosis.
-Next: user reloads native window, then enable provisioning only and execute the
-already-approved exact plan/confirmation. Retain operation ID on any uncertainty.
+Accepted operation: 2d92dea1b47995dca1be3f76078a66db;
+instance: 71c6bbde3540c018764bde52a357db6d. GET progress confirms full_clone
+SUCCEEDED, configure_resources UNCERTAIN with submissionStarted=true and failure
+resource_state_unconfirmed. Disk/Cloud-Init/start/readiness stages remain queued
+and unsubmitted. No claim of a booted/ready guest. Saved sanitized progress in
+.lab/home-proxmox/creation-progress.json. Next: user read-only Proxmox JSON config
+for 9001 plus qm status 9001 (requested asynchronously), then diagnose exact
+resource observation mismatch with a failing fixture. Source worker can reconcile
+this uncertain stage via GET without replaying its recorded resource PUT; retain
+same DB/intent. Do not manually fix/delete/recreate the VM to hide the failure.
+
+User explicit “oui go” approval covers this exact clone/config/start/readiness
+on 9001, preserving 9000/VM100. Broad subsequent goal authorizes autonomous work;
+no repeated approval for these operations. Keep unrelated hosts/bootloader and
+personal credentials out of scope. Future disposable-target operations must be
+made concrete before execution and remain within the stated lab boundaries.
+
+Frontend white-window regression is fixed in 491609b. On the same live Vite,
+nonpersistent WebKit with simulated IPC reproduced Blank workspace, text length 0;
+explicit ./LocalCreation.tsx import replaced cached removed localCreation.ts path,
+then same probe reports Local workspace rendered. Build/typecheck/diff passed.
+No personal WebView state was read or cleared.
+
+### Separate test-lint slice completed locally
+
+Resolved the five existing client test-target Clippy errors without suppression:
+load shared SSH fixture once at agent module test scope (also deduplicates its
+shell fixture), and use lexical MutexGuard scopes before three awaited fixture
+tasks. Existing dead_code fixture annotation moved with the fixture, not expanded
+to production. Strict cargo clippy --locked -p vmanyware-client --lib --tests --
+-D warnings now passes. Seven targeted tests pass: three application identity/
+PTY cases, explicit disposable-agent authentication, one recreation refusal and
+two scoped snapshot/restore recovery cases. No personal keychain/agent accessed.
+Next: record this bounded test-only correction, then resume real resource diagnosis.
 
 ### Real infrastructure evidence
 
@@ -94,27 +119,16 @@ local-main ACL consistency pass. Client test-target Clippy fails on 5 preexistin
 errors in untouched SSH/recreation/recovery tests (duplicate_mod, await_holding_lock).
 No suppressions added. Formatter corrected two preexisting wraps in smoke example.
 
-### Next action and approval boundary
+### Remaining gates
 
-The local server is user-run on Mac loopback 8080, fresh dedicated database
-.lab/home-proxmox/control-plane.sqlite, all write flags false. Initial provider
-config failure disappeared after guarded hidden token entry; exact original cause
-unproven. Never paste exit into user's top-level shell; provide complete subshell.
-
-Explicit user approval is now recorded above for APPLICATION clone/start
-9000 -> 9001/home-smoke,
-2 CPUs/2048 MiB/12 GiB local-lvm, DHCP vmbr0, debian and selected public key,
-fixed readiness checks, no packages/snapshots. Template/ACL approvals persist and
-must not be requested again, and the subsequent explicit “oui go” authorizes this clone/start operation.
-After frontend recovery restart server with provisioning=true only, load saved home-smoke,
-preview/preflight 9001 and use explicit local confirmation. Retain operation ID;
-never blind-retry uncertain outcomes or delete partial targets. No real 9001
-creation/start/deletion has been executed yet. Then verify DHCP/QGA/clean
-Cloud-Init/readiness and separately approve direct Mac routing/SSH if needed.
-
-Follow-ups: local per-stage progress, broader history-based creation recovery,
-existing client test-lint errors; actual snapshot/restore/delete/recreate, deployment
-and remaining platform/runtime/release gates. No roadmap completion claim.
+Current operation/next step is at the top of this checkpoint; old user-run
+preparation history below must not authorize replay. Recover the exact uncertain
+9001 operation first, then verify real DHCP/QGA/clean Cloud-Init/readiness and
+native SSH. ProxyJump shell success on VM100 does not prove Mac direct routing.
+Local per-stage display and fuller history-based creation recovery remain source
+follow-ups. Actual snapshot/restore/delete/recreate, Linux deployment, remaining
+platform runtime/secure stores and release gates are still open. No full-roadmap
+completion or release-readiness claim.
 
 ## 2026-10-25 — User-requested session pause
 
