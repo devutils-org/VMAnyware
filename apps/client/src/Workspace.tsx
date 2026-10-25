@@ -148,10 +148,11 @@ export function Workspace({ native }: { native: boolean }) {
     if (blocked || environment.status !== "registered") return;
     setSshTarget({ host: "", username: "", generation: ++sshGeneration.current, instance: environment }); setView("terminal");
   }
-  async function checkRuntime() {
-    try { setRuntime(`Native bridge connected (${await invoke<string>("runtime_platform")})`); }
-    catch { setRuntime("Native bridge check failed."); }
-  }
+  // Settings shows the platform the native bridge reports; read when the view opens.
+  useEffect(() => {
+    if (view !== "settings" || !native || runtime) return;
+    invoke<string>("runtime_platform").then(setRuntime).catch(() => setRuntime("unavailable"));
+  }, [view, native, runtime]);
 
   if (mode === "local") return <Shell nav={null} title="Local development service" subtitle="Loopback control plane on this computer" actions={<button type="button" onClick={() => setMode("remote")}><Icon name="back" />Back to remote server</button>}>
     <LocalWorkspace native={native} />
@@ -215,7 +216,7 @@ export function Workspace({ native }: { native: boolean }) {
 
     {view === "environment" && (selected ? <div className="detail">
       <div className="detail-header">
-        <span className={`chip ${selected.status}`}>{selected.status === "registered" ? "Registered" : "Deleted"}</span>
+        {selected.status === "deleted" && <span className="chip deleted" title="Deleted through VMAnyware. The definition and history are kept and it can be recreated.">Deleted</span>}
         {selected.status === "registered" && <span className={`chip power ${power?.id === selected.id ? power.status : "unknown"}`}>{power?.id === selected.id ? power.status : "power unknown"}</span>}
         <dl className="facts"><div><dt>VMID</dt><dd>{selected.providerReference.vmid}</dd></div><div><dt>Node</dt><dd>{selected.providerReference.node}</dd></div><div><dt>Instance</dt><dd className="mono">{selected.id.slice(0, 12)}</dd></div></dl>
         <div className="toolbar">
@@ -274,8 +275,8 @@ export function Workspace({ native }: { native: boolean }) {
         {hasSaved && <button type="button" className="link" onClick={forgetServer}>Forget saved server on this device</button>}
       </Panel>
       <Panel title="Application SSH identity"><AppIdentity disabled={busy} /></Panel>
-      <Panel title="Application" action={<button type="button" onClick={() => void checkRuntime()}>Check native bridge</button>}>
-        <p className="muted">{native ? "Native application" : "Browser preview"}{runtime && ` · ${runtime}`}</p>
+      <Panel title="About">
+        <dl className="facts"><div><dt>Application</dt><dd>VMAnyware · {native ? "native" : "browser preview"}</dd></div><div><dt>Platform</dt><dd>{runtime || "—"}</dd></div></dl>
       </Panel>
     </div>}
 
@@ -347,7 +348,7 @@ function EnvironmentList({ environments, loading, onOpen, onCreate }: { environm
       <span className="name"><Icon name="servers" />{environment.definitionName}</span>
       <span className="mono">{environment.providerReference.vmid}</span>
       <span>{environment.providerReference.node}</span>
-      <span><span className={`chip ${environment.status}`}>{environment.status === "registered" ? "Registered" : "Deleted"}</span></span>
+      <span><span className={`chip ${environment.status}`} title={environment.status === "registered" ? "A VM managed by this control plane" : "Deleted; definition and history kept, can be recreated"}>{environment.status === "registered" ? "Active" : "Deleted"}</span></span>
       <span className="chevron"><Icon name="chevron" /></span>
     </button>)}
   </div>;

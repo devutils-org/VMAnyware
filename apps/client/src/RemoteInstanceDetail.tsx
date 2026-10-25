@@ -24,15 +24,19 @@ export function RemoteInstanceDetail({ connectionId, environment, disabled, auto
   }
   function hide() { generation.current++; setDetail(null); setError(""); }
   return <section className="remote-instance-detail" data-instance-id={environment.id} aria-label={`Retained definition for VM ${vmid}`} aria-busy={busy}>
-    <button type="button" disabled={disabled || busy} onClick={read}>{detail ? `Refresh definition for VM ${vmid}` : `Read definition for VM ${vmid}`}</button>
+    {!detail && <button type="button" disabled={disabled || busy} onClick={read}>Read definition for VM {vmid}</button>}
     {busy && <p role="status">Reading the retained definition…</p>}
     {detail && <>
-      <h4>Retained definition: {detail.definitionName}</h4>
-      <p>Association: {detail.status === "deleted" ? "deleted · definition retained" : "registered"} · {detail.providerReference.node} · VM {detail.providerReference.vmid}</p>
-      <p>Definition revision: {detail.definitionRevision} · SHA-256: <code>{detail.definitionHash}</code></p>
-      <p>This is the saved configuration declaration for this association. It does not verify current VM resources, existence, guest readiness or SSH identity.</p>
-      <pre aria-label={`Saved YAML for ${detail.definitionName}`}><code>{detail.definitionYaml}</code></pre>
-      <button type="button" disabled={disabled || busy} onClick={hide}>Hide saved definition for VM {vmid}</button>
+      <dl className="facts">
+        <div><dt>Definition</dt><dd>{detail.definitionName} · revision {detail.definitionRevision}</dd></div>
+        <div><dt>SHA-256</dt><dd className="mono">{detail.definitionHash.slice(0, 16)}…</dd></div>
+      </dl>
+      <details className="yaml">
+        <summary>Show YAML</summary>
+        <pre aria-label={`Saved YAML for ${detail.definitionName}`}><code>{detail.definitionYaml}</code></pre>
+        <p className="hint">The saved declaration for this VM. It does not verify current VM resources, existence, guest readiness or SSH identity. Full hash <code>{detail.definitionHash}</code></p>
+      </details>
+      <div className="actions-row"><button type="button" className="ghost" disabled={disabled || busy} onClick={read}>Refresh</button><button type="button" className="ghost" disabled={disabled || busy} onClick={hide}>Hide</button></div>
     </>}
     {error && <p role="alert" className="error">{error}</p>}
   </section>;

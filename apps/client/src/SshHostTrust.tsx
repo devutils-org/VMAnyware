@@ -132,13 +132,12 @@ export function SshHostTrust({ native, initialHost = "", initialUsername = "" }:
     <h2 id="ssh-trust-heading" tabIndex={-1}>SSH host trust</h2>
     <p>Inspect and verify a host key before choosing an SSH identity. A separate authentication check is available after host verification.</p>
     {!native ? <p>Open the native application to inspect SSH hosts.</p> : supported === false ? <p>SSH host inspection is unavailable on this platform.</p> : supported === null && <p>Checking SSH inspection support…</p>}
-    <form onSubmit={inspect}>
-      <label htmlFor="ssh-host">Hostname or IP address</label>
-      <div className="connection-fields">
-        <input id="ssh-host" required maxLength={253} autoCapitalize="none" autoCorrect="off" spellCheck={false} value={host} onChange={event => { invalidate(); setHost(event.target.value); }} />
-        <label htmlFor="ssh-port">Port <input id="ssh-port" type="number" min="1" max="65535" step="1" required value={port} onChange={event => { invalidate(); setPort(event.target.value); }} /></label>
-        <button type="submit" disabled={!native || !supported || busy}>{busy ? "Working…" : "Inspect host key"}</button>
-      </div>
+    <form className="inline-form" onSubmit={inspect}>
+      <div className="field grow"><label htmlFor="ssh-host">Hostname or IP address</label>
+        <input id="ssh-host" required maxLength={253} autoCapitalize="none" autoCorrect="off" spellCheck={false} value={host} onChange={event => { invalidate(); setHost(event.target.value); }} /></div>
+      <div className="field port"><label htmlFor="ssh-port">Port</label>
+        <input id="ssh-port" type="number" min="1" max="65535" step="1" required value={port} onChange={event => { invalidate(); setPort(event.target.value); }} /></div>
+      <button type="submit" disabled={!native || !supported || busy}>{busy ? "Working…" : "Inspect host key"}</button>
     </form>
     {error && <p role="alert" className="error">{error}</p>}
     {inspection && <div>
