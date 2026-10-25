@@ -396,12 +396,64 @@ async fn inventory_parsing_and_node_path_validation() {
 }
 
 #[tokio::test]
+async fn available_vmid_accepts_canonical_provider_string() {
+    let mut fixture = Fixture::new("200 OK", r#"{"data":"9001"}"#, "", Duration::ZERO).await;
+    assert_eq!(fixture.client().available_vmid(9001).await.unwrap(), 9001);
+    assert!(fixture
+        .requests
+        .recv()
+        .await
+        .unwrap()
+        .starts_with("GET /api2/json/cluster/nextid?vmid=9001 HTTP/1.1"));
+    assert!(fixture.requests.try_recv().is_err());
+}
+
+#[tokio::test]
+async fn available_vmid_preserves_integer_results_and_rejects_malformed_ids() {
+    for (data, expected) in [
+        ("9001", Ok(9001)),
+        ("9002", Ok(9002)),
+        (r#""9002""#, Ok(9002)),
+        ("null", Err(Error::InvalidResponse)),
+        ("true", Err(Error::InvalidResponse)),
+        ("[]", Err(Error::InvalidResponse)),
+        ("{}", Err(Error::InvalidResponse)),
+        ("9001.0", Err(Error::InvalidResponse)),
+        ("99", Err(Error::InvalidResponse)),
+        ("1000000000", Err(Error::InvalidResponse)),
+        (r#""09001""#, Err(Error::InvalidResponse)),
+        (r#""+9001""#, Err(Error::InvalidResponse)),
+        (r#""9001 ""#, Err(Error::InvalidResponse)),
+        (r#""99""#, Err(Error::InvalidResponse)),
+    ] {
+        let fixture = Fixture::new(
+            "200 OK",
+            &format!("{{\"data\":{data}}}"),
+            "",
+            Duration::ZERO,
+        )
+        .await;
+        assert_eq!(
+            fixture.client().available_vmid(9001).await,
+            expected,
+            "{data}"
+        );
+    }
+    let mut fixture = Fixture::new("200 OK", r#"{"data":9001}"#, "", Duration::ZERO).await;
+    assert_eq!(
+        fixture.client().available_vmid(99).await,
+        Err(Error::Configuration)
+    );
+    assert!(fixture.requests.try_recv().is_err());
+}
+
+#[tokio::test]
 async fn preflight_observes_metadata_over_verified_tls_and_never_mutates() {
     let mut fixture = Fixture::routes("200 OK", &[
         ("/api2/json/nodes/pve-test/qemu/9000/config?current=1", r#"{"data":{"template":1,"scsi0":"local:base-9000-disk-0,size=8G","ide2":"local:vm-9000-cloudinit,media=cdrom"}}"#),
         ("/api2/json/nodes/pve-test/storage", r#"{"data":[{"storage":"local-lvm","content":"images,rootdir","active":1,"enabled":true,"avail":100000000000}]}"#),
         ("/api2/json/nodes/pve-test/network", r#"{"data":[{"iface":"vmbr0","type":"bridge","active":1}]}"#),
-        ("/api2/json/cluster/nextid?vmid=201", r#"{"data":201}"#),
+        ("/api2/json/cluster/nextid?vmid=201", r#"{"data":"201"}"#),
     ], "", Duration::ZERO).await;
     let catalog =
         crate::provisioning::Catalog::parse(include_str!("../../../examples/templates.yaml"))

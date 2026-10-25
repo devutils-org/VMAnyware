@@ -266,8 +266,25 @@ impl Proxmox {
     }
 
     pub(crate) async fn available_vmid(&self, vmid: u32) -> Result<u32, Error> {
-        self.get_query(&["cluster", "nextid"], &[("vmid", vmid.to_string())])
-            .await
+        if !(100..=999999999).contains(&vmid) {
+            return Err(Error::Configuration);
+        }
+        // The provider may return its supplied query parameter as a JSON string.
+        let value: serde_json::Value = self
+            .get_query(&["cluster", "nextid"], &[("vmid", vmid.to_string())])
+            .await?;
+        let observed = match value {
+            serde_json::Value::Number(number) => {
+                number.as_u64().and_then(|id| u32::try_from(id).ok())
+            }
+            serde_json::Value::String(text) => {
+                text.parse::<u32>().ok().filter(|id| id.to_string() == text)
+            }
+            _ => None,
+        }
+        .filter(|id| (100..=999999999).contains(id))
+        .ok_or(Error::InvalidResponse)?;
+        Ok(observed)
     }
 
     async fn get<T: DeserializeOwned>(&self, segments: &[&str]) -> Result<T, Error> {

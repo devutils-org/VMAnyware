@@ -19,7 +19,7 @@ async fn fixture(values: Vec<Value>) -> Fixture {
 #[tokio::test]
 async fn deletion_absence_covers_exact_plan_with_gets_and_retains_partial_cleanup() {
     for remaining in [false, true] {
-        let mut fixture = fixture(vec![json!({"data":202}),grants(),json!({"data":if remaining {vec![json!({"volid":"storage:vm-202-disk-0","vmid":203,"private":"hidden"})]}else{vec![]}}),grants(),json!({"data":202})]).await;
+        let mut fixture = fixture(vec![json!({"data":202}),grants(),json!({"data":if remaining {vec![json!({"volid":"storage:vm-202-disk-0","vmid":203,"private":"hidden"})]}else{vec![]}}),grants(),json!({"data":"202"})]).await;
         let client = fixture.client();
         let approval = approval(client.scope_id());
         assert!(approval.is_valid());
@@ -55,6 +55,7 @@ async fn deletion_absence_refuses_filtered_malformed_or_changed_observations() {
         "unsafe",
         "reused",
         "wrong-first",
+        "malformed-vmid",
         "oversize",
     ] {
         let mut values = vec![
@@ -75,7 +76,8 @@ async fn deletion_absence_refuses_filtered_malformed_or_changed_observations() {
             "wrong-storage" => values[2] = json!({"data":[{"volid":"other:x"}]}),
             "unsafe" => values[2] = json!({"data":[{"volid":"storage:../x"}]}),
             "reused" => values[4] = json!({"data":203}),
-            "wrong-first" => values[0] = json!({"data":"202"}),
+            "wrong-first" => values[0] = json!({"data":"203"}),
+            "malformed-vmid" => values[0] = json!({"data":"0202"}),
             "oversize" => values[2] = json!({"data":vec![json!({"volid":"storage:x"});4097]}),
             _ => unreachable!(),
         }
