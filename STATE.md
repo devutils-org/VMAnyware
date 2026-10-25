@@ -220,9 +220,18 @@ NOT yet deployed: VM 110 still runs schema 16. Use the new non-destructive
 .lab/home-proxmox/deploy/upgrade.sh (backup, rebuild, migrate, restart).
 lab-1 (9001) has no lastGuest until a new readiness proof (created before 17).
 
-Next: user redeploys with upgrade.sh, relaunches the app, validates Console /
-Sessions / Keychain / Activity on lab-1, then snapshot → restore → delete →
-recreate through the app.
+Redeployed with upgrade.sh (schema 17, health 200); deletions enabled in
+server.env; temporary Sys.Audit (/) and Datastore.Allocate (local-lvm) granted
+to user+control-plane token — REVOKE after the deletion test. User validated
+Keychain → Console → native terminal on lab-1 (9001); lab-1 creation proven
+8/8 stages incl. packages + final snapshot. Follow-ups committed: full-window
+terminal (e723611, c093f2a, c66f039), status colour code (c6259fd), keyboard
+shortcuts with tooltips/help (73280ca, Node tests). ⌘R/⌘N may be caught by the
+native macOS menu: unverified in the real app.
+
+Next: user continues the deep test on lab-1 (snapshot t1 → modify → shutdown →
+restore → start → marker; Activity; delete; recreate on 9002 with pre-filled
+Console), then revoke temporary deletion grants.
 
 Next: user relaunches and validates the streamlined actions; then UI delete/recreate with the app key; then registered-VMID defect fix and template
 r2 (empty machine-id). Deletion via app needs temporary grants again.
