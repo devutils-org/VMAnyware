@@ -214,7 +214,8 @@ export function Workspace({ native }: { native: boolean }) {
   };
   const [title, subtitle] = titles[view];
 
-  return <Shell nav={nav} server={server} title={title} subtitle={subtitle}
+  // Lists and details use the full width; forms stay at a readable width.
+  return <Shell nav={nav} server={server} title={title} subtitle={subtitle} narrow={view === "create" || view === "settings" || view === "activity"}
     back={view === "environment" ? () => setView("environments") : undefined}
     actions={view === "environments" ? <>{running}
       <button type="button" className="ghost" disabled={loading} onClick={() => void loadWorkspace()}><Icon name="refresh" />{loading ? "Refreshing…" : "Refresh"}</button>
@@ -291,7 +292,7 @@ export function Workspace({ native }: { native: boolean }) {
     </div>}
 
     {drawer && <div className="drawer-backdrop" role="presentation" hidden={drawerHidden} onClick={event => { if (event.target === event.currentTarget) closeDrawer(); }}>
-      <aside className="drawer" role="dialog" aria-modal="true" aria-label="Review action">
+      <aside className="drawer dialog" role="dialog" aria-modal="true" aria-label="Review action">
         <header>
           <span className="drawer-target">{drawer.environment.definitionName} · VM {drawer.environment.providerReference.vmid}</span>
           <button type="button" className="icon" aria-label="Close" title={mutationLocked ? "Close; the action keeps running" : "Close"} onClick={closeDrawer}><Icon name="close" /></button>
@@ -308,7 +309,7 @@ export function Workspace({ native }: { native: boolean }) {
   </Shell>;
 }
 
-function Shell({ nav, server, title, subtitle, back, actions, children }: { nav: ReactNode; server?: ReactNode; title: string; subtitle: string; back?: () => void; actions?: ReactNode; children: ReactNode }) {
+function Shell({ nav, server, title, subtitle, back, actions, narrow = false, children }: { nav: ReactNode; server?: ReactNode; title: string; subtitle: string; back?: () => void; actions?: ReactNode; narrow?: boolean; children: ReactNode }) {
   return <div className={nav ? "app" : "app no-nav"}>
     {nav && <aside className="sidebar" aria-label="Main navigation">
       <div className="brand"><span className="brand-mark" aria-hidden="true">›_</span>VMAnyware</div>
@@ -323,7 +324,7 @@ function Shell({ nav, server, title, subtitle, back, actions, children }: { nav:
         </div>
         <div className="topbar-actions">{actions}<span className="mobile-only">{server}</span></div>
       </header>
-      <main className="content">{children}</main>
+      <main className={`content${narrow ? " narrow" : ""}`}>{children}</main>
     </div>
     {nav && <nav className="tabbar" aria-label="Main navigation">{nav}</nav>}
   </div>;
