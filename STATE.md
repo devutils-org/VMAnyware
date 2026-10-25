@@ -12,6 +12,27 @@ Goal: fin VMAnyware; full roadmap remains incomplete. Branch codex/home-proxmox-
 Recent home-server work is user-executed; no authenticated agent host channel or
 provider secret is available. Never inspect credential files or request secrets.
 
+### Current approved action and frontend recovery
+
+User explicitly replied “oui go” to application clone/start 9000 -> 9001,
+home-smoke, 2 CPUs/2048 MiB/12 GiB local-lvm, DHCP vmbr0, selected public key,
+fixed guest readiness checks. No packages/snapshot; preserve source/VM100.
+Do not request this same approval again. No real creation has started yet; the
+server write flags are still false. User immediately reported a white frontend.
+
+Diagnosed/reproduced with an isolated nonpersistent macOS WKWebView, simulated
+IPC and the user's already-running Vite at 127.0.0.1:1420. Original probe reports
+Blank workspace, text length 0. Vite transformed ProvisioningPreview import into
+the removed /src/localCreation.ts path (stale resolver cache after helper rename
+on the case-insensitive Mac filesystem); that URL returned HTML instead of JS.
+Changed only the import to explicit ./LocalCreation.tsx. Same live-server WebKit
+probe now reports Local workspace rendered; transformed import is correct.
+Frontend TypeScript/production build and diff review also pass.
+No user WebView storage/credentials or provider requests were inspected/executed.
+Diagnostic harness is clearly isolated under ignored .lab/local-creation-diagnosis.
+Next: user reloads native window, then enable provisioning only and execute the
+already-approved exact plan/confirmation. Retain operation ID on any uncertainty.
+
 ### Real infrastructure evidence
 
 - Endpoint https://192.168.1.36:8006, node debian-btw, Proxmox 9.2.21; verified
@@ -80,11 +101,12 @@ The local server is user-run on Mac loopback 8080, fresh dedicated database
 config failure disappeared after guarded hidden token entry; exact original cause
 unproven. Never paste exit into user's top-level shell; provide complete subshell.
 
-Obtain concrete approval for APPLICATION clone/start 9000 -> 9001/home-smoke,
+Explicit user approval is now recorded above for APPLICATION clone/start
+9000 -> 9001/home-smoke,
 2 CPUs/2048 MiB/12 GiB local-lvm, DHCP vmbr0, debian and selected public key,
 fixed readiness checks, no packages/snapshots. Template/ACL approvals persist and
-must not be requested again, but do not authorize this new clone/start operation.
-After approval restart server with provisioning=true only, load saved home-smoke,
+must not be requested again, and the subsequent explicit “oui go” authorizes this clone/start operation.
+After frontend recovery restart server with provisioning=true only, load saved home-smoke,
 preview/preflight 9001 and use explicit local confirmation. Retain operation ID;
 never blind-retry uncertain outcomes or delete partial targets. No real 9001
 creation/start/deletion has been executed yet. Then verify DHCP/QGA/clean

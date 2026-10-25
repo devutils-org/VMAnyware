@@ -1,6 +1,6 @@
 import { useCallback, useState, type FormEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { LocalCreation } from "./LocalCreation";
+import { LocalCreation } from "./LocalCreation.tsx";
 
 export type Plan = {
   providerScopeId: string | null;
