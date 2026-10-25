@@ -47,6 +47,8 @@ pub struct ProviderReference {
 pub enum Status {
     Registered,
     Deleted,
+    /// Creation failed before any provider VM could exist; the VMID is free again.
+    Released,
 }
 
 #[derive(Debug, Serialize)]

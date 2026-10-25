@@ -425,7 +425,7 @@ fn schema_five_upgrade_preserves_dispatched_lifecycle_identity_and_recovery() {
         connection
             .pragma_query_value(None, "user_version", |r| r.get::<_, u32>(0))
             .unwrap(),
-        15
+        16
     );
     assert!(connection
         .prepare("PRAGMA foreign_key_check")
@@ -841,7 +841,7 @@ fn schema_six_upgrade_preserves_completed_clone_and_resource_queue() {
         connection
             .pragma_query_value(None, "user_version", |r| r.get::<_, u32>(0))
             .unwrap(),
-        15
+        16
     );
     assert!(connection
         .prepare("PRAGMA foreign_key_check")
@@ -1236,7 +1236,7 @@ fn disk_journal_schema_seven_upgrade_preserves_resource_evidence() {
         connection
             .pragma_query_value(None, "user_version", |r| r.get::<_, u32>(0))
             .unwrap(),
-        15
+        16
     );
     assert!(connection
         .prepare("PRAGMA foreign_key_check")
@@ -1673,7 +1673,7 @@ fn cloud_init_journal_schema_eight_upgrade_preserves_completed_disk_evidence() {
         connection
             .pragma_query_value(None, "user_version", |r| r.get::<_, u32>(0))
             .unwrap(),
-        15
+        16
     );
     assert!(connection
         .prepare("PRAGMA foreign_key_check")
@@ -1950,7 +1950,7 @@ fn seed_journal_schema_nine_upgrade_preserves_settings_without_inventing_regener
         connection
             .pragma_query_value(None, "user_version", |r| r.get::<_, u32>(0))
             .unwrap(),
-        15
+        16
     );
     assert!(!connection
         .prepare("PRAGMA foreign_key_check")

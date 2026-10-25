@@ -22,6 +22,7 @@ fn summary(row: &rusqlite::Row<'_>) -> rusqlite::Result<Summary> {
     let status = match status.as_str() {
         "registered" => Status::Registered,
         "deleted" => Status::Deleted,
+        "released" => Status::Released,
         _ => return Err(rusqlite::Error::InvalidQuery),
     };
     Ok(Summary {
@@ -106,12 +107,13 @@ impl Store {
         read(&connection, id)
     }
 
-    /// Recent 100 associations across scopes; results omit the YAML snapshot.
+    /// Recent 100 associations across scopes, excluding released ones that never had a
+    /// provider VM; results omit the YAML snapshot.
     pub fn recent_instances(&self) -> Result<Vec<Summary>, RegistrationError> {
         let connection = self.0.lock().map_err(|_| RegistrationError::Unavailable)?;
         let mut statement = connection
             .prepare(&format!(
-            "SELECT {SUMMARY_COLUMNS} FROM instances ORDER BY created_at DESC, id DESC LIMIT 100"
+            "SELECT {SUMMARY_COLUMNS} FROM instances WHERE status<>'released' ORDER BY created_at DESC, id DESC LIMIT 100"
         ))
             .map_err(|_| RegistrationError::Unavailable)?;
         let rows = statement

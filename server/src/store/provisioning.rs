@@ -687,6 +687,24 @@ impl Store {
                 {
                     return Err(ProvisioningError::InvalidOperation);
                 }
+                // Refused before dispatch, or rejected by authorization at dispatch with no
+                // task: no provider VM can exist, so release the VMID association.
+                if !stage.dispatch_started
+                    || (stage.task.is_none()
+                        && matches!(
+                            code,
+                            Failure::ProviderUnauthorized | Failure::ProviderForbidden
+                        ))
+                {
+                    if let Some(instance) = job.operation.instance_id.as_deref() {
+                        transaction
+                            .execute(
+                                "UPDATE instances SET status='released' WHERE id=?1 AND status='registered'",
+                                [instance],
+                            )
+                            .map_err(unavailable)?;
+                    }
+                }
                 ("failed", "failed", None, Some(code))
             }
             CloneOutcome::Uncertain(code) => {

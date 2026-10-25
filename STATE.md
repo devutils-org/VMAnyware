@@ -136,7 +136,7 @@ wrong (provider_unauthorized). Token recreated; on-VM PVEAPIToken test 200.
 Found and fixed (a6a7043): native/UI kept a definitively failed submitted
 create locked until reconnect; now unlocked only after succeeded/failed.
 
-OPEN SERVER DEFECT (next task): a clone-stage failure before dispatch leaves
+FIXED in source (ADR 0095, schema 16, not yet deployed to VM 110) — was: a clone-stage failure before dispatch leaves
 the instance `registered` on its VMID (9003 here, VM never existed), and the
 unique registered-VMID index then blocks any new creation on that VMID. Needs a
 schema status for never-provisioned associations (not `deleted`, which offers
@@ -183,6 +183,16 @@ primary button as confirmation (single consent for destructive), automatic
 operation polling, closable background drawer, Done releases state; power and
 snapshots re-read afterwards. tsc/build/28 tests pass; simulated snapshot flow
 in preview harness: Snapshot→Continue→Create→(auto)→Done.
+
+UI follow-ups committed (power chip, centered dialog, full width, auto-release
+of settled actions). Also found: deployed token lacked ACLs on 9005 → clone
+403 → ghost 9005 (user to grant 9001–9010). VMID release fix ADR 0095: new
+regression fails before/passes after; all server unit+integration tests,
+strict Clippy, fmt pass; package check script updated for schema 16/17.
+
+Agreed reset plan (user "ok go"): 1) VMID fix ✔ source; 2) template r2 with
+emptied /etc/machine-id; 3) user: qm destroy 9002 9004, back up + fresh DB on
+VM 110, redeploy package, token ACLs 9001–9010; 4) full journey via app.
 
 Next: user relaunches and validates the streamlined actions; then UI delete/recreate with the app key; then registered-VMID defect fix and template
 r2 (empty machine-id). Deletion via app needs temporary grants again.

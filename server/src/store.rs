@@ -90,7 +90,7 @@ impl Store {
         let initial_version: u32 = connection
             .pragma_query_value(None, "user_version", |row| row.get(0))
             .map_err(|_| Error::Unavailable)?;
-        if initial_version < 14 {
+        if initial_version < 16 {
             connection
                 .pragma_update(None, "foreign_keys", false)
                 .map_err(|_| Error::Unavailable)?;
@@ -101,7 +101,7 @@ impl Store {
         let version: u32 = transaction
             .pragma_query_value(None, "user_version", |row| row.get(0))
             .map_err(|_| Error::Unavailable)?;
-        if version > 15 {
+        if version > 16 {
             return Err(Error::Unavailable);
         }
         if version < 1 {
@@ -234,7 +234,15 @@ impl Store {
                 .pragma_update(None, "user_version", 15)
                 .map_err(|_| Error::Unavailable)?;
         }
-        if version < 14 {
+        if version < 16 {
+            transaction
+                .execute_batch(include_str!("../../migrations/0016_instance_release.sql"))
+                .map_err(|_| Error::Unavailable)?;
+            transaction
+                .pragma_update(None, "user_version", 16)
+                .map_err(|_| Error::Unavailable)?;
+        }
+        if version < 16 {
             let foreign_key_problem = transaction
                 .prepare("PRAGMA foreign_key_check")
                 .map_err(|_| Error::Unavailable)?

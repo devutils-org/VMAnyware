@@ -2857,6 +2857,69 @@ async fn provisioning_clone_executor_rejects_unproven_source_or_occupied_target_
     }
 }
 
+#[tokio::test]
+async fn clone_failure_without_a_provider_vm_releases_the_registered_vmid() {
+    use crate::{operation::Failure, provisioning_intent::CloneOutcome};
+    let fixture = Fixture::new("200 OK", "{}", "", Duration::ZERO).await;
+    let provider = fixture.client();
+    // Before dispatch, and a dispatch refused by authorization, cannot have created a VM.
+    for (dispatch, failure) in [
+        (false, Failure::ProvisioningPreconditionsFailed),
+        (true, Failure::ProviderForbidden),
+    ] {
+        let (_directory, store, operation) = queued_clone(&provider);
+        let job = store.claim_provisioning_clone().unwrap().unwrap();
+        if dispatch {
+            store
+                .begin_provisioning_clone(&operation.id, &job.approval)
+                .unwrap();
+        }
+        store
+            .finish_provisioning_clone(&operation.id, CloneOutcome::Failed(failure))
+            .unwrap();
+        let id = operation.instance_id.clone().unwrap();
+        let instance = store.instance(&id).unwrap().unwrap();
+        assert_eq!(instance.summary.status, crate::instance::Status::Released);
+        assert!(store.recent_instances().unwrap().iter().all(|i| i.id != id));
+        // The VMID is free for a new association; the released record stays for history.
+        store
+            .register_instance(
+                &crate::instance::Registration {
+                    definition_name: instance.summary.definition_name.clone(),
+                    definition_hash: instance.summary.definition_hash.clone(),
+                    node: "pve-test".into(),
+                    vmid: 202,
+                },
+                &provider.scope_id(),
+            )
+            .unwrap();
+        assert!(store.enqueue_instance_observation("released", &id).is_err());
+    }
+    // A provider task that ran may have created a VM: keep the association.
+    let (_directory, store, operation) = queued_clone(&provider);
+    let job = store.claim_provisioning_clone().unwrap().unwrap();
+    store
+        .begin_provisioning_clone(&operation.id, &job.approval)
+        .unwrap();
+    let task = super::TaskReference::new(
+        "pve-test",
+        "UPID:pve-test:00000001:00000002:00000003:qmclone:9000:fixture@pve:",
+    )
+    .unwrap();
+    store.link_provisioning_clone(&operation.id, &task).unwrap();
+    store
+        .finish_provisioning_clone(
+            &operation.id,
+            CloneOutcome::Failed(Failure::ProviderTaskFailed),
+        )
+        .unwrap();
+    let id = operation.instance_id.unwrap();
+    assert_eq!(
+        store.instance(&id).unwrap().unwrap().summary.status,
+        crate::instance::Status::Registered
+    );
+}
+
 fn resource_config(plan: &crate::provisioning::Plan) -> serde_json::Value {
     serde_json::json!({"digest":"d".repeat(40),"description":clone_description(plan),
         "name":"kernel-lab","tags":format!("vmanyware-{}","a".repeat(32)),"template":0,"sockets":1,"cores":4,"vcpus":4,"cpulimit":0,"memory":8192,"balloon":0})

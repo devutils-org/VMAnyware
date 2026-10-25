@@ -114,7 +114,7 @@ with tempfile.TemporaryDirectory(prefix='vmanyware-package-check-') as temporary
     if args.future_schema_only:
         future = runtime / 'future.sqlite'
         with sqlite3.connect(future) as connection:
-            connection.executescript("CREATE TABLE future_state(id INTEGER PRIMARY KEY, label TEXT NOT NULL, payload BLOB NOT NULL); PRAGMA user_version=16; PRAGMA application_id=424242;")
+            connection.executescript("CREATE TABLE future_state(id INTEGER PRIMARY KEY, label TEXT NOT NULL, payload BLOB NOT NULL); PRAGMA user_version=17; PRAGMA application_id=424242;")
             connection.execute('INSERT INTO future_state VALUES (?,?,?)', (1, 'owned-future-fixture', bytes(range(256))))
             connection.commit()
         before = future.read_bytes()
@@ -127,7 +127,7 @@ with tempfile.TemporaryDirectory(prefix='vmanyware-package-check-') as temporary
             assert token not in rejected.stderr and rejected.stdout == ''
             assert future.read_bytes() == before, 'Future database bytes changed on refusal'
             with sqlite3.connect(future.as_uri() + '?mode=ro', uri=True) as connection:
-                assert connection.execute('PRAGMA user_version').fetchone() == (16,)
+                assert connection.execute('PRAGMA user_version').fetchone() == (17,)
                 assert connection.execute('PRAGMA application_id').fetchone() == (424242,)
                 assert connection.execute('PRAGMA integrity_check').fetchall() == [('ok',)]
                 assert connection.execute('SELECT * FROM future_state').fetchall() == [(1, 'owned-future-fixture', bytes(range(256)))]
@@ -250,7 +250,7 @@ with tempfile.TemporaryDirectory(prefix='vmanyware-package-check-') as temporary
             assert token not in log.read()
         if args.previous_schema:
             with sqlite3.connect(runtime / 'server.sqlite') as connection:
-                assert connection.execute('PRAGMA user_version').fetchone() == (15,)
+                assert connection.execute('PRAGMA user_version').fetchone() == (16,)
                 assert connection.execute('PRAGMA foreign_key_check').fetchall() == []
                 assert connection.execute('PRAGMA integrity_check').fetchall() == [('ok',)]
                 for table in legacy_tables:

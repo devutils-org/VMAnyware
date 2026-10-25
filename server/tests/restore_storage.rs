@@ -470,7 +470,7 @@ fn restore_schema_eleven_upgrade_preserves_snapshot_and_provisioning_journals() 
         connection
             .pragma_query_value(None, "user_version", |r| r.get::<_, u32>(0))
             .unwrap(),
-        15
+        16
     );
     for table in [
         "provisioning_intents",

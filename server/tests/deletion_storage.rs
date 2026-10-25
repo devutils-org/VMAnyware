@@ -378,7 +378,7 @@ fn deletion_schema_twelve_upgrade_preserves_restore_and_failed_provisioning_grap
         connection
             .pragma_query_value(None, "user_version", |row| row.get::<_, u32>(0))
             .unwrap(),
-        15
+        16
     );
     assert!(!connection
         .prepare("PRAGMA foreign_key_check")
@@ -575,7 +575,7 @@ fn retirement_schema_thirteen_preserves_marked_delete_and_rejects_orphan_atomica
                 connection
                     .pragma_query_value(None, "user_version", |r| r.get::<_, u32>(0))
                     .unwrap(),
-                15
+                16
             );
             assert!(!connection
                 .prepare("PRAGMA foreign_key_check")
