@@ -6,6 +6,94 @@ Naming note: historical lab resource identifiers below are normalized to the
 current VMAnyware name. External resources were not renamed; use VMIDs and
 ignored local lab records to verify actual identifiers before operations.
 
+## Latest resume point — 2026-10-25 home Proxmox acceptance
+
+Goal: fin VMAnyware; full roadmap remains incomplete. Branch codex/home-proxmox-ios.
+Recent home-server work is user-executed; no authenticated agent host channel or
+provider secret is available. Never inspect credential files or request secrets.
+
+### Real infrastructure evidence
+
+- Endpoint https://192.168.1.36:8006, node debian-btw, Proxmox 9.2.21; verified
+  public CA at ~/.config/vmanyware/proxmox-ca.pem on Mac. Rust token probe sees
+  node online/template 9000. Native make dev local connection now reports service
+  Available, one node and one template; server listening/health/inventory logs pass.
+- VM 100: installed Debian 13, static 10.10.10.100/24, gateway 10.10.10.1. User
+  SSH via ProxyJump works; DNS and IPv4 HTTPS to deb.debian.org return success.
+  Preserve 100. Native direct SSH routing from Mac remains unverified.
+- User reserves template 9000/test IDs 9001–9010. Host forwarding enabled. User
+  explicitly approved and started dedicated vmanyware-dhcp on vmbr0 only:
+  10.10.10.200–210/24, 1-hour leases, gateway .1, DNS option 1.1.1.1; DNS listener
+  disabled and logs confirm exclusive vmbr0 binding. Not enabled at boot; no
+  actual guest DHCP lease yet. No Wi-Fi/firewall/bootloader modification approved.
+- User approved and executed template 9000 creation/conversion: 2 CPUs, 2048 MiB,
+  8 GiB scsi0 local-lvm:base-9000-disk-0, Cloud-Init ide2, DHCP vmbr0, serial
+  console, host agent enabled. template:1/status:stopped proven; never boot it.
+- Official Debian genericcloud amd64 build 20261021-2638 qcow2 and JSON pass
+  SHA512SUMS. Source 3 GiB; prepared-agent.qcow2 copy customized before import.
+  User read-only image inspection proves installed cloud-init 25.1.4-1+deb13u1,
+  openssh-server 1:10.0p1-7+deb13u4, QGA 1:10.0.13+ds-0+deb13u1. Main cloud.cfg
+  and cfg.d retain debian/lock_passwd:true; /home empty, skel no .ssh. Catalog
+  imageDefaultUser declaration completed in ignored .lab/home-proxmox/templates.yaml.
+- Approved user/token ACLs now proven by effective token tables: vmanyware@pve
+  and dev-readonly, nonpropagating source 9000 Audit/Clone; target 9001 Allocate/
+  Audit/CPU/Cloudinit/Disk/Memory/Network/Options/GuestAgent.Unrestricted/PowerMgmt;
+  local-lvm Audit/AllocateSpace; vmbr0 SDN.Use. No admin/global/VM100 grants.
+- Host tools virt-customize 1.52.3/dnsmasq 2.91 installed after apt simulation
+  (58 additions, zero removals/upgrades). dpkg audit empty. EFI warning retained:
+  BootCurrent 0002 loads EFI/BOOT/BOOTX64.EFI on nvme0n1p1, mounted /boot/efi.
+  Do not reinstall GRUB/change fallback loader or reboot without concrete approval.
+
+### Current application state and verification
+
+User supplied application Ed25519 PUBLIC key, retained only in ignored
+.lab/home-proxmox/home-smoke.yaml. Definition home-smoke: debian-13, 2 CPUs,
+2048 MiB, 12 GiB disk, no packages/final snapshot. Saved by native UI. Hashes:
+definition 9be8ebade3ad08705af2d4f4bfa07cbf43bad069e5477802ac653b04d948ede9;
+plan 1951e7428021b038e04dd1effb83647e7a3632f69ad2fb5c63c3e466174a114c.
+Real seven-check metadata preflight now passes including 9001 free. Image label,
+permissions and guest readiness remain deliberately separate unknowns.
+
+Fixed next-ID text/number incompatibility in 2c92968: controlled TLS regression
+failed before fix, now passes; user real preflight confirms availability passed.
+2 decoder tests, API regression, 8 deletion-absence and 35 preflight-filter checks,
+strict server Clippy and formatting passed. Different IDs/malformed values still
+fail; no reservation inference. Source: official Cluster.pm returns input directly.
+
+Added local confirmed creation (ADR 0091): reuse remote native approval/readiness
+validation, preserve providerScopeId in local preview, fixed POST/GET commands,
+explicit plan confirmation, persistent exact key/plan/known IDs, GET-only known
+operation recovery, no silent new-key retries. Pending/corrupt state locks local
+inputs; acknowledge terminal result invalidates old preview. Existing AppIdentity
+UI now accessible locally without YAML overwrite. No new dependencies/migrations.
+Verification: 3 native local-command tests, preview-scope regression, 6 affected
+remote-create tests, 5 Node client-state tests, frontend typecheck/build, actual
+bundled macOS build, production-library Clippy, fmt/diff and 84-command explicit
+local-main ACL consistency pass. Client test-target Clippy fails on 5 preexisting
+errors in untouched SSH/recreation/recovery tests (duplicate_mod, await_holding_lock).
+No suppressions added. Formatter corrected two preexisting wraps in smoke example.
+
+### Next action and approval boundary
+
+The local server is user-run on Mac loopback 8080, fresh dedicated database
+.lab/home-proxmox/control-plane.sqlite, all write flags false. Initial provider
+config failure disappeared after guarded hidden token entry; exact original cause
+unproven. Never paste exit into user's top-level shell; provide complete subshell.
+
+Obtain concrete approval for APPLICATION clone/start 9000 -> 9001/home-smoke,
+2 CPUs/2048 MiB/12 GiB local-lvm, DHCP vmbr0, debian and selected public key,
+fixed readiness checks, no packages/snapshots. Template/ACL approvals persist and
+must not be requested again, but do not authorize this new clone/start operation.
+After approval restart server with provisioning=true only, load saved home-smoke,
+preview/preflight 9001 and use explicit local confirmation. Retain operation ID;
+never blind-retry uncertain outcomes or delete partial targets. No real 9001
+creation/start/deletion has been executed yet. Then verify DHCP/QGA/clean
+Cloud-Init/readiness and separately approve direct Mac routing/SSH if needed.
+
+Follow-ups: local per-stage progress, broader history-based creation recovery,
+existing client test-lint errors; actual snapshot/restore/delete/recreate, deployment
+and remaining platform/runtime/release gates. No roadmap completion claim.
+
 ## 2026-10-25 — User-requested session pause
 
 User explicitly requested stopping the session and resuming later. Preserve the

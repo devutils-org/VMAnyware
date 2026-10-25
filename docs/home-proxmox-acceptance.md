@@ -1,6 +1,7 @@
 # Home Proxmox acceptance plan
 
-Status: prepared 2026-10-25; read-only connectivity proven by user-run probe.
+Status: updated 2026-10-25; user-run template conversion, scoped token reads and
+seven-check application metadata preflight proven. Real application creation pending.
 No VM, network, storage or credential modification is authorized by this plan.
 The complete product specification remains VMAnyware.md.
 
@@ -11,8 +12,9 @@ The complete product specification remains VMAnyware.md.
 - Dedicated token successfully reads version and node status. Its exact effective
   ACLs and expiry still need verification; no administrator credential is needed.
 - Existing VM 100 and all its volumes remain outside the test scope.
-- Proposed template 9000 and disposable instances 9001–9010 require confirmation
-  of availability and reservation before any concrete mutation approval.
+- User approved reservation of template 9000 and disposable instances 9001–9010.
+  Template 9000 is now converted/stopped; latest preflight reports 9001 free.
+  No clone/start operation is authorized merely by this reservation.
 - Proposed storage local-lvm and bridge vmbr0 require live capability checks.
 - Do not reuse the previous nested lab's credentials, approvals or image claims.
 
@@ -110,3 +112,81 @@ VM 100 must never receive target mutation grants.
 Source: [official API schema](https://pve.proxmox.com/pve-docs/api-viewer/apidoc.js).
 Adapter evidence: server/src/proxmox/readiness.rs, deletion_management.rs,
 deletion_absence.rs, clone.rs and snapshot.rs. No write ACL was created or tested.
+
+## Concrete template preparation proposal — 2026-10-25
+
+User approved and executed this preparation/import/conversion. Commands below
+record the completed procedure; do not replay them. Verified source directory:
+/var/lib/vz/vmanyware-images/debian-13-20261021-2638. User reports SHA512SUMS OK
+for the official qcow2 and JSON metadata, qcow2 virtual size 3 GiB, corrupt=false.
+Preserve the original image and create only a new prepared-agent.qcow2 copy.
+The tool boots its own temporary libguestfs appliance; it does not boot the
+prepared Debian guest. Network access is for the agent package installation.
+Do not change host packages, credentials, boot configuration, VM 100 or DHCP.
+
+Proposed commands, run sequentially on the approved host and stop on failure:
+
+```sh
+cd /var/lib/vz/vmanyware-images/debian-13-20261021-2638
+# Refuse any existing prepared image, including symlinks.
+test ! -e prepared-agent.qcow2 && test ! -L prepared-agent.qcow2
+sha512sum --check --ignore-missing SHA512SUMS
+cp --reflink=auto --sparse=always --no-clobber \
+  debian-13-genericcloud-amd64-20261021-2638.qcow2 prepared-agent.qcow2
+LIBGUESTFS_BACKEND=direct virt-customize --format qcow2 \
+  -a prepared-agent.qcow2 --install qemu-guest-agent \
+  --run-command 'systemctl enable qemu-guest-agent' \
+  --run-command 'dpkg-query --show qemu-guest-agent cloud-init openssh-server' \
+  --run-command 'systemctl is-enabled qemu-guest-agent'
+qemu-img check prepared-agent.qcow2
+sha512sum prepared-agent.qcow2
+pvesh get /cluster/nextid --vmid 9000
+qm create 9000 --name vmanyware-debian13-20261021 \
+  --memory 2048 --cores 2 --ostype l26 --agent enabled=1 \
+  --scsihw virtio-scsi-pci --net0 virtio,bridge=vmbr0
+qm set 9000 --scsi0 "local-lvm:0,import-from=$(pwd)/prepared-agent.qcow2"
+qm disk resize 9000 scsi0 8G
+qm set 9000 --ide2 local-lvm:cloudinit
+qm set 9000 --boot order=scsi0 --serial0 socket --vga serial0
+qm set 9000 --citype nocloud --ciupgrade 0 --ipconfig0 ip=dhcp
+qm config 9000 --current 1
+qm status 9000
+```
+
+Review stopped status, exact scsi0 size, Cloud-Init drive, bridge and agent setting
+before the separately gated final command `qm template 9000`. Approval may cover
+conversion after that review, but never starting the source template. Do not
+replay a partially successful import or destroy resources automatically.
+Image-default-user attestation still requires inspection of the exact prepared
+image's default-user configuration/locked-account metadata and absence of inherited
+authorized keys before confirmed application creation. No SSH key or password is
+added by this proposal. No test clone/start/snapshot/delete is included.
+
+## First application create: scoped ACL proposal
+
+Prepared after user-reported source-template conversion and image inspection.
+User explicitly approved these credential/ACL changes in the subsequent reply.
+User-returned effective token tables match all four grants. Applied to both
+vmanyware@pve and privilege-separated token vmanyware@pve!dev-readonly, with
+nonpropagating grants at these exact paths only:
+
+| Role | Path | Privileges |
+| --- | --- | --- |
+| VMAnywareSource | /vms/9000 | VM.Audit VM.Clone |
+| VMAnywareCreate | /vms/9001 | VM.Audit VM.Allocate VM.Config.CPU VM.Config.Memory VM.Config.Disk VM.Config.Network VM.Config.Cloudinit VM.Config.Options VM.PowerMgmt VM.GuestAgent.Unrestricted |
+| VMAnywareStorage | /storage/local-lvm | Datastore.Audit Datastore.AllocateSpace |
+| VMAnywareBridge | /sdn/zones/localnetwork/vmbr0 | SDN.Use |
+
+Create new roles only; refuse collisions rather than altering existing roles.
+Do not grant Administrator, root-path permissions or mutation rights on VM 100.
+VM.Allocate inherently permits removal of the target; a deletion operation still
+requires its own concrete approval. Guest-agent unrestricted permission inherently
+permits arbitrary guest commands; application readiness submits fixed commands.
+Storage allocation is a shared-storage capability, not a per-volume quota.
+These are source-derived candidate grants, not live-verified minimum ACL proof.
+
+After grants, use token-authenticated read-only preflight and effective privilege
+observation. The proposed first app operation is full clone 9000 to 9001, 2 CPUs,
+2048 MiB, 12 GiB scsi0 on local-lvm, DHCP vmbr0, exact test public SSH key, start
+and guest readiness. This operation and the public-key identity must be selected
+and approved before execution; reservation is not creation approval.
