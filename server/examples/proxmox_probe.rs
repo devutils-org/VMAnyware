@@ -11,6 +11,17 @@ async fn probe() -> Result<(), String> {
             "Set VMANYWARE_PROXMOX_PROBE=read-only to explicitly enable the live probe.".into(),
         );
     }
+    let permission_vmid = match std::env::var("VMANYWARE_PROXMOX_PROBE_VMID") {
+        Ok(value) => Some(
+            value
+                .parse::<u32>()
+                .ok()
+                .filter(|id| (100..=999999999).contains(id) && id.to_string() == value)
+                .ok_or("Invalid VMANYWARE_PROXMOX_PROBE_VMID; use a canonical VMID.")?,
+        ),
+        Err(std::env::VarError::NotPresent) => None,
+        Err(_) => return Err("Invalid VMANYWARE_PROXMOX_PROBE_VMID.".into()),
+    };
     let ca = match std::env::var("VMANYWARE_PROXMOX_CA") {
         Ok(path) => Some(std::fs::read(path).map_err(|_| "Cannot read the configured CA file.")?),
         Err(std::env::VarError::NotPresent) => None,
@@ -23,6 +34,20 @@ async fn probe() -> Result<(), String> {
         ca.as_deref(),
     )
     .map_err(|e| e.to_string())?;
+    if let Some(vmid) = permission_vmid {
+        let privileges = client
+            .vm_privileges(vmid)
+            .await
+            .map_err(|e| e.to_string())?;
+        println!(
+            "Effective privileges at /vms/{vmid}: {}",
+            if privileges.is_empty() {
+                "none".to_owned()
+            } else {
+                privileges.join(", ")
+            }
+        );
+    }
     let version = client.version().await.map_err(|e| e.to_string())?;
     println!(
         "Proxmox version {} (release {})",

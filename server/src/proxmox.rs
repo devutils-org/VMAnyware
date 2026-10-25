@@ -21,6 +21,7 @@ mod task;
 pub use task::{TaskPollOptions, TaskReference, TaskStatus};
 mod identity;
 mod packages;
+mod permissions;
 pub use packages::{PackageProgress, PackageRequest};
 mod readiness;
 pub use readiness::{GuestProbe, GuestReadiness, ReadinessRequest};

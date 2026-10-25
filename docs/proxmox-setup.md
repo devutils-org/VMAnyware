@@ -60,6 +60,21 @@ After explicitly selecting a test endpoint and configuring these variables:
 VMANYWARE_PROXMOX_PROBE=read-only cargo run -p vmanyware-server --example proxmox_probe
 ```
 
+To inspect effective privileges at one explicitly selected VM path, optionally
+set a canonical VMID before running the same probe:
+
+```sh
+VMANYWARE_PROXMOX_PROBE=read-only VMANYWARE_PROXMOX_PROBE_VMID=9001 \
+  cargo run --locked -p vmanyware-server --example proxmox_probe
+```
+
+Select the actual approved test VMID instead of this example. This adds only
+`GET /access/permissions?path=/vms/<vmid>` and prints sorted privilege names.
+Zero/false privilege values mean nonpropagating grants, not denied privileges.
+An empty result means no reported grants at that path; it does not prove the
+VMID is free or reserved. Storage/network privileges, token expiry and successful
+operation execution remain separate checks. No ACL is changed.
+
 The extra opt-in prevents accidental live probing. Default tests use generated
 short-lived TLS identities on localhost and never use runtime credentials.
 

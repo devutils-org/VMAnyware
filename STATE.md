@@ -6,6 +6,26 @@ Naming note: historical lab resource identifiers below are normalized to the
 current VMAnyware name. External resources were not renamed; use VMIDs and
 ignored local lab records to verify actual identifiers before operations.
 
+## 2026-10-25 — Scoped read-only token privilege probe
+
+Scope/acceptance: add optional effective-VM-privilege observation to the existing
+live probe, needed to verify dedicated-token grants before real provisioning.
+VMANYWARE_PROXMOX_PROBE_VMID selects one canonical VMID; invalid selection fails
+before network/credential use. Without it the probe retains its previous reads.
+New vm_privileges performs fixed GET access/permissions at /vms/<selected ID>,
+validates scope/privilege-name/propagation shapes, and returns sorted names only.
+Zero/false propagation values are grants. No ACL modification, arbitrary API
+passthrough or production behavior change. Empty grants do not establish free IDs.
+
+Verification: two generated-TLS tests pass (exact selected GET/nonpropagating
+privileges; malformed scope/values/name refusal, invalid ID with zero requests,
+empty grants). Example cargo check, scoped library/test/example strict Clippy,
+server formatting and diff review pass. No unrelated application suites rerun.
+No live Proxmox request, credential file read or VM mutation occurred. Next: use
+this opt-in check on the explicitly selected disposable target after reservation
+confirmation; DHCP/forwarding observations and write approvals remain pending.
+The full roadmap is still incomplete; iOS artifact evidence remains as below.
+
 ## 2026-10-25 — Downloadable exact iOS simulator artifact verified
 
 Run 40144618222 completed/successful for debed94, including archive digest check

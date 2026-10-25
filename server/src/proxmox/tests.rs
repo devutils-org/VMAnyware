@@ -5606,3 +5606,5 @@ mod packages;
 mod packages_worker;
 
 mod provisioning_snapshot;
+
+mod permissions;
