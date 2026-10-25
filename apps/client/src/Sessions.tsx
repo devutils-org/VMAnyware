@@ -5,7 +5,7 @@ import { Icon } from "./icons";
 const SshTerminal = lazy(async () => ({ default: (await import("./SshTerminal")).SshTerminal }));
 
 /** Open terminal sessions as tabs. Owns native session lifetime: closing a tab closes it. */
-export function Sessions({ sessions, active, onSelect, onClosed }: { sessions: Session[]; active: string | null; onSelect: (id: string) => void; onClosed: (id: string) => void }) {
+export function Sessions({ sessions, active, onSelect, onClosed, maximized, onToggleMaximize }: { sessions: Session[]; active: string | null; onSelect: (id: string) => void; onClosed: (id: string) => void; maximized: boolean; onToggleMaximize: () => void }) {
   function close(id: string) {
     void invoke("close_ssh_session", { sessionId: id }).catch(() => {});
     onClosed(id);
@@ -17,6 +17,7 @@ export function Sessions({ sessions, active, onSelect, onClosed }: { sessions: S
         <button type="button" className="session-title" onClick={() => onSelect(session.id)}><Icon name="terminal" />{session.title}</button>
         <button type="button" className="icon" aria-label={`Close ${session.title}`} onClick={() => close(session.id)}><Icon name="close" size={14} /></button>
       </div>)}
+      <button type="button" className="icon session-maximize" aria-label={maximized ? "Exit full window" : "Full window"} title={maximized ? "Exit full window (Esc)" : "Full window"} onClick={onToggleMaximize}><Icon name={maximized ? "minimize" : "maximize"} /></button>
     </div>
     {/* All sessions stay mounted so switching tabs keeps their streams. */}
     {sessions.map(session => <div key={session.id} hidden={session.id !== active} className="session-panel">

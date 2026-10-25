@@ -16,6 +16,8 @@ const paths: Record<string, string> = {
   power: "M12 3v8M6.3 7a8 8 0 1 0 11.4 0",
   repeat: "M4 9h13l-3-3M20 15H7l3 3",
   key: "M14 10a4 4 0 1 1-1.2 2.8L4 21H2v-3h2v-2h2l2.8-2.8A4 4 0 0 1 14 10zM16 8h.01",
+  maximize: "M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5",
+  minimize: "M9 4v5H4M15 4v5h5M9 20v-5H4M15 20v-5h5",
   link: "M10 14l4-4M8 12l-2 2a3 3 0 0 0 4 4l2-2M16 12l2-2a3 3 0 0 0-4-4l-2 2",
 };
 export type IconName = keyof typeof paths;

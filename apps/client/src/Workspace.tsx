@@ -66,6 +66,15 @@ export function Workspace({ native }: { native: boolean }) {
   const [power, setPower] = useState<{ id: string; status: "running" | "stopped" } | null>(null);
   const [mutationLocked, setMutationLocked] = useState(false);
   const [sessions, setSessions] = useState<Session[]>([]), [activeSession, setActiveSession] = useState<string | null>(null);
+  // Full-window terminal: hides navigation while the Sessions view is shown.
+  const [maximized, setMaximized] = useState(false);
+  const focusMode = maximized && view === "sessions" && sessions.length > 0;
+  useEffect(() => {
+    if (!focusMode) return;
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape" && event.shiftKey) setMaximized(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [focusMode]);
   // Ad-hoc connection target for the Sessions view (for example after a creation).
   const [adhoc, setAdhoc] = useState<{ target: ConsoleTarget | null; key: number }>({ target: null, key: 0 });
   const [runtime, setRuntime] = useState("");
@@ -217,7 +226,7 @@ export function Workspace({ native }: { native: boolean }) {
   };
   const [title, subtitle] = titles[view];
 
-  return <Shell nav={nav} server={server} title={title} subtitle={subtitle}
+  return <Shell nav={nav} server={server} title={title} subtitle={subtitle} focus={focusMode}
     back={view === "environment" ? () => setView("environments") : undefined}
     actions={view === "environments" ? <>{running}
       <button type="button" className="ghost" disabled={loading} onClick={() => void loadWorkspace()}><Icon name="refresh" />{loading ? "Refreshing…" : "Refresh"}</button>
@@ -270,11 +279,11 @@ export function Workspace({ native }: { native: boolean }) {
 
     {/* Kept mounted while hidden so live SSH sessions survive navigation. */}
     <div className="stack" hidden={view !== "sessions"}>
-      <Sessions sessions={sessions} active={activeSession} onSelect={setActiveSession} onClosed={closedSession} />
-      <Panel title={sessions.length ? "New connection" : "Connect to a guest"}>
+      <Sessions sessions={sessions} active={activeSession} onSelect={setActiveSession} onClosed={closedSession} maximized={focusMode} onToggleMaximize={() => setMaximized(value => !value)} />
+      {!focusMode && <Panel title={sessions.length ? "New connection" : "Connect to a guest"}>
         <Console key={`adhoc.${adhoc.key}`} native={native} target={adhoc.target} onSession={addSession} onOpenKeychain={() => setView("keychain")} />
         <p className="hint">Tip: open a machine and use its Console tab to connect with its known address.</p>
-      </Panel>
+      </Panel>}
     </div>
 
     {view === "activity" && <Panel title="All operations"><OperationTimeline key={`timeline.all.${revision}`} connectionId={connection.connectionId} environments={environments ?? []} includeCreations endpoint={connection.endpoint} disabled={busy || loading} onSshTarget={selectSshTarget} /></Panel>}
@@ -312,8 +321,8 @@ export function Workspace({ native }: { native: boolean }) {
   </Shell>;
 }
 
-function Shell({ nav, server, title, subtitle, back, actions, narrow = false, children }: { nav: ReactNode; server?: ReactNode; title: string; subtitle: string; back?: () => void; actions?: ReactNode; narrow?: boolean; children: ReactNode }) {
-  return <div className={nav ? "app" : "app no-nav"}>
+function Shell({ nav, server, title, subtitle, back, actions, narrow = false, focus = false, children }: { nav: ReactNode; server?: ReactNode; title: string; subtitle: string; back?: () => void; actions?: ReactNode; narrow?: boolean; focus?: boolean; children: ReactNode }) {
+  return <div className={`${nav ? "app" : "app no-nav"}${focus ? " focus-mode" : ""}`}>
     {nav && <aside className="sidebar" aria-label="Main navigation">
       <div className="brand"><BrandMark />VMAnyware</div>
       <nav>{nav}</nav>
