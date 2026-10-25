@@ -367,7 +367,6 @@ button + label { margin-top: 14px; }
 
 /* ---------- width: fluid lists and details, readable forms ---------- */
 .content { max-width: none; padding-inline: clamp(16px, 2.5vw, 40px); }
-.content.narrow { max-width: 1120px; }
 .list-head, .list-row { grid-template-columns: minmax(0, 3fr) minmax(6rem, 1fr) minmax(0, 1.5fr) minmax(8rem, 1fr) 24px; }
 
 /* Folding the YAML open must not stretch the power panel beside it. */
@@ -383,3 +382,9 @@ button + label { margin-top: 14px; }
   @keyframes sheet { from { transform: translateY(40px); opacity: .6; } }
 }
 @media (min-width: 821px) { .topbar { padding-inline: clamp(16px, 2.5vw, 40px); } }
+
+/* Full-width pages: give wide forms more columns instead of stretched fields. */
+@media (min-width: 1400px) {
+  .form-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .form-grid .span-2 { grid-column: span 3; }
+}

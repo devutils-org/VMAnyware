@@ -214,8 +214,7 @@ export function Workspace({ native }: { native: boolean }) {
   };
   const [title, subtitle] = titles[view];
 
-  // Lists and details use the full width; forms stay at a readable width.
-  return <Shell nav={nav} server={server} title={title} subtitle={subtitle} narrow={view === "create" || view === "settings" || view === "activity"}
+  return <Shell nav={nav} server={server} title={title} subtitle={subtitle}
     back={view === "environment" ? () => setView("environments") : undefined}
     actions={view === "environments" ? <>{running}
       <button type="button" className="ghost" disabled={loading} onClick={() => void loadWorkspace()}><Icon name="refresh" />{loading ? "Refreshing…" : "Refresh"}</button>
