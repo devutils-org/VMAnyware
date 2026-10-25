@@ -238,9 +238,11 @@ terminal, host key SHA256:znzU88toL9iQJWQLMGiBCUrB9a8sp/wRAUfFI+ZNOlY verified
 via qm guest exec, home directory empty (fresh disk). Console pre-fill from
 lastGuest on 9002 confirmed by user (address pre-filled, ADR 0096 proven).
 
-Next: REVOKE temporary
-Sys.Audit (/) and Datastore.Allocate (local-lvm) grants (user + control-plane
-token) and set VMANYWARE_DELETIONS_ENABLED back if desired. Then remaining
+Temporary Sys.Audit (/) and
+Datastore.Allocate (local-lvm) grants revoked for user + control-plane token
+(token table on local-lvm: Datastore.AllocateSpace, Datastore.Audit only).
+VMANYWARE_DELETIONS_ENABLED is still true on VM 110 (deletion now fails its
+preflight without those grants). Next: remaining
 MVP: mobile (Android APK runtime, iOS), platform secret stores, creation on
 the reviewed-operation module, release hardening (rotate exposed tokens).
 
