@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { CheckSummary, useOperationPolling } from "./actionFlow";
+import { CheckSummary, useOperationPolling, useAutoRun } from "./actionFlow";
 
 type Action = "start" | "shutdown";
 type Target = { id: string; definitionName: string; providerReference: { scopeId: string; node: string; vmid: number } };
@@ -19,7 +19,7 @@ export function RemoteLifecycle({ connectionId, environment, action, disabled, o
   useEffect(() => { onLock(busy || review !== null || submitted); }, [busy, review, submitted, onLock]);
   useEffect(() => () => { generation.current++; onLock(false); }, [connectionId, onLock]);
   // Opening the action is the request to review it; the review is read-only.
-  useEffect(() => { void prepare(); }, []);
+  useAutoRun(true, () => void prepare(), []);
   const verb = action === "start" ? "Start" : "Gracefully shut down";
   const eligible = !!review && review.preflight.executionEnabled && (action === "start" ? review.preflight.startPreconditions : review.preflight.shutdownPreconditions) === "passed" && review.preflight.checks.length === 5 && review.preflight.checks.every(check => labels[check.code] && check.status === "passed") && new Set(review.preflight.checks.map(check => check.code)).size === 5;
   const terminal = operation && (["succeeded", "failed"].includes(operation.status) || (operation.status === "interrupted" && !operation.providerTaskKnown));
@@ -84,8 +84,10 @@ export function RemoteLifecycle({ connectionId, environment, action, disabled, o
     {review && <>
       <p>Observed power: <strong>{review.preflight.observation.status}</strong> · QMP: {review.preflight.observation.qmpStatus ?? "unknown"}. This observation may become stale.</p>
       <CheckSummary checks={review.preflight.checks} labels={labels} />
-      {!eligible && <p role="alert">Lifecycle prerequisites or server capability do not permit this action.</p>}
-      {!submitted && <div className="actions-row"><button type="button" className="primary" disabled={disabled || busy || !eligible} onClick={submit}>{action === "start" ? "Start" : "Shut down"} VM {review.target.vmid}</button><button type="button" disabled={disabled || busy} onClick={clear}>Cancel</button></div>}
+      {!eligible && (review.preflight.observation.status === (action === "start" ? "running" : "stopped")
+        ? <p className="notice">VM {review.target.vmid} is already {action === "start" ? "running" : "stopped"}. Nothing to do.</p>
+        : <p role="alert">Lifecycle prerequisites or server capability do not permit this action.</p>)}
+      {!submitted && <div className="actions-row">{eligible && <button type="button" className="primary" disabled={disabled || busy} onClick={submit}>{action === "start" ? "Start" : "Shut down"} VM {review.target.vmid}</button>}<button type="button" disabled={disabled || busy} onClick={clear}>{eligible ? "Cancel" : "Close"}</button></div>}
       <p className="hint">Request key <code>{requestKey}</code></p>
     </>}
     {submitted && !operation && <><p role="status">No verified lifecycle operation ID received. Retain this request key and retry only the same confirmed action.</p><button type="button" disabled={disabled || busy} onClick={submit}>Retry same lifecycle request</button></>}

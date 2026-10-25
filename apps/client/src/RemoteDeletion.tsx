@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { CheckSummary, useOperationPolling } from "./actionFlow";
+import { CheckSummary, useOperationPolling, useAutoRun } from "./actionFlow";
 
 type Target = { id: string; definitionName: string; providerReference: { scopeId: string; node: string; vmid: number } };
 type Effects = { version: number; removeVmConfiguration: boolean; removeSnapshotMetadata: boolean; removeVmPermissions: boolean; removeVmFirewall: boolean; cleanupIpam: boolean; cleanupRecordedFleecingImages: boolean; purgeJobs: boolean; destroyUnreferencedDisks: boolean; retainDefinitionAndHistory: boolean };
@@ -18,7 +18,7 @@ export function RemoteDeletion({ connectionId, environment, disabled, onLock, on
   useEffect(() => { onLock(busy || review !== null || submitted); }, [busy, review, submitted, onLock]);
   useEffect(() => () => { generation.current++; onLock(false); }, [connectionId, onLock]);
   // Opening the action is the request to review it; the review is read-only.
-  useEffect(() => { void prepare(); }, []);
+  useAutoRun(true, () => void prepare(), []);
   const eligible = review?.executionEnabled && review.deletionPreconditions === "passed" && review.destructive && review.definitionRetained && !review.purge && !review.destroyUnreferencedDisks && fixedEffects(review.effects) && !review.haManaged && review.replicationJobs.length === 0 && review.observation.node === review.node && review.observation.vmid === review.vmid && review.observation.status === "stopped" && (review.observation.qmpStatus === null || review.observation.qmpStatus === "stopped") && review.checks.length === 16 && new Set(review.checks.map(check => check.code)).size === 16 && review.checks.every(check => labels[check.code] && check.status === "passed") && review.volumes.every(volume => volume.ownerVerified && ["delete_owned_volume", "fleecing_cleanup"].includes(volume.effect));
   const terminal = operation && ["succeeded", "failed", "interrupted"].includes(operation.status);
   const report = (failure: unknown) => typeof failure === "string" ? failure : "Cannot complete the deletion request. Retain its request key.";

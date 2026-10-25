@@ -1,6 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { CheckSummary, useOperationPolling } from "./actionFlow";
+import { CheckSummary, useOperationPolling, useAutoRun } from "./actionFlow";
 
 type Target = { id: string; definitionName: string; providerReference: { scopeId: string; node: string; vmid: number } };
 type CheckStatus = "passed" | "failed" | "unknown";
@@ -20,7 +20,7 @@ export function RemoteSnapshotRestore({ connectionId, environment, snapshotName,
   useEffect(() => { onLock(busy || review !== null || submitted); }, [busy, review, submitted, onLock]);
   useEffect(() => () => { generation.current++; onLock(false); }, [connectionId, onLock]);
   // Opening the action is the request to review it; the review is read-only.
-  useEffect(() => { void prepare(); }, []);
+  useAutoRun(true, () => void prepare(), []);
   const eligible = review?.executionEnabled && review.restorePreconditions === "passed" && review.checks.length === 13 && review.destructive && !review.startsVm && !!review.snapshotConfigHash && /^[0-9a-f]{64}$/.test(review.snapshotConfigHash) && review.selectedSnapshot?.name === snapshotName && review.selectedSnapshot?.includesRam === false && review.selectedSnapshot?.providerState === null && stopped(review.observation, review.node, review.vmid) && review.checks.every(check => labels[check.code] && check.status === "passed") && new Set(review.checks.map(check => check.code)).size === 13;
   const locked = disabled || busy || review !== null || submitted;
   const terminal = operation && ["succeeded", "failed", "interrupted"].includes(operation.status);

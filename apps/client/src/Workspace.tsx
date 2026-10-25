@@ -65,6 +65,7 @@ export function Workspace({ native }: { native: boolean }) {
   const [drawer, setDrawer] = useState<Drawer | null>(null), [drawerHidden, setDrawerHidden] = useState(false);
   // Bumped when an action settles so visible reads (power, snapshots) run again.
   const [revision, setRevision] = useState(0);
+  const [power, setPower] = useState<{ id: string; status: "running" | "stopped" } | null>(null);
   const [mutationLocked, setMutationLocked] = useState(false);
   const [sshTarget, setSshTarget] = useState<SshTarget | null>(null);
   const [runtime, setRuntime] = useState("");
@@ -215,11 +216,12 @@ export function Workspace({ native }: { native: boolean }) {
     {view === "environment" && (selected ? <div className="detail">
       <div className="detail-header">
         <span className={`chip ${selected.status}`}>{selected.status === "registered" ? "Registered" : "Deleted"}</span>
+        {selected.status === "registered" && <span className={`chip power ${power?.id === selected.id ? power.status : "unknown"}`}>{power?.id === selected.id ? power.status : "power unknown"}</span>}
         <dl className="facts"><div><dt>VMID</dt><dd>{selected.providerReference.vmid}</dd></div><div><dt>Node</dt><dd>{selected.providerReference.node}</dd></div><div><dt>Instance</dt><dd className="mono">{selected.id.slice(0, 12)}</dd></div></dl>
         <div className="toolbar">
           {selected.status === "registered" ? <>
-            <button type="button" disabled={blocked} onClick={() => openDrawer({ kind: "lifecycle", environment: selected, action: "start" })}><Icon name="play" />Start</button>
-            <button type="button" disabled={blocked} onClick={() => openDrawer({ kind: "lifecycle", environment: selected, action: "shutdown" })}><Icon name="power" />Shut down</button>
+            <button type="button" disabled={blocked || (power?.id === selected.id && power.status === "running")} title={power?.id === selected.id && power.status === "running" ? "Already running" : undefined} onClick={() => openDrawer({ kind: "lifecycle", environment: selected, action: "start" })}><Icon name="play" />Start</button>
+            <button type="button" disabled={blocked || (power?.id === selected.id && power.status === "stopped")} title={power?.id === selected.id && power.status === "stopped" ? "Already stopped" : undefined} onClick={() => openDrawer({ kind: "lifecycle", environment: selected, action: "shutdown" })}><Icon name="power" />Shut down</button>
             <button type="button" disabled={blocked} onClick={() => openDrawer({ kind: "snapshot", environment: selected })}><Icon name="camera" />Snapshot</button>
             <button type="button" disabled={blocked} onClick={() => sshForInstance(selected)}><Icon name="terminal" />Connect</button>
             <button type="button" className="danger" disabled={blocked} onClick={() => openDrawer({ kind: "deletion", environment: selected })}><Icon name="trash" />Delete</button>
@@ -231,8 +233,9 @@ export function Workspace({ native }: { native: boolean }) {
           <button key={value} type="button" role="tab" aria-selected={tab === value} onClick={() => setTab(value)}>{value[0].toUpperCase() + value.slice(1)}</button>)}
       </div>
       <div className="tab-panel" role="tabpanel">
-        {tab === "overview" && <div className="grid-2">
-          {selected.status === "registered" && <Panel title="Power"><RemoteInstanceStatus key={`power.${selected.id}.${revision}`} connectionId={connection.connectionId} environment={selected} disabled={busy || loading} invalidated={mutationLocked} autoRead /></Panel>}
+        {/* Kept mounted so the header power state stays current on other tabs. */}
+        {<div className="grid-2" hidden={tab !== "overview"}>
+          {selected.status === "registered" && <Panel title="Power"><RemoteInstanceStatus key={`power.${selected.id}.${revision}`} connectionId={connection.connectionId} environment={selected} disabled={busy || loading} invalidated={mutationLocked} autoRead onObserved={status => setPower(status ? { id: selected.id, status } : null)} /></Panel>}
           <Panel title="Definition"><RemoteInstanceDetail key={`detail.${selected.id}.${selected.status}`} connectionId={connection.connectionId} environment={selected} disabled={busy || loading} autoRead /></Panel>
         </div>}
         {tab === "snapshots" && selected.status === "registered" && <Panel title="Snapshots" action={<button type="button" disabled={blocked} onClick={() => openDrawer({ kind: "snapshot", environment: selected })}><Icon name="camera" />New snapshot</button>}>

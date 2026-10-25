@@ -316,3 +316,25 @@ button.danger.solid:hover:not(:disabled) { background: #ffa6b0; border-color: #f
 .dot.busy { background: var(--purple); animation: pulse 1.2s ease-in-out infinite; }
 @keyframes pulse { 50% { opacity: .35; } }
 @media (max-width: 820px) { .running-pill { font-size: 0; gap: 0; width: 32px; padding: 0; } }
+
+/* ---------- spacing between controls and content ---------- */
+:is(input, textarea, select, details, ul, ol, p, dl, pre, .checks, .consent, .notice) + :is(button, .actions-row, .connection-fields) { margin-top: 14px; }
+form > button, section > button { margin-top: 14px; }
+section > button + button, form > button + button { margin-left: 8px; }
+button + :is(p, ul, details, dl, .result, .notice) { margin-top: 12px; }
+.panel-body li > strong + button { margin-left: 12px; }
+.remote-snapshots ul { margin-top: 14px; }
+.remote-snapshots li { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; column-gap: 16px; padding: 12px 0; }
+.remote-snapshots li > strong { font-family: var(--mono); font-size: 13px; overflow-wrap: anywhere; }
+.remote-snapshots li > button { margin: 0; }
+.remote-snapshots li > p { grid-column: 1 / -1; margin: 4px 0 0; font-size: 12px; }
+
+/* ---------- power state ---------- */
+.chip.power.running { color: var(--ok); border-color: #7ef0b440; background: #7ef0b40c; }
+.chip.power.stopped { color: var(--purple); border-color: #b7a0ff40; background: #b7a0ff0c; }
+.chip.power.unknown { color: var(--muted); border-color: var(--line-strong); background: transparent; }
+.chip.power.unknown::before { background: transparent; border: 1px solid currentColor; }
+.power-reading { display: flex; align-items: center; gap: 12px; margin: 0 0 4px; color: var(--muted); font: 12px var(--mono); }
+.power-value { font: 600 22px/1.2 var(--sans); letter-spacing: -.02em; text-transform: capitalize; }
+.power-value.running { color: var(--ok); }
+.power-value.stopped { color: var(--purple); }

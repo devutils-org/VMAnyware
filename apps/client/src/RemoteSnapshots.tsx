@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from "react";
 import { RemoteRestoreRecovery } from "./RemoteRestoreRecovery";
 import { RemoteSnapshotRecovery } from "./RemoteSnapshotRecovery";
 import { invoke } from "@tauri-apps/api/core";
+import { useAutoRun } from "./actionFlow";
 
 type Target = { id: string; definitionName: string; providerReference: { scopeId: string; node: string; vmid: number } };
 type Snapshot = { name: string; description: string; createdAt: number | null; includesRam: boolean | null; parent: string | null; providerState: string | null };
@@ -11,7 +12,7 @@ export function RemoteSnapshots({ connectionId, environment, disabled, restoreDi
   const generation = useRef(0);
   useEffect(() => () => { generation.current++; }, [connectionId, environment.id]);
   // Opening the snapshot view is the explicit read request.
-  useEffect(() => { if (autoLoad) void load(); }, [autoLoad, connectionId, environment.id]);
+  useAutoRun(autoLoad, () => void load(), [connectionId, environment.id]);
   async function load() {
     const current = ++generation.current;
     setListing(null); setError(""); setBusy(true);

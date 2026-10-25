@@ -21,3 +21,15 @@ export function CheckSummary({ checks, labels }: { checks: { code: string; statu
     <ul>{checks.map(check => <li key={check.code} className={check.status}>{labels[check.code] || "Unrecognized prerequisite"}: {check.status}</li>)}</ul>
   </details>;
 }
+
+/** Runs a read once per dependency change, after mount settles. Deferring past the
+ *  development double-mount avoids a second concurrent native request ("busy"). */
+export function useAutoRun(enabled: boolean, run: () => void, deps: unknown[]) {
+  const latest = useRef(run);
+  latest.current = run;
+  useEffect(() => {
+    if (!enabled) return;
+    const timer = window.setTimeout(() => latest.current(), 0);
+    return () => window.clearTimeout(timer);
+  }, [enabled, ...deps]);
+}

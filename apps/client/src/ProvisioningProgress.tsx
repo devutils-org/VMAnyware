@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { useAutoRun } from "./actionFlow";
 
 const labels = {
   full_clone: "Clone template", configure_resources: "Configure CPU and memory",
@@ -19,7 +20,7 @@ export function ProvisioningProgress({ connectionId, operationId, disabled, inst
     return () => { generation.current++; };
   }, [connectionId, operationId, instanceId, planHash, definitionHash, sourceInstanceId, node, vmid]);
   // Shown with a submitted operation; each status change remounts and re-reads the steps.
-  useEffect(() => { void read(); }, [connectionId, operationId]);
+  useAutoRun(true, () => void read(), [connectionId, operationId]);
   async function read() {
     if (disabled || busy) return;
     const current = ++generation.current; setBusy(true); setProgress(null); setError("");
