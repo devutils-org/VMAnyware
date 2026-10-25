@@ -95,6 +95,12 @@ See the [platform matrix](docs/platforms.md) for tested targets.
 
 ## Use
 
+For terminal access, run `make tui`, or point the standalone client at your
+server with `cargo run --locked -p vmanyware-tui -- tui --endpoint https://control-plane.example`.
+It provides machines, saved YAML, power observations and operation/provisioning
+monitoring with keyboard navigation. Enter the access token in its hidden
+connection field. See [terminal client usage and checks](docs/tui.md).
+
 Run in separate terminals from the repository root:
 
 ```sh

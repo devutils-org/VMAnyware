@@ -1,0 +1,42 @@
+name: Terminal client
+
+'on':
+  push:
+    paths:
+      - 'apps/tui/**'
+      - 'scripts/check-tui.py'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - 'Makefile'
+      - '.github/workflows/tui.yml'
+  pull_request:
+    paths:
+      - 'apps/tui/**'
+      - 'scripts/check-tui.py'
+      - 'Cargo.toml'
+      - 'Cargo.lock'
+      - 'rust-toolchain.toml'
+      - 'Makefile'
+      - '.github/workflows/tui.yml'
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: tui-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  tui:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@d23441a48e516b6c34aea4fa41551a30e30af803 # v6
+        with:
+          persist-credentials: false
+      - name: Install repository-pinned Rust toolchain
+        run: rustup show active-toolchain
+      - name: Check terminal client and real PTY journey with localhost HTTPS
+        run: make check-tui

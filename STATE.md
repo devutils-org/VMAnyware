@@ -6,6 +6,72 @@ Naming note: historical lab resource identifiers below are normalized to the
 current VMAnyware name. External resources were not renamed; use VMIDs and
 ignored local lab records to verify actual identifiers before operations.
 
+## Latest resume point — 2026-10-25 clickable terminal client
+
+User requested mouse interaction for the TUI. Scope/acceptance: clickable
+connection fields/Connect, machine and operation rows, view/detail tabs,
+footer commands and modal Close; wheel navigation/scroll; correct hits after
+list scrolling, filtering and resize; release mouse capture on exit. Added
+render-derived hit rectangles and Crossterm mouse dispatch. Narrow layouts
+wrap footer commands so Quit remains visible at 40 columns. Keyboard commands
+and their existing network/action guards are reused. No additional dependency
+or server/API behavior beyond the initial terminal slice. User requested
+committing and pushing both slices together; real infrastructure testing is
+deferred until their Proxmox server is running again.
+
+Verification: five focused UI/mouse tests and five affected app-state tests
+pass. Strict TUI all-target Clippy, scoped formatting and binary build pass.
+The real Linux PTY/HTTPS fixture now drives SGR mouse clicks for connection,
+definition/activity navigation, operation selection, refresh, search, help
+and quit; it also verifies resize, responsive quit and terminal/mouse-capture
+restoration. Prior API/TLS tests were not repeated for this input/render diff.
+No real control-plane/Proxmox, native GUI or credential operation occurred.
+
+Limitations: terminal must forward mouse events; native macOS/Windows TUI
+runtime remains unverified. Next: reviewed system-SSH handoff from a saved
+guest hint, preserving host verification and restoring the TUI afterward.
+
+## Earlier checkpoint — 2026-10-25 terminal client
+
+User requested the proposed standalone TUI. Scope/acceptance: verified HTTPS
+connection with hidden token entry and optional public CA, keyboard navigation
+through machines, saved definitions, live power, recent operations and recorded
+provisioning steps; responsive input/quit during network reads; no Tauri or
+server/provider mutations. Implemented in `apps/tui` as `vmanyware tui` with
+`make tui` and targeted `make check-tui`. See `docs/tui.md` and ADR 0099.
+
+Machines and Activity support search, pane focus, scrolling, help and narrow
+terminals. Refresh preserves selection by ID, rejects late selected-object
+replies, marks cached lists STALE on failure and keeps unknown power distinct
+from saved associations/guest hints. Only fixed authenticated GETs are exposed;
+definitions are hash-checked and power/progress are target-checked. Closing the
+TUI leaves server work alone. No configuration or tokens are persisted.
+
+Verification: 15 Rust tests pass, including generated localhost HTTPS trust,
+authentication, redirect refusal, bounded/malformed responses, cross-target
+replies, definition tampering, uncertainty/order checks, late replies, keyboard
+navigation and narrow rendering. Strict all-target TUI Clippy, scoped fmt and
+binary compilation pass. The real binary's Linux PTY/HTTPS journey passes
+machines/live power, YAML, activity/stages, refresh, search/help, resize,
+responsive quit during an in-flight read and terminal-mode restoration; the
+fixture token is never displayed. Socket tests required sandbox escalation
+for ephemeral localhost servers, not real infrastructure access.
+
+The new crate adds the Ratatui/Crossterm stack to the workspace lock without
+changing existing package versions (some existing lock dependency lists grow
+for additional features). A locked server compilation passes to cover workspace
+integration; no unrelated native/frontend/server suites were repeated. Seven
+CI-selector scenarios pass; a separate path-filtered Linux TUI workflow is
+prepared, not observed in hosted CI. Existing native/server implementations,
+Proxmox, deployed services and credentials are unchanged.
+
+Limitations: this slice is read-only; recent lists are bounded to 100 records
+each. Real deployed-control-plane and macOS/Windows TUI runtime are unverified.
+It does not close mobile or release roadmap gates. Next bounded TUI task:
+reviewed system-SSH handoff from the saved guest hint, restoring the terminal
+and preserving system host-key verification. Remaining MVP tasks below remain
+separate from this completed terminal monitoring slice.
+
 ## Latest resume point — 2026-10-25 home Proxmox acceptance
 
 Goal: user authorizes all necessary project work, follow the full roadmap and

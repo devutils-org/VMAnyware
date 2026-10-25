@@ -17,6 +17,17 @@ web:
 server:
 	cargo run -p vmanyware-server
 
+.PHONY: tui check-tui
+tui:
+	cargo run --locked -p vmanyware-tui -- tui
+
+check-tui:
+	cargo fmt -p vmanyware-tui -- --check
+	cargo clippy --locked -p vmanyware-tui --all-targets -- -D warnings
+	cargo test --locked -p vmanyware-tui
+	cargo build --locked -p vmanyware-tui
+	python3 scripts/check-tui.py
+
 check: check-client check-rust
 
 check-client:

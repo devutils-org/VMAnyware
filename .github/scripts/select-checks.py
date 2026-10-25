@@ -17,6 +17,9 @@ def select(paths):
             continue
         elif path.startswith('apps/client/'):
             frontend = True
+        elif path.startswith('apps/tui/') or path in ('scripts/check-tui.py', '.github/workflows/tui.yml'):
+            # Standalone TUI checks have their own path-filtered workflow.
+            continue
         else:
             # Shared locks, toolchains, Makefile, CI and unknown inputs.
             server = frontend = True
