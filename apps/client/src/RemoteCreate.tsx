@@ -6,7 +6,7 @@ import { AppIdentity } from "./AppIdentity";
 
 type Plan = { definitionName: string; definitionHash: string; planHash: string; creationEnabled: boolean; sshKeyCount: number; packages: string[]; snapshotAfterProvisioning: boolean; source: { templateVmid: number; templateVersion: string }; target: { node: string; vmid: number; storage: string; bridge: string; guestUser: string; resources: { cpu: number; memoryMiB: number; diskGiB: number } } };
 type Operation = { id: string; status: "queued" | "running" | "uncertain" | "interrupted" | "succeeded" | "failed"; failure?: string | null; result: null | { guestReady: boolean; guest: { ipv4: string } } };
-export function RemoteCreate({ connectionId, endpoint, disabled, onSshTarget }: { connectionId: number; endpoint: string; disabled: boolean; onSshTarget: (host: string, username: string) => void }) {
+export function RemoteCreate({ connectionId, endpoint, disabled, onSshTarget, onEnvironmentsChanged }: { connectionId: number; endpoint: string; disabled: boolean; onSshTarget: (host: string, username: string) => void; onEnvironmentsChanged?: () => void }) {
   const [name, setName] = useState("mobile-lab"), [image, setImage] = useState("debian-13"), [vmid, setVmid] = useState("202");
   const [cpu, setCpu] = useState("2"), [memory, setMemory] = useState("2048"), [disk, setDisk] = useState("8"), [key, setKey] = useState("");
   const [packages, setPackages] = useState(""), [snapshot, setSnapshot] = useState(false);
@@ -15,6 +15,8 @@ export function RemoteCreate({ connectionId, endpoint, disabled, onSshTarget }: 
   const [operation, setOperation] = useState<Operation | null>(null), [error, setError] = useState("");
   const generation = useRef(0);
   useEffect(() => () => { generation.current++; }, [connectionId]);
+  // Registration happens on submission; reload the environment list when the status changes.
+  useEffect(() => { if (operation?.status) onEnvironmentsChanged?.(); }, [operation?.status, onEnvironmentsChanged]);
   const locked = disabled || busy || plan !== null || submitted;
   const report = (failure: unknown) => typeof failure === "string" ? failure : "Creation request unavailable. Retain its request key.";
   async function prepare(event: FormEvent) {

@@ -10,13 +10,15 @@ type Operation = { id: string; kind: string; instanceId: string; status: "queued
 const labels: Record<string, string> = { template: "Source is a template", source_disk: "Template disk matches catalog", cloud_init_drive: "Cloud-Init drive exists", storage: "Storage supports VM images", storage_capacity: "Reported storage capacity", bridge: "Network bridge is active", target_vmid: "Target VMID was observed free", template_revision: "Template image identity", execution_permissions: "Provider write permissions", guest_readiness: "Actual guest readiness" };
 const required = Object.keys(labels).slice(0, 7);
 function usableIpv4(value: string) { const parts = value.split("."); return parts.length === 4 && parts.every(part => /^(0|[1-9][0-9]{0,2})$/.test(part) && Number(part) <= 255) && Number(parts[0]) > 0 && Number(parts[0]) < 224 && parts[0] !== "127" && !(parts[0] === "169" && parts[1] === "254"); }
-export function RemoteRecreation({ connectionId, source, disabled, onLock, onSshTarget }: { connectionId: number; source: Source; disabled: boolean; onLock: (locked: boolean) => void; onSshTarget: (host: string, username: string) => void }) {
+export function RemoteRecreation({ connectionId, source, disabled, onLock, onSshTarget, onEnvironmentsChanged }: { connectionId: number; source: Source; disabled: boolean; onLock: (locked: boolean) => void; onSshTarget: (host: string, username: string) => void; onEnvironmentsChanged?: () => void }) {
   const [vmid, setVmid] = useState(""), [review, setReview] = useState<Review | null>(null), [key, setKey] = useState("");
   const [confirmed, setConfirmed] = useState(false), [submitted, setSubmitted] = useState(false), [busy, setBusy] = useState(false);
   const [operation, setOperation] = useState<Operation | null>(null), [error, setError] = useState("");
   const generation = useRef(0);
   useEffect(() => { onLock(busy || review !== null || submitted); }, [busy, review, submitted, onLock]);
   useEffect(() => () => { generation.current++; onLock(false); }, [connectionId, source.id, onLock]);
+  // Registration happens on submission; reload the environment list when the status changes.
+  useEffect(() => { if (operation?.status) onEnvironmentsChanged?.(); }, [operation?.status, onEnvironmentsChanged]);
   const eligible = review?.recreationEnabled && review.plan.creationEnabled && review.preflight.creationEnabled && !review.preflight.vmidReserved && review.preflight.checks.length === 10 && new Set(review.preflight.checks.map(check => check.code)).size === 10 && review.preflight.checks.every(check => labels[check.code] && ["passed", "unknown"].includes(check.status)) && required.every(code => review.preflight.checks.some(check => check.code === code && check.status === "passed"));
   const terminal = operation && ["succeeded", "failed", "interrupted"].includes(operation.status);
   const report = (failure: unknown) => typeof failure === "string" ? failure : "Cannot complete this recreation request. Retain its request key if submitted.";
