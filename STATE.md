@@ -6,6 +6,53 @@ Naming note: historical lab resource identifiers below are normalized to the
 current VMAnyware name. External resources were not renamed; use VMIDs and
 ignored local lab records to verify actual identifiers before operations.
 
+## 2026-10-25 — User-requested session pause
+
+User explicitly requested stopping the session and resuming later. Preserve the
+full goal: finish Proxmox, then complete the roadmap. Current work branch is
+codex/home-proxmox-ios; published implementation/evidence through 495a1f7.
+
+New user-run home-host observations supersede the missing-network-input portion
+of the older blocker: no UDP port-67 listener; dnsmasq, kea-dhcp4-server and
+isc-dhcp-server inactive; net.ipv4.ip_forward=1. This does not prove working NAT,
+DNS or guest reachability. qm guest cmd 100 network-get-interfaces reports the
+QEMU guest agent is not running. Subsequent ip/address/route output was still
+from the Proxmox host (wlo1=192.168.1.36, vmbr0=10.10.10.1), not the guest.
+The VM 100 address remains unknown. Do not install an agent or change VM 100.
+
+Next resume: ask the user to open VM 100's Console in Proxmox and report
+ip -brief -4 address / ip route from inside Debian, and confirm preservation of
+100 plus reservation of VMIDs 9000–9010. Reservation is still unconfirmed and
+no home-server VM/network/storage/credential mutations are approved. Then prepare
+an exact DHCP/template/network/ACL proposal for approval before executing.
+Do not re-request already supplied host DHCP/forwarding observations.
+
+Completed earlier: verified home read-only Rust API probe; scoped privilege probe
+with passing local/hosted checks; actual unsigned iOS simulator application build
+and downloaded/hash-verified artifact (run 40144618222). iOS runtime, real home
+provisioning/SSH/snapshot/restore/delete/recreate, remaining platform/deployment
+and release acceptance stay open. No tests or infrastructure operations run in
+this documentation-only pause checkpoint; diff review is the check.
+
+## 2026-10-25 — Proxmox acceptance blocked awaiting target inputs
+
+The same home-server prerequisite/approval blocker has persisted across more than
+three consecutive goal turns without a user response. Revalidation: workspace is
+clean before this checkpoint; all known CI runs are terminal, including successful
+40145053948 and later docs-only 40145312892. No live operation remains to observe.
+The previous goal turn produced no source/runtime progress. Do not rerun unchanged
+checks or create more preparation variants to simulate progress.
+
+To resume the requested Proxmox-first sequence, obtain (1) confirmation that VM 100
+is preserved and disposable VMIDs 9000–9010 may be reserved, and (2) user-run
+read-only results for DHCP listeners/services and net.ipv4.ip_forward. No agent
+has a configured approved authenticated execution channel to inspect those host
+settings. The token supplied by the user is not available in the agent environment;
+do not inspect local credential files or assume user-shell exports are inherited.
+Then prepare exact template/network/ACL operations and obtain explicit approval
+under AGENTS.md before any host/VM/credential mutation. Broad roadmap goal text is
+not concrete target/operation approval. Full roadmap remains incomplete.
+
 ## 2026-10-25 — Scoped privilege probe CI verified
 
 Exact Local checks run 40145053948 completed/successful for b1d4ac7. Selector and
