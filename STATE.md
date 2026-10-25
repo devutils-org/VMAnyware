@@ -166,8 +166,16 @@ SHA256:FJtvpxgQ9pcynvVZv2bEw0/nNwfljVjMzlASBKaVCIU (no comment), not the app
 identity ...cZYPT... (app allows only one identity, so a different key was put
 in the definition; unconfirmed). Do not hand-edit the guest.
 
-Next: UI snapshot/restore on 9004 (marker via qm guest exec), then UI
-delete/recreate with the app key; then registered-VMID defect fix and template
+UI redesign (ADR 0094, user request): connect screen remembering public
+endpoint/CA only, app shell (sidebar / phone tab bar), environment list and
+detail tabs, mutation drawer, Terminal/Create kept mounted. No IPC/server
+change. tsc, vite build, 28 client tests pass; desktop 1440x900 and phone
+390x844 screenshots from the built bundle with a preview-only fake bridge (in
+scratchpad, not committed) show no horizontal overflow. Native GUI check by
+user pending.
+
+Next: user relaunches app and checks the new UI; then UI snapshot/restore on
+9004 (marker via qm guest exec), then UI delete/recreate with the app key; then registered-VMID defect fix and template
 r2 (empty machine-id). Deletion via app needs temporary grants again.
 Remaining MVP
 gaps per docs/roadmap-status.md: HTTPS remote-mode UI on real infra, mobile,

@@ -3,10 +3,12 @@ import { invoke } from "@tauri-apps/api/core";
 
 type Environment = { id: string; definitionName: string; status: "registered" | "deleted"; providerReference: { scopeId: string; node: string; vmid: number } };
 type Detail = { id: string; definitionName: string; definitionHash: string; definitionRevision: number; definitionYaml: string; status: "registered" | "deleted"; providerReference: { provider: string; scopeId: string; node: string; vmid: number } };
-export function RemoteInstanceDetail({ connectionId, environment, disabled }: { connectionId: number; environment: Environment; disabled: boolean }) {
+export function RemoteInstanceDetail({ connectionId, environment, disabled, autoRead = false }: { connectionId: number; environment: Environment; disabled: boolean; autoRead?: boolean }) {
   const [detail, setDetail] = useState<Detail | null>(null), [busy, setBusy] = useState(false), [error, setError] = useState("");
   const generation = useRef(0), { scopeId, node, vmid } = environment.providerReference;
   useEffect(() => { generation.current++; setDetail(null); setBusy(false); setError(""); return () => { generation.current++; }; }, [connectionId, environment.id, environment.definitionName, environment.status, scopeId, node, vmid]);
+  // Opening the overview is the explicit read request.
+  useEffect(() => { if (autoRead) void read(); }, [autoRead, connectionId, environment.id, environment.status]);
   async function read() {
     if (disabled || busy) return;
     const current = ++generation.current; setBusy(true); setError(""); setDetail(null);

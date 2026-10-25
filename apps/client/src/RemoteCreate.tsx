@@ -6,7 +6,7 @@ import { AppIdentity } from "./AppIdentity";
 
 type Plan = { definitionName: string; definitionHash: string; planHash: string; creationEnabled: boolean; sshKeyCount: number; packages: string[]; snapshotAfterProvisioning: boolean; source: { templateVmid: number; templateVersion: string }; target: { node: string; vmid: number; storage: string; bridge: string; guestUser: string; resources: { cpu: number; memoryMiB: number; diskGiB: number } } };
 type Operation = { id: string; status: "queued" | "running" | "uncertain" | "interrupted" | "succeeded" | "failed"; failure?: string | null; result: null | { guestReady: boolean; guest: { ipv4: string } } };
-export function RemoteCreate({ connectionId, endpoint, disabled, onSshTarget, onEnvironmentsChanged }: { connectionId: number; endpoint: string; disabled: boolean; onSshTarget: (host: string, username: string) => void; onEnvironmentsChanged?: () => void }) {
+export function RemoteCreate({ connectionId, endpoint, disabled, onSshTarget, onEnvironmentsChanged, images }: { connectionId: number; endpoint: string; disabled: boolean; onSshTarget: (host: string, username: string) => void; onEnvironmentsChanged?: () => void; images?: string[] }) {
   const [name, setName] = useState("mobile-lab"), [image, setImage] = useState("debian-13"), [vmid, setVmid] = useState("202");
   const [cpu, setCpu] = useState("2"), [memory, setMemory] = useState("2048"), [disk, setDisk] = useState("8"), [key, setKey] = useState("");
   const [packages, setPackages] = useState(""), [snapshot, setSnapshot] = useState(false);
@@ -49,19 +49,23 @@ export function RemoteCreate({ connectionId, endpoint, disabled, onSshTarget, on
     <AppIdentity disabled={locked} onUse={publicKey => setKey(current => [...new Set([...current.split("\n").map(value => value.trim()).filter(Boolean), publicKey])].join("\n"))} />
     <form className="create-definition" onSubmit={prepare}>
       <fieldset disabled={locked}>
-        <label htmlFor="create-name">Environment name</label><input id="create-name" value={name} onChange={event => setName(event.target.value)} pattern="[a-z0-9]+(-[a-z0-9]+)*" maxLength={63} required />
-        <label htmlFor="create-image">Configured image</label><input id="create-image" value={image} onChange={event => setImage(event.target.value)} required />
-        <label htmlFor="create-vmid">New VMID</label><input id="create-vmid" type="number" min={100} max={999999999} value={vmid} onChange={event => setVmid(event.target.value)} required />
-        <label htmlFor="create-cpu">CPUs</label><input id="create-cpu" type="number" min={1} max={64} value={cpu} onChange={event => setCpu(event.target.value)} required />
-        <label htmlFor="create-memory">Memory (MiB)</label><input id="create-memory" type="number" min={256} max={262144} value={memory} onChange={event => setMemory(event.target.value)} required />
-        <label htmlFor="create-disk">Disk (GiB)</label><input id="create-disk" type="number" min={4} max={4096} value={disk} onChange={event => setDisk(event.target.value)} required />
-        <label htmlFor="create-public-key">SSH public keys, one per line</label><textarea id="create-public-key" value={key} onChange={event => setKey(event.target.value)} required spellCheck={false} autoCapitalize="none" autoCorrect="off" />
-        <p>Use public keys only. Private keys and passphrases must never be included.</p>
-        <label htmlFor="create-packages">Debian packages, one per line (optional)</label>
-        <textarea id="create-packages" value={packages} onChange={event => setPackages(event.target.value)} maxLength={16512} spellCheck={false} autoCapitalize="none" autoCorrect="off" />
-        <p>Up to 128 unique declarations, with optional =version. Packages use the guest’s configured repositories; unpinned dependencies may change.</p>
-        <label><input id="create-final-snapshot" type="checkbox" checked={snapshot} onChange={event => setSnapshot(event.target.checked)} /> Create a disk-only snapshot after all provisioning steps succeed.</label>
-        <p>The final snapshot also requires server snapshot permission. It is not an independent backup or proof of application consistency.</p>
+        <div className="form-grid">
+          <div className="field span-2"><label htmlFor="create-name">Environment name</label><input id="create-name" value={name} onChange={event => setName(event.target.value)} pattern="[a-z0-9]+(-[a-z0-9]+)*" maxLength={63} required /></div>
+          <div className="field span-2"><label htmlFor="create-image">Configured image</label>{images && images.length > 0
+            ? <select id="create-image" value={image} onChange={event => setImage(event.target.value)} required>{!images.includes(image) && <option value={image}>{image}</option>}{images.map(value => <option key={value} value={value}>{value}</option>)}</select>
+            : <input id="create-image" value={image} onChange={event => setImage(event.target.value)} required />}</div>
+          <div className="field"><label htmlFor="create-vmid">New VMID</label><input id="create-vmid" type="number" min={100} max={999999999} value={vmid} onChange={event => setVmid(event.target.value)} required /></div>
+          <div className="field"><label htmlFor="create-cpu">CPUs</label><input id="create-cpu" type="number" min={1} max={64} value={cpu} onChange={event => setCpu(event.target.value)} required /></div>
+          <div className="field"><label htmlFor="create-memory">Memory (MiB)</label><input id="create-memory" type="number" min={256} max={262144} value={memory} onChange={event => setMemory(event.target.value)} required /></div>
+          <div className="field"><label htmlFor="create-disk">Disk (GiB)</label><input id="create-disk" type="number" min={4} max={4096} value={disk} onChange={event => setDisk(event.target.value)} required /></div>
+          <div className="field span-4"><label htmlFor="create-public-key">SSH public keys, one per line</label><textarea id="create-public-key" value={key} onChange={event => setKey(event.target.value)} required spellCheck={false} autoCapitalize="none" autoCorrect="off" />
+            <p className="hint">Public keys only. Private keys and passphrases must never be included.</p></div>
+          <div className="field span-4"><label htmlFor="create-packages">Debian packages, one per line (optional)</label>
+            <textarea id="create-packages" value={packages} onChange={event => setPackages(event.target.value)} maxLength={16512} spellCheck={false} autoCapitalize="none" autoCorrect="off" />
+            <p className="hint">Up to 128 unique declarations, with optional =version. Packages use the guest’s configured repositories; unpinned dependencies may change.</p></div>
+          <div className="field span-4"><label><input id="create-final-snapshot" type="checkbox" checked={snapshot} onChange={event => setSnapshot(event.target.checked)} /> Create a disk-only snapshot after all provisioning steps succeed.</label>
+            <p className="hint">Requires server snapshot permission. It is not an independent backup or proof of application consistency.</p></div>
+        </div>
         <button type="submit">Save definition and preview</button>
       </fieldset>
     </form>

@@ -4,7 +4,7 @@ import { invoke } from "@tauri-apps/api/core";
 type Environment = { id: string; definitionName: string; providerReference: { scopeId: string; node: string; vmid: number } };
 type Status = { instanceId: string; providerScopeId: string; observation: { node: string; vmid: number; status: "running" | "stopped"; qmpStatus: string | null } };
 const qmpStates = ["running", "stopped", "paused", "prelaunch", "shutdown", "suspended", "guest-panicked", "unknown"];
-export function RemoteInstanceStatus({ connectionId, environment, disabled, invalidated }: { connectionId: number; environment: Environment; disabled: boolean; invalidated: boolean }) {
+export function RemoteInstanceStatus({ connectionId, environment, disabled, invalidated, autoRead = false }: { connectionId: number; environment: Environment; disabled: boolean; invalidated: boolean; autoRead?: boolean }) {
   const [observed, setObserved] = useState<{ value: Status; readAt: string } | null>(null);
   const [busy, setBusy] = useState(false), [error, setError] = useState("");
   const generation = useRef(0);
@@ -13,6 +13,8 @@ export function RemoteInstanceStatus({ connectionId, environment, disabled, inva
     generation.current++; setObserved(null); setError(""); setBusy(false);
     return () => { generation.current++; };
   }, [connectionId, environment.id, scopeId, node, vmid, invalidated]);
+  // Opening the overview is the explicit read request; a failure stays unknown.
+  useEffect(() => { if (autoRead && !invalidated) void read(); }, [autoRead, connectionId, environment.id, invalidated]);
   async function read() {
     if (disabled || invalidated || busy) return;
     const current = ++generation.current; setBusy(true); setError(""); setObserved(null);
