@@ -190,9 +190,20 @@ of settled actions). Also found: deployed token lacked ACLs on 9005 → clone
 regression fails before/passes after; all server unit+integration tests,
 strict Clippy, fmt pass; package check script updated for schema 16/17.
 
-Agreed reset plan (user "ok go"): 1) VMID fix ✔ source; 2) template r2 with
-emptied /etc/machine-id; 3) user: qm destroy 9002 9004, back up + fresh DB on
-VM 110, redeploy package, token ACLs 9001–9010; 4) full journey via app.
+Reset done (user-run, approved "ok go"): qm destroy --purge 9002 and 9004
+(9003/9005 never existed in Proxmox); prepared-agent-r2.qcow2 = r1 copy with
+/etc/machine-id truncated (virt-customize printed machine-id-empty step, qemu-img
+check clean); template 9000 destroyed and recreated from r2 (template:1, scsi0
+8G, ide2 cloudinit, agent, vmbr0); catalogs now templateVersion ...-agent-r2.
+Token control-plane: VMAnywareSource on 9000, Create+Snapshot on 9001–9010
+(user too). VM 110: reset-and-redeploy.sh backed up state to
+/var/backups/vmanyware-state-20261025T134223Z.tar, removed DB, rebuilt package
+(schema 16, check-server-package passed), restarted active, environments [].
+Local Mac lab DB archived to .lab/home-proxmox/archive/ (local dev server no
+longer used). Logo/app icon now the devutils mark (99dc418).
+
+Next: full journey through the app on the deployed server (create 9001 with
+app key → SSH → snapshot → modify → restore → delete → recreate).
 
 Next: user relaunches and validates the streamlined actions; then UI delete/recreate with the app key; then registered-VMID defect fix and template
 r2 (empty machine-id). Deletion via app needs temporary grants again.
