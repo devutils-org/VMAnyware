@@ -10,12 +10,14 @@ const labels: Record<string, string> = { instance_marker: "Instance marker match
 const failures: Record<string, string> = { deletion_disabled: "Deletion is disabled on the server.", deletion_target_changed: "The reviewed target or cleanup scope changed. Review it again before a new request.", deletion_preconditions_failed: "Deletion prerequisites no longer pass. Inspect the target.", approval_expired: "Confirmation expired before dispatch. Review the target again.", provider_submission_unconfirmed: "Submission outcome is unknown. The server will not repeat the DELETE.", provider_task_unconfirmed: "The provider task outcome is not confirmed. Refresh its saved operation.", deletion_state_unconfirmed: "The VM or reviewed volumes still need absence verification. Cleanup may be partial; no DELETE will be repeated.", provider_task_failed: "The provider task failed and cleanup may be partial. The target remains locked for inspection and read-only reconciliation." };
 function fixedEffects(e: Effects) { return e.version === 1 && e.removeVmConfiguration && e.removeSnapshotMetadata && e.removeVmPermissions && e.removeVmFirewall && e.cleanupIpam && e.cleanupRecordedFleecingImages && !e.purgeJobs && !e.destroyUnreferencedDisks && e.retainDefinitionAndHistory && Object.keys(e).length === 10; }
 
-export function RemoteDeletion({ connectionId, environment, disabled, onLock, onDeleted, onDone }: { connectionId: number; environment: Target; disabled: boolean; onLock: (locked: boolean) => void; onDeleted: (instanceId: string) => void; onDone?: () => void }) {
+export function RemoteDeletion({ connectionId, environment, disabled, onLock, onDeleted, onDone, onSettled }: { connectionId: number; environment: Target; disabled: boolean; onLock: (locked: boolean) => void; onDeleted: (instanceId: string) => void; onDone?: () => void; onSettled?: (succeeded: boolean) => void }) {
   const [review, setReview] = useState<Review | null>(null), [requestKey, setRequestKey] = useState("");
   const [confirmed, setConfirmed] = useState(false), [loss, setLoss] = useState(false), [submitted, setSubmitted] = useState(false), [busy, setBusy] = useState(false), [retired, setRetired] = useState(false);
   const [operation, setOperation] = useState<Operation | null>(null), [error, setError] = useState("");
   const generation = useRef(0);
-  useEffect(() => { onLock(busy || review !== null || submitted); }, [busy, review, submitted, onLock]);
+  // Set once a definitive result has released the retained native request.
+  const [released, setReleased] = useState(false);
+  useEffect(() => { onLock(!released && (busy || review !== null || submitted)); }, [busy, review, submitted, released, onLock]);
   useEffect(() => () => { generation.current++; onLock(false); }, [connectionId, onLock]);
   // Opening the action is the request to review it; the review is read-only.
   useAutoRun(true, () => void prepare(), []);
@@ -65,6 +67,12 @@ export function RemoteDeletion({ connectionId, environment, disabled, onLock, on
     catch (failure) { if (generation.current === current) setError(report(failure)); }
     finally { if (generation.current === current) setBusy(false); }
   }
+  // A definitive result needs no acknowledgement: release the retained request automatically.
+  async function release() {
+    try { await invoke("clear_remote_deletion", { connectionId, requestKey }); setReleased(true); onSettled?.(operation?.status === "succeeded"); }
+    catch { /* Keep the explicit Done fallback below. */ }
+  }
+  useAutoRun(!!terminal && !released, () => void release(), [operation?.status]);
   const pending = !!operation && !terminal;
   useOperationPolling(pending && !disabled, operation, () => void refresh());
   return <section className="remote-deletion" aria-labelledby="deletion-heading" aria-busy={busy}>
@@ -97,7 +105,7 @@ export function RemoteDeletion({ connectionId, environment, disabled, onLock, on
       {pending && <p className="hint">Updating automatically. You can close this panel; the server keeps working and the action stays in History.</p>}
       {operation.failure && <p role="alert">{failures[operation.failure] || "The server could not verify this deletion. Inspect the saved operation."}</p>}
       {operation.status === "succeeded" && <p>Deletion verified: the VM and reviewed volumes are absent. Definition and history retained.</p>}
-      {terminal && <button type="button" className="primary" disabled={disabled || busy} onClick={clear}>Done</button>}
+      {terminal && !released && <button type="button" className="primary" disabled={disabled || busy} onClick={clear}>Done</button>}
     </div>}
     {retired && !review && <p>This instance was deleted. Its definition and history are retained.</p>}
     {submitted && !operation && <p role="status">No verified operation ID received. Keep this request key and retry only this same confirmed request.</p>}

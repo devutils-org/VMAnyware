@@ -356,3 +356,11 @@ html, body { overscroll-behavior: none; }
 .inline-form > button { margin: 0; min-height: 38px; }
 .yaml { margin-top: 12px; }
 .yaml pre { margin: 0 0 8px; }
+.grid-2 { align-items: stretch; }
+.grid-2 > .panel { display: flex; flex-direction: column; }
+.grid-2 > .panel > .panel-body { flex: 1; }
+
+/* Adjacent buttons outside flex rows (feature components render them inline). */
+:not(.actions-row, .connection-fields, .toolbar, .tabs, nav, .inline-form, .topbar-actions, .connect-footer) > button + button { margin-left: 8px; }
+:is(label, h3, h4) + button { margin-top: 10px; }
+button + label { margin-top: 14px; }

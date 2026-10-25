@@ -11,13 +11,15 @@ const labels: Record<string, string> = { instance_marker: "Instance marker match
 const failures: Record<string, string> = { restore_disabled: "Snapshot restoration is disabled on the server.", restore_target_changed: "The reviewed VM or snapshot changed. Inspect the target before preparing another restore.", restore_preconditions_failed: "Restore prerequisites no longer pass. Inspect the VM and snapshot before another request.", approval_expired: "Confirmation expired before dispatch. Review the target again.", provider_submission_unconfirmed: "Submission outcome is unknown. The server will not repeat the write.", provider_task_unconfirmed: "The provider rollback task is not yet confirmed.", restore_state_unconfirmed: "The selected snapshot and stopped target are not yet verified after rollback.", provider_task_failed: "The provider rollback task failed. Partial changes may remain; inspect this VM." };
 const stopped = (observation: Observation, node: string, vmid: number) => observation.node === node && observation.vmid === vmid && observation.status === "stopped" && (observation.qmpStatus === null || observation.qmpStatus === "stopped");
 
-export function RemoteSnapshotRestore({ connectionId, environment, snapshotName, disabled, onLock, onDone }: { connectionId: number; environment: Target; snapshotName: string; disabled: boolean; onLock: (locked: boolean) => void; onDone?: () => void }) {
+export function RemoteSnapshotRestore({ connectionId, environment, snapshotName, disabled, onLock, onDone, onSettled }: { connectionId: number; environment: Target; snapshotName: string; disabled: boolean; onLock: (locked: boolean) => void; onDone?: () => void; onSettled?: (succeeded: boolean) => void }) {
   const [review, setReview] = useState<Review | null>(null), [requestKey, setRequestKey] = useState("");
   const [acknowledgeDataLoss, setAcknowledgeDataLoss] = useState(false);
   const [confirmed, setConfirmed] = useState(false), [submitted, setSubmitted] = useState(false), [busy, setBusy] = useState(false);
   const [operation, setOperation] = useState<Operation | null>(null), [error, setError] = useState("");
   const generation = useRef(0);
-  useEffect(() => { onLock(busy || review !== null || submitted); }, [busy, review, submitted, onLock]);
+  // Set once a definitive result has released the retained native request.
+  const [released, setReleased] = useState(false);
+  useEffect(() => { onLock(!released && (busy || review !== null || submitted)); }, [busy, review, submitted, released, onLock]);
   useEffect(() => () => { generation.current++; onLock(false); }, [connectionId, onLock]);
   // Opening the action is the request to review it; the review is read-only.
   useAutoRun(true, () => void prepare(), []);
@@ -66,6 +68,12 @@ export function RemoteSnapshotRestore({ connectionId, environment, snapshotName,
     catch (failure) { if (generation.current === current) setError(report(failure)); }
     finally { if (generation.current === current) setBusy(false); }
   }
+  // A definitive result needs no acknowledgement: release the retained request automatically.
+  async function release() {
+    try { await invoke("clear_remote_snapshot_restore", { connectionId, requestKey }); setReleased(true); onSettled?.(operation?.status === "succeeded"); }
+    catch { /* Keep the explicit Done fallback below. */ }
+  }
+  useAutoRun(!!terminal && !released, () => void release(), [operation?.status]);
   const pending = !!operation && !terminal;
   useOperationPolling(pending && !disabled, operation, () => void refresh());
   return <section className="remote-snapshot-restore" aria-labelledby="snapshot-restore-heading" aria-busy={busy}>
@@ -99,7 +107,7 @@ export function RemoteSnapshotRestore({ connectionId, environment, snapshotName,
       {operation.status === "succeeded" && <p>Provider rollback verified: {review?.request.snapshotName}. VM observed stopped. Recovered guest contents and application consistency remain unverified.</p>}
       {operation.failure && <p role="alert">{failures[operation.failure] || "The operation did not confirm success. Inspect this VM before another action."}</p>}
       {operation.status === "uncertain" && <p>This request remains retained and is re-read without submitting another rollback.</p>}
-      {terminal && <button type="button" className="primary" disabled={disabled || busy} onClick={clear}>Done</button>}
+      {terminal && !released && <button type="button" className="primary" disabled={disabled || busy} onClick={clear}>Done</button>}
     </div>}
     {error && <p role="alert" className="error">{error}</p>}
   </section>;

@@ -11,12 +11,14 @@ type Operation = { id: string; kind: string; instanceId: string; status: "queued
 const labels: Record<string, string> = { instance_marker: "Instance marker matches", not_template: "Target is a VM", unlocked: "Configuration is unlocked", no_pending_changes: "No pending changes", configuration_unchanged: "Configuration stayed unchanged" };
 const failures: Record<string, string> = { lifecycle_disabled: "Lifecycle actions are disabled on the server.", approval_expired: "The confirmation expired before dispatch.", lifecycle_target_changed: "The reviewed target changed.", lifecycle_preconditions_failed: "Lifecycle prerequisites no longer pass.", provider_submission_unconfirmed: "Submission outcome is unknown. The server will not repeat the write.", provider_task_unconfirmed: "The provider task is not confirmed.", power_state_unconfirmed: "The requested power state is not confirmed.", process_interrupted: "The server was interrupted. Read the recorded operation before another action.", provider_task_failed: "The provider task failed." };
 
-export function RemoteLifecycle({ connectionId, environment, action, disabled, onLock, onDone }: { connectionId: number; environment: Target; action: Action; disabled: boolean; onLock: (locked: boolean) => void; onDone?: () => void }) {
+export function RemoteLifecycle({ connectionId, environment, action, disabled, onLock, onDone, onSettled }: { connectionId: number; environment: Target; action: Action; disabled: boolean; onLock: (locked: boolean) => void; onDone?: () => void; onSettled?: (succeeded: boolean) => void }) {
   const [review, setReview] = useState<Review | null>(null), [requestKey, setRequestKey] = useState("");
   const [confirmed, setConfirmed] = useState(false), [submitted, setSubmitted] = useState(false), [busy, setBusy] = useState(false);
   const [operation, setOperation] = useState<Operation | null>(null), [error, setError] = useState("");
   const generation = useRef(0);
-  useEffect(() => { onLock(busy || review !== null || submitted); }, [busy, review, submitted, onLock]);
+  // Set once a definitive result has released the retained native request.
+  const [released, setReleased] = useState(false);
+  useEffect(() => { onLock(!released && (busy || review !== null || submitted)); }, [busy, review, submitted, released, onLock]);
   useEffect(() => () => { generation.current++; onLock(false); }, [connectionId, onLock]);
   // Opening the action is the request to review it; the review is read-only.
   useAutoRun(true, () => void prepare(), []);
@@ -73,6 +75,12 @@ export function RemoteLifecycle({ connectionId, environment, action, disabled, o
     catch (failure) { if (generation.current === current) setError(report(failure)); }
     finally { if (generation.current === current) setBusy(false); }
   }
+  // A definitive result needs no acknowledgement: release the retained request automatically.
+  async function release() {
+    try { await invoke("clear_remote_lifecycle", { connectionId, requestKey }); setReleased(true); onSettled?.(operation?.status === "succeeded"); }
+    catch { /* Keep the explicit Done fallback below. */ }
+  }
+  useAutoRun(!!terminal && !released, () => void release(), [operation?.status]);
   const pending = !!operation && !terminal;
   useOperationPolling(pending && !disabled, operation, () => void refresh());
   return <section className="remote-lifecycle" aria-labelledby="remote-lifecycle-heading" aria-busy={busy}>
@@ -97,7 +105,7 @@ export function RemoteLifecycle({ connectionId, environment, action, disabled, o
       {operation.status === "succeeded" && <p>Provider task and requested power state verified: {operation.result?.observation.status}. Guest readiness and SSH access are not verified.</p>}
       {operation.failure && <p role="alert">{failures[operation.failure] || "The action did not confirm success. Inspect its operation and VM before another action."}</p>}
       {(operation.status === "uncertain" || (operation.status === "interrupted" && operation.providerTaskKnown)) && <p>The request remains retained and is re-read without repeating the action.</p>}
-      {terminal && <button type="button" className="primary" disabled={disabled || busy} onClick={clear}>Done</button>}
+      {terminal && !released && <button type="button" className="primary" disabled={disabled || busy} onClick={clear}>Done</button>}
     </div>}
     {error && <p role="alert" className="error">{error}</p>}
   </section>;

@@ -2,7 +2,7 @@ import { ProvisioningProgress } from "./ProvisioningProgress";
 import { ProvisioningFailure } from "./ProvisioningFailure";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { CheckSummary, useOperationPolling } from "./actionFlow";
+import { CheckSummary, useOperationPolling, useAutoRun } from "./actionFlow";
 
 type Source = { id: string; definitionName: string; providerReference: { node: string; vmid: number } };
 type Plan = { definitionName: string; definitionHash: string; planHash: string; providerScopeId: string; creationEnabled: boolean; sshKeyCount: number; packages: string[]; snapshotAfterProvisioning: boolean; source: { templateVmid: number; templateVersion: string }; target: { node: string; vmid: number; storage: string; bridge: string; guestUser: string; resources: { cpu: number; memoryMiB: number; diskGiB: number } } };
@@ -11,12 +11,14 @@ type Operation = { id: string; kind: string; instanceId: string; status: "queued
 const labels: Record<string, string> = { template: "Source is a template", source_disk: "Template disk matches catalog", cloud_init_drive: "Cloud-Init drive exists", storage: "Storage supports VM images", storage_capacity: "Reported storage capacity", bridge: "Network bridge is active", target_vmid: "Target VMID was observed free", template_revision: "Template image identity", execution_permissions: "Provider write permissions", guest_readiness: "Actual guest readiness" };
 const required = Object.keys(labels).slice(0, 7);
 function usableIpv4(value: string) { const parts = value.split("."); return parts.length === 4 && parts.every(part => /^(0|[1-9][0-9]{0,2})$/.test(part) && Number(part) <= 255) && Number(parts[0]) > 0 && Number(parts[0]) < 224 && parts[0] !== "127" && !(parts[0] === "169" && parts[1] === "254"); }
-export function RemoteRecreation({ connectionId, source, disabled, onLock, onSshTarget, onEnvironmentsChanged, onDone }: { connectionId: number; source: Source; disabled: boolean; onLock: (locked: boolean) => void; onSshTarget: (host: string, username: string) => void; onEnvironmentsChanged?: () => void; onDone?: () => void }) {
+export function RemoteRecreation({ connectionId, source, disabled, onLock, onSshTarget, onEnvironmentsChanged, onDone, onSettled }: { connectionId: number; source: Source; disabled: boolean; onLock: (locked: boolean) => void; onSshTarget: (host: string, username: string) => void; onEnvironmentsChanged?: () => void; onDone?: () => void; onSettled?: (succeeded: boolean) => void }) {
   const [vmid, setVmid] = useState(""), [review, setReview] = useState<Review | null>(null), [key, setKey] = useState("");
   const [confirmed, setConfirmed] = useState(false), [submitted, setSubmitted] = useState(false), [busy, setBusy] = useState(false);
   const [operation, setOperation] = useState<Operation | null>(null), [error, setError] = useState("");
   const generation = useRef(0);
-  useEffect(() => { onLock(busy || review !== null || submitted); }, [busy, review, submitted, onLock]);
+  // Set once a definitive result has released the retained native request.
+  const [released, setReleased] = useState(false);
+  useEffect(() => { onLock(!released && (busy || review !== null || submitted)); }, [busy, review, submitted, released, onLock]);
   useEffect(() => () => { generation.current++; onLock(false); }, [connectionId, source.id, onLock]);
   // Registration happens on submission; reload the environment list when the status changes.
   useEffect(() => { if (operation?.status) onEnvironmentsChanged?.(); }, [operation?.status, onEnvironmentsChanged]);
@@ -65,6 +67,12 @@ export function RemoteRecreation({ connectionId, source, disabled, onLock, onSsh
     finally { if (generation.current === current) setBusy(false); }
   }
   // Readiness may report uncertain while its retained probe continues; keep reading.
+  // A definitive result needs no acknowledgement: release the retained request automatically.
+  async function release() {
+    try { await invoke("clear_remote_recreation", { connectionId, requestKey: key }); setReleased(true); onSettled?.(operation?.status === "succeeded"); }
+    catch { /* Keep the explicit Done fallback below. */ }
+  }
+  useAutoRun(!!terminal && !released, () => void release(), [operation?.status]);
   const pending = !!operation && !terminal;
   useOperationPolling(pending && !disabled, operation, () => void refresh());
   return <section className="remote-recreation" aria-labelledby="recreation-heading" aria-busy={busy}>
@@ -86,7 +94,7 @@ export function RemoteRecreation({ connectionId, source, disabled, onLock, onSsh
       <div className="actions-row">
         {!operation && <button type="button" className="primary" disabled={!eligible || disabled || busy} onClick={submit}>{submitted ? "Retry the same recreation request" : `Create VM ${review.plan.target.vmid}`}</button>}
         {!submitted && <button type="button" disabled={disabled || busy} onClick={clear}>Cancel</button>}
-        {terminal && <button type="button" className="primary" disabled={disabled || busy} onClick={clear}>Done</button>}
+        {terminal && !released && <button type="button" className="primary" disabled={disabled || busy} onClick={clear}>Done</button>}
       </div>
       <p className="hint">Request key <code>{key}</code></p>
     </>}

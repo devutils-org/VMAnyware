@@ -22,7 +22,6 @@ export function RemoteInstanceDetail({ connectionId, environment, disabled, auto
     } catch (failure) { if (generation.current === current) setError(typeof failure === "string" ? failure : "Cannot read the saved definition. Retry the read."); }
     finally { if (generation.current === current) setBusy(false); }
   }
-  function hide() { generation.current++; setDetail(null); setError(""); }
   return <section className="remote-instance-detail" data-instance-id={environment.id} aria-label={`Retained definition for VM ${vmid}`} aria-busy={busy}>
     {!detail && <button type="button" disabled={disabled || busy} onClick={read}>Read definition for VM {vmid}</button>}
     {busy && <p role="status">Reading the retained definition…</p>}
@@ -36,7 +35,6 @@ export function RemoteInstanceDetail({ connectionId, environment, disabled, auto
         <pre aria-label={`Saved YAML for ${detail.definitionName}`}><code>{detail.definitionYaml}</code></pre>
         <p className="hint">The saved declaration for this VM. It does not verify current VM resources, existence, guest readiness or SSH identity. Full hash <code>{detail.definitionHash}</code></p>
       </details>
-      <div className="actions-row"><button type="button" className="ghost" disabled={disabled || busy} onClick={read}>Refresh</button><button type="button" className="ghost" disabled={disabled || busy} onClick={hide}>Hide</button></div>
     </>}
     {error && <p role="alert" className="error">{error}</p>}
   </section>;

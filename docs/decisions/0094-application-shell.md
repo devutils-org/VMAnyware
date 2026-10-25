@@ -53,9 +53,13 @@ one or two checkboxes, confirm, manual refresh, acknowledge, close). Now:
 - Submitted operations are re-read automatically (bounded polling, reads only)
   until succeeded/failed; uncertain readiness keeps being read as before.
 - The drawer can always be closed: running or pending work stays mounted in
-  the background with a top-bar indicator, and "Done" releases the retained
-  native request state (the former acknowledge) and closes the drawer. Power
-  and snapshot views re-read after an action settles.
+  the background with a top-bar indicator. Once an operation is definitively
+  succeeded/failed, the retained native request state (the former
+  acknowledge) is released automatically; a success closes its drawer after a
+  short delay (except recreation, which offers SSH next), a failure stays
+  readable. Uncertain or still-running work is never released. "Done" remains
+  only as a fallback if the release call fails. Power and snapshot views re-read
+  after an action settles.
 
 Prerequisite checks, request-key retention, same-key retry and evidence
 validation are unchanged.
