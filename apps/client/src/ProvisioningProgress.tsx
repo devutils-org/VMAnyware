@@ -33,13 +33,18 @@ export function ProvisioningProgress({ connectionId, operationId, disabled, inst
     finally { if (generation.current === current) setBusy(false); }
   }
   return <section className="provisioning-progress" aria-label="Recorded provisioning steps">
-    <button type="button" disabled={disabled || busy} onClick={read}>{progress ? "Refresh recorded steps" : "Read recorded steps"}</button>
     {busy && !progress && <p role="status">Reading recorded provisioning steps…</p>}
     {progress && <>
-      <p>Recorded steps: {progress.status} · {progress.node} · VM {progress.vmid}</p>
-      <p>Saved stage evidence only. Current power, guest readiness and SSH access have not been checked by this read. A started marker does not confirm completion.</p>
-      <ol>{progress.stages.map(stage => <li key={stage.position}>{labels[stage.kind]}: {stage.status}{stage.submissionStarted ? " · dispatch recorded" : ""}</li>)}</ol>
+      <p className="steps-head"><span className={`chip state ${progress.status}`}>{progress.status}</span> {progress.node} · VM {progress.vmid}
+        <button type="button" className="ghost" disabled={disabled || busy} onClick={read}>Refresh</button></p>
+      <ol className="steps">{progress.stages.map(stage => <li key={stage.position} className={`step ${stage.status}`}>
+        <span className="step-icon" aria-hidden="true" />
+        <span className="step-label">{labels[stage.kind]}</span>
+        <span className={`chip state ${stage.status}`}>{stage.status}</span>
+      </li>)}</ol>
+      <p className="hint">Recorded stage evidence. It does not re-check current power, guest readiness or SSH access.</p>
     </>}
+    {!progress && !busy && <button type="button" disabled={disabled} onClick={read}>Read recorded steps</button>}
     {error && <p role="alert">{error}</p>}
   </section>;
 }

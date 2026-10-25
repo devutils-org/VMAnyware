@@ -463,3 +463,29 @@ button + label { margin-top: 14px; }
 .app.focus-mode .session-panel { display: flex; flex-direction: column; min-height: 0; padding: 8px 12px 12px; }
 .app.focus-mode .session-panel > * { display: flex; flex-direction: column; flex: 1; min-height: 0; }
 .app.focus-mode .session-panel .ssh-terminal { flex: 1; height: auto; min-height: 0; }
+
+/* ---------- status colour code: success green, failure red, in progress violet, unknown grey ---------- */
+.steps { list-style: none; margin: 10px 0 0; padding: 0; display: grid; gap: 2px; }
+.panel-body .steps li, .steps li { display: grid; grid-template-columns: 22px minmax(0, 1fr) auto; align-items: center; gap: 10px; padding: 7px 10px; border: 0; border-radius: 8px; color: var(--soft); }
+.step-icon { width: 18px; height: 18px; border-radius: 50%; border: 1.5px solid var(--line-strong); display: grid; place-items: center; font: 700 11px/1 var(--sans); }
+.step.succeeded, .step.passed { background: #7ef0b40a; }
+.step.succeeded .step-icon, .step.passed .step-icon { border-color: var(--ok); background: var(--ok); }
+.step.succeeded .step-icon::after, .step.passed .step-icon::after { content: "✓"; color: #05150d; }
+.step.failed, .step.interrupted { background: #ff8f9c12; color: var(--fg); }
+.step.failed .step-icon, .step.interrupted .step-icon { border-color: var(--danger); background: var(--danger); }
+.step.failed .step-icon::after, .step.interrupted .step-icon::after { content: "✕"; color: #1a0508; }
+.step.running .step-icon, .step.uncertain .step-icon { border-color: var(--purple); border-top-color: transparent; animation: spin .9s linear infinite; }
+.step.uncertain { background: #b7a0ff0c; }
+.step.queued .step-icon, .step.unknown .step-icon { border-style: dashed; }
+.step.queued .step-label { color: var(--muted); }
+@keyframes spin { to { transform: rotate(360deg); } }
+.chip.state.passed { color: var(--ok); border-color: #7ef0b440; background: #7ef0b40a; }
+.chip.state.unknown { color: var(--muted); border-color: var(--line-strong); }
+.steps-head { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; color: var(--soft); }
+.steps-head button { margin-left: auto; }
+.result.succeeded { border-color: #7ef0b460; background: #7ef0b40c; }
+.result.failed, .result.interrupted { border-color: #ff8f9c60; background: #ff8f9c0e; }
+.result.uncertain, .result.running, .result.queued { border-color: #b7a0ff50; background: #b7a0ff0a; }
+.result.succeeded [role="status"] { color: var(--ok); }
+.result.failed [role="status"], .result.interrupted [role="status"] { color: var(--danger); }
+[role="alert"]:not(.error) { color: #ffc2c9; }

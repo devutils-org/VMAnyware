@@ -19,7 +19,7 @@ export function CheckSummary({ checks, labels }: { checks: { code: string; statu
   const passed = checks.filter(check => check.status === "passed").length;
   return <details className="checks" open={passed !== checks.length || undefined}>
     <summary><span className={passed === checks.length ? "ok" : "warn"}>{passed}/{checks.length}</span> prerequisite checks passed</summary>
-    <ul>{checks.map(check => <li key={check.code} className={check.status}>{labels[check.code] || "Unrecognized prerequisite"}: {check.status}</li>)}</ul>
+    <ul className="steps">{checks.map(check => <li key={check.code} className={`step ${check.status}`}><span className="step-icon" aria-hidden="true" /><span className="step-label">{labels[check.code] || "Unrecognized prerequisite"}</span><span className={`chip state ${check.status}`}>{check.status}</span></li>)}</ul>
   </details>;
 }
 
