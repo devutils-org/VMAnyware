@@ -157,8 +157,18 @@ sends the same DHCP client-id. User stopped 9002 and, with approval, added
 service restarted active. Proper fix pending: template r2 with emptied
 /etc/machine-id as a new catalog templateVersion (do not silently alter 9000).
 
-Next: in app — list 9004 snapshots, replace host key ...ZSM→...Qbk, terminal
-package check; then snapshot/restore via UI; then registered-VMID defect fix. Deletion via app needs temporary grants again.
+Declared packages + final snapshot proven on real guest (first time): user
+`qm guest exec 9004` shows hostname home-remote-3 and git/tree/tmux/nvim/btop
+in /usr/bin; `qm listsnapshot 9004` shows ready_c8afc72e… "VMAnyware
+provisioning c8afc72e…" at 12:45:56. Host-key replacement ...ZSM→...Qbk done in
+app. SSH auth to 9004 rejected: guest authorized_keys holds
+SHA256:FJtvpxgQ9pcynvVZv2bEw0/nNwfljVjMzlASBKaVCIU (no comment), not the app
+identity ...cZYPT... (app allows only one identity, so a different key was put
+in the definition; unconfirmed). Do not hand-edit the guest.
+
+Next: UI snapshot/restore on 9004 (marker via qm guest exec), then UI
+delete/recreate with the app key; then registered-VMID defect fix and template
+r2 (empty machine-id). Deletion via app needs temporary grants again.
 Remaining MVP
 gaps per docs/roadmap-status.md: HTTPS remote-mode UI on real infra, mobile,
 platform secret stores, real server deployment, release.
