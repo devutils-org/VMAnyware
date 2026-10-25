@@ -486,6 +486,23 @@ async fn native_pty_remote_exit_and_window_cleanup_close_owned_transport() {
         );
         wait_closed(&refusing).await;
     }
+    // Informational messages before the shell reply must not look like a refusal.
+    let advisory = Fixture::with_policy(allowed.public_key().clone(), true, Some("advisory")).await;
+    advisory.trust(&store);
+    let selection = manager
+        .list("main", "127.0.0.1", advisory.port, "fixture")
+        .await
+        .unwrap();
+    let started = sessions
+        .start("main", &selection.id, &selected, 80, 24)
+        .await
+        .unwrap();
+    let id = serde_json::to_value(started).unwrap()["id"]
+        .as_str()
+        .unwrap()
+        .to_owned();
+    sessions.close("main", &id).unwrap();
+    wait_closed(&advisory).await;
 }
 
 async fn shell_output_until(

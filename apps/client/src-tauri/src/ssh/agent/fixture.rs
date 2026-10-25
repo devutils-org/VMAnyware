@@ -177,6 +177,10 @@ impl server::Handler for Handler {
         if self.refuse == Some("shell") {
             session.channel_failure(channel)?;
         } else {
+            if self.refuse == Some("advisory") {
+                // OpenSSH may send informational channel messages before the reply.
+                session.xon_xoff_request(channel, true)?;
+            }
             session.channel_success(channel)?;
             if self.os_shell {
                 let shell = Arc::new(Mutex::new(shell::Shell::start(

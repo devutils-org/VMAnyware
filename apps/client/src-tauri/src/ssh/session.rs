@@ -243,9 +243,13 @@ fn dimensions(cols: u32, rows: u32) -> Result<(), String> {
     }
 }
 async fn accepted(channel: &mut Channel<client::Msg>) -> Result<(), String> {
-    match channel.wait().await {
-        Some(ChannelMsg::Success) => Ok(()),
-        _ => Err("SSH server refused or interrupted the PTY/shell request".into()),
+    loop {
+        match channel.wait().await {
+            Some(ChannelMsg::Success) => return Ok(()),
+            // OpenSSH sends a window adjustment before the shell reply.
+            Some(ChannelMsg::WindowAdjusted { .. } | ChannelMsg::XonXoff { .. }) => {}
+            _ => return Err("SSH server refused or interrupted the PTY/shell request".into()),
+        }
     }
 }
 async fn run(

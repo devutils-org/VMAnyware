@@ -14,7 +14,45 @@ Branch codex/home-proxmox-ios.
 Recent home-server work is user-executed; no authenticated agent host channel or
 provider secret is available. Never inspect credential files or request secrets.
 
-### Current real operation — inspect, never resubmit
+### Newest checkpoint — 9001 provisioned; native SSH trust pending in app
+
+After the server restart, the same operation 2d92dea1b47995dca1be3f76078a66db
+recovered by GET and finished: local GET /api/v1/operations/{id} reports
+status succeeded, guestReady true, cloudInitClean true (exit 0), eth0
+10.10.10.205. No second POST. User shut down VM 100 cleanly (disk retained).
+
+Mac direct routing: in-app host-key inspection first timed out because the
+en0-scoped lookup for 10.10.10.205 still chose the box 192.168.1.254. User ran
+a host-only `route -n change -host -ifscope en0 10.10.10.205 192.168.1.36`
+(not persistent across reboot/network change); route get now shows gateway
+192.168.1.36 and `nc -vz` to port 22 succeeds. Agent ssh-keyscan (public key
+only) gives ED25519 SHA256:ZFJ11fkZILLkg/zTKEjpaRd7OZd4GuSpFWeS6utn6aM, equal
+to the fingerprint the user obtained via Proxmox. Ignored
+.lab/home-proxmox/guest-9001-host.pub is an empty leftover.
+
+Native SSH proven (user-reported in app): host key inspected and trusted at
+that fingerprint; re-inspection matched; "Encrypted application key" source,
+user debian → "Authenticated as debian on 10.10.10.205 · port 22 with
+SHA256:cZYPT8fYwpNXo8hCtcE81Kmu/ghWKtt+MA+ET8tMcg8. Connection closed."
+Note: "Application key via system key store" fails with "No saved unlock secret"
+until a keychain unlock secret is saved; not a key/guest problem.
+
+"Open terminal" then failed: "SSH server refused or interrupted the PTY/shell
+request". Cause reproduced with a throwaway loopback OpenSSH 10.3 sshd and a
+scratch russh 0.64.1 probe: pty-req → Success, but shell → WindowAdjusted
+then Success; session.rs `accepted` treated any non-Success as refusal. Fix:
+skip WindowAdjusted/XonXoff while awaiting the reply. Regression (fixture
+"advisory" policy sends xon-xoff before shell success) failed with that exact
+error before the fix and passes after; all 28 ssh:: lib tests, fmt and strict
+client lib/test Clippy pass.
+
+Real native terminal proven after relaunch (user-reported): "Open terminal" on
+9001 shows the Debian login banner; `hostname; whoami; ip -brief -4 address;
+cloud-init status` → home-smoke, debian, eth0 10.10.10.205/24, status: done.
+
+Next: snapshot/restore/delete/recreate on 9001 only, each made concrete first.
+
+### Earlier real operation — inspect, never resubmit
 
 User restarted server via ignored .lab/home-proxmox/run-server.sh --provision;
 provisioning=true, other writes=false. Script prompts on /dev/tty, never stores
