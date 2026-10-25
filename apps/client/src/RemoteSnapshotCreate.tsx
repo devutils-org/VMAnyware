@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { CheckSummary, useOperationPolling } from "./actionFlow";
 
 type Target = { id: string; definitionName: string; providerReference: { scopeId: string; node: string; vmid: number } };
 type CheckStatus = "passed" | "failed" | "unknown";
@@ -8,7 +9,7 @@ type Operation = { id: string; kind: string; instanceId: string; providerTaskKno
 const labels: Record<string, string> = { instance_marker: "Instance marker matches", not_template: "Target is a VM", unlocked: "Configuration is unlocked", no_pending_changes: "No pending changes", configuration_unchanged: "Configuration stayed unchanged", snapshot_supported: "Snapshot support", snapshot_name_available: "Name is available", snapshot_target_unchanged: "Target stayed unchanged", snapshot_tree_complete: "No incomplete snapshot work" };
 const failures: Record<string, string> = { snapshot_disabled: "Snapshot creation is disabled on the server.", snapshot_target_changed: "The reviewed target changed. Inspect the VM before preparing another snapshot.", snapshot_preconditions_failed: "Snapshot prerequisites no longer pass. Inspect the VM before another request.", approval_expired: "Confirmation expired before dispatch. Review the target again.", provider_submission_unconfirmed: "Submission outcome is unknown. The server will not repeat the write.", provider_task_unconfirmed: "The provider task is not yet confirmed.", snapshot_state_unconfirmed: "The exact completed disk-only snapshot is not yet verified.", provider_task_failed: "The provider task failed. Partial snapshot state may remain." };
 
-export function RemoteSnapshotCreate({ connectionId, environment, disabled, onLock }: { connectionId: number; environment: Target; disabled: boolean; onLock: (locked: boolean) => void }) {
+export function RemoteSnapshotCreate({ connectionId, environment, disabled, onLock, onDone }: { connectionId: number; environment: Target; disabled: boolean; onLock: (locked: boolean) => void; onDone?: () => void }) {
   const [name, setName] = useState("before-work"), [description, setDescription] = useState("");
   const [review, setReview] = useState<Review | null>(null), [requestKey, setRequestKey] = useState("");
   const [confirmed, setConfirmed] = useState(false), [submitted, setSubmitted] = useState(false), [busy, setBusy] = useState(false);
@@ -41,7 +42,7 @@ export function RemoteSnapshotCreate({ connectionId, environment, disabled, onLo
     }
   }
   async function submit() {
-    if (!review || !eligible || !confirmed || busy || disabled || operation) return;
+    if (!review || !eligible || busy || disabled || operation) return;
     const current = ++generation.current; setSubmitted(true); setBusy(true); setError("");
     try { const result = await invoke<Operation>("confirm_remote_snapshot", { connectionId, requestKey, confirmed: true }); if (generation.current === current) { validateOperation(result); setOperation(result); } }
     catch (failure) { if (generation.current === current) setError(report(failure)); }
@@ -57,10 +58,12 @@ export function RemoteSnapshotCreate({ connectionId, environment, disabled, onLo
   async function clear() {
     if (disabled || busy || (submitted && !terminal)) return;
     const current = ++generation.current; setBusy(true); setError("");
-    try { await invoke("clear_remote_snapshot", { connectionId, requestKey }); if (generation.current === current) { setReview(null); setRequestKey(""); setConfirmed(false); setSubmitted(false); setOperation(null); } }
+    try { await invoke("clear_remote_snapshot", { connectionId, requestKey }); if (generation.current === current) { setReview(null); setRequestKey(""); setConfirmed(false); setSubmitted(false); setOperation(null); onDone?.(); } }
     catch (failure) { if (generation.current === current) setError(report(failure)); }
     finally { if (generation.current === current) setBusy(false); }
   }
+  const pending = !!operation && !terminal;
+  useOperationPolling(pending && !disabled, operation, () => void refresh());
   return <section className="remote-snapshot-create" aria-labelledby="snapshot-create-heading" aria-busy={busy}>
     <h3 id="snapshot-create-heading">Create a disk-only snapshot</h3>
     <p>Target: {environment.definitionName} · {environment.providerReference.node} · VM {environment.providerReference.vmid}</p>
@@ -70,35 +73,31 @@ export function RemoteSnapshotCreate({ connectionId, environment, disabled, onLo
       <input id="snapshot-name" value={name} onChange={event => setName(event.target.value)} minLength={2} maxLength={40} pattern="[A-Za-z][A-Za-z0-9_-]{1,39}" required disabled={locked} autoCapitalize="none" autoCorrect="off" spellCheck={false} />
       <label htmlFor="snapshot-description">Description (optional, maximum 4 KiB)</label>
       <textarea id="snapshot-description" value={description} onChange={event => setDescription(event.target.value)} maxLength={4096} disabled={locked} />
-      <button type="submit" disabled={locked || name === "current" || new TextEncoder().encode(description).length > 4096}>Review snapshot creation</button>
+      {!review && !submitted && <button type="submit" disabled={locked || name === "current" || new TextEncoder().encode(description).length > 4096}>Continue</button>}
     </form>
-    {busy && <p role="status">Reading or submitting the retained snapshot request…</p>}
+    {busy && !operation && <p role="status">{review ? "Submitting…" : "Checking prerequisites…"}</p>}
     {review && <>
-      <p>Reviewed snapshot: <strong>{review.request.name}</strong> · {review.node} · VM {review.vmid} · disk only (RAM excluded)</p>
-      <p>{review.request.description || "No description."}</p>
-      <p className="operation-id">Request key: <code>{requestKey}</code></p>
-      <ul>{review.checks.map(check => <li key={check.code}>{labels[check.code] || "Unrecognized prerequisite"}: {check.status}</li>)}</ul>
+      <CheckSummary checks={review.checks} labels={labels} />
       {!review.executionEnabled && <p role="alert">Snapshot creation is disabled on this server.</p>}
       {!eligible && <p role="alert">Snapshot prerequisites or server capability do not permit creation.</p>}
-      <label><input type="checkbox" checked={confirmed} onChange={event => setConfirmed(event.target.checked)} disabled={disabled || busy || submitted || !eligible} />I confirm disk-only snapshot {review.request.name} for {environment.definitionName} ({review.node} / VM {review.vmid}).</label>
-      {!submitted && <div className="connection-fields">
-        <button type="button" disabled={disabled || busy || !eligible || !confirmed} onClick={submit}>Confirm snapshot creation</button>
-        <button type="button" disabled={disabled || busy} onClick={clear}>Cancel snapshot review</button>
+      {!submitted && <div className="actions-row">
+        <button type="button" className="primary" disabled={disabled || busy || !eligible} onClick={submit}>Create snapshot {review.request.name}</button>
+        <button type="button" disabled={disabled || busy} onClick={clear}>Cancel</button>
       </div>}
+      <p className="hint">Disk only, RAM excluded · request key <code>{requestKey}</code></p>
     </>}
     {submitted && !operation && <>
       <p role="status">Submission outcome unknown. Keep this request key and retry only the same confirmed snapshot.</p>
       <button type="button" disabled={disabled || busy} onClick={submit}>Retry same snapshot request</button>
     </>}
-    {operation && <>
-      <p role="status">Snapshot operation: {operation.status} · <code>{operation.id}</code></p>
-      <p>Closing or disconnecting does not cancel server work. Save the operation ID before leaving.</p>
+    {operation && <div className={`result ${operation.status}`}>
+      <p role="status"><span className="status-dot" />{pending ? "In progress" : operation.status === "succeeded" ? "Done" : "Not confirmed"} · {operation.status} · <code>{operation.id}</code></p>
+      {pending && <p className="hint">Updating automatically. You can close this panel; the server keeps working and the action stays in History.</p>}
       {operation.status === "succeeded" && <p>Snapshot creation verified: {review?.request.name}. Disk only; restoration and guest consistency remain unverified.</p>}
       {operation.failure && <p role="alert">{failures[operation.failure] || "The operation did not confirm success. Inspect this VM before another action."}</p>}
-      {operation.status === "uncertain" && <p>This request remains retained. Refresh reads its operation without submitting another creation.</p>}
-      <button type="button" disabled={disabled || busy} onClick={refresh}>Refresh snapshot operation</button>
-      {terminal && <button type="button" disabled={disabled || busy} onClick={clear}>Acknowledge snapshot result</button>}
-    </>}
+      {operation.status === "uncertain" && <p>This request remains retained and is re-read without submitting another creation.</p>}
+      {terminal && <button type="button" className="primary" disabled={disabled || busy} onClick={clear}>Done</button>}
+    </div>}
     {error && <p role="alert" className="error">{error}</p>}
   </section>;
 }

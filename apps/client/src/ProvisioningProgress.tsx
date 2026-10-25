@@ -18,6 +18,8 @@ export function ProvisioningProgress({ connectionId, operationId, disabled, inst
     generation.current++; setProgress(null); setError(""); setBusy(false);
     return () => { generation.current++; };
   }, [connectionId, operationId, instanceId, planHash, definitionHash, sourceInstanceId, node, vmid]);
+  // Shown with a submitted operation; each status change remounts and re-reads the steps.
+  useEffect(() => { void read(); }, [connectionId, operationId]);
   async function read() {
     if (disabled || busy) return;
     const current = ++generation.current; setBusy(true); setProgress(null); setError("");

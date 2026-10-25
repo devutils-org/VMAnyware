@@ -62,7 +62,9 @@ export function Workspace({ native }: { native: boolean }) {
   const [view, setView] = useState<View>("environments");
   const [selectedId, setSelectedId] = useState<string | null>(null);
   const [tab, setTab] = useState<Tab>("overview");
-  const [drawer, setDrawer] = useState<Drawer | null>(null);
+  const [drawer, setDrawer] = useState<Drawer | null>(null), [drawerHidden, setDrawerHidden] = useState(false);
+  // Bumped when an action settles so visible reads (power, snapshots) run again.
+  const [revision, setRevision] = useState(0);
   const [mutationLocked, setMutationLocked] = useState(false);
   const [sshTarget, setSshTarget] = useState<SshTarget | null>(null);
   const [runtime, setRuntime] = useState("");
@@ -87,7 +89,7 @@ export function Workspace({ native }: { native: boolean }) {
   }
   function resetWorkspace() {
     setConnection(null); setImages(null); setEnvironments(null); setLoadError(""); setDrawer(null);
-    setMutationLocked(false); setSshTarget(null); setSelectedId(null);
+    setMutationLocked(false); setSshTarget(null); setSelectedId(null); setDrawerHidden(false);
   }
   async function disconnect() {
     generation.current++; setBusy(true); setError("");
@@ -124,10 +126,20 @@ export function Workspace({ native }: { native: boolean }) {
       .catch(() => {});
   }, [connectionId]);
 
+  // A hidden drawer keeps running work mounted; it disappears once the action settles.
+  useEffect(() => { if (drawerHidden && !mutationLocked) { setDrawer(null); setDrawerHidden(false); setRevision(value => value + 1); } }, [drawerHidden, mutationLocked]);
+  const closeDrawer = useCallback(() => { if (mutationLocked) setDrawerHidden(true); else setDrawer(null); }, [mutationLocked]);
+  const finishDrawer = useCallback(() => { setDrawer(null); setDrawerHidden(false); setRevision(value => value + 1); }, []);
+  useEffect(() => {
+    if (!drawer || drawerHidden) return;
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") closeDrawer(); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [drawer, drawerHidden, closeDrawer]);
   const selected = environments?.find(environment => environment.id === selectedId) ?? null;
   const blocked = busy || loading || mutationLocked;
   function openEnvironment(environment: Environment) { setSelectedId(environment.id); setTab("overview"); setView("environment"); }
-  function openDrawer(next: Drawer) { if (!blocked) setDrawer(next); }
+  function openDrawer(next: Drawer) { if (!blocked) { setDrawer(next); setDrawerHidden(false); } }
   function selectSshTarget(target: string, username: string) {
     setSshTarget({ host: target, username, generation: ++sshGeneration.current }); setView("terminal");
   }
@@ -179,6 +191,7 @@ export function Workspace({ native }: { native: boolean }) {
     <NavItem icon="settings" label="Settings" active={view === "settings"} onClick={() => setView("settings")} />
   </>;
   const server = <div className="server-chip" title={connection.endpoint}><span className="dot online" />{host(connection.endpoint)}</div>;
+  const running = drawer && drawerHidden ? <button type="button" className="running-pill" onClick={() => setDrawerHidden(false)}><span className="dot busy" />Open action · VM {drawer.environment.providerReference.vmid}</button> : null;
   const titles: Record<View, [string, string]> = {
     environments: ["Environments", "Virtual machines registered on this control plane"],
     environment: [selected?.definitionName ?? "Environment", selected ? `VM ${selected.providerReference.vmid} · ${selected.providerReference.node}` : ""],
@@ -191,10 +204,10 @@ export function Workspace({ native }: { native: boolean }) {
 
   return <Shell nav={nav} server={server} title={title} subtitle={subtitle}
     back={view === "environment" ? () => setView("environments") : undefined}
-    actions={view === "environments" ? <>
+    actions={view === "environments" ? <>{running}
       <button type="button" className="ghost" disabled={loading} onClick={() => void loadWorkspace()}><Icon name="refresh" />{loading ? "Refreshing…" : "Refresh"}</button>
       <button type="button" className="primary" onClick={() => setView("create")}><Icon name="plus" />New environment</button>
-    </> : undefined}>
+    </> : running}>
     {loadError && <p role="alert" className="error banner">{loadError}</p>}
 
     {view === "environments" && <EnvironmentList environments={environments} loading={loading} onOpen={openEnvironment} onCreate={() => setView("create")} />}
@@ -219,11 +232,11 @@ export function Workspace({ native }: { native: boolean }) {
       </div>
       <div className="tab-panel" role="tabpanel">
         {tab === "overview" && <div className="grid-2">
-          {selected.status === "registered" && <Panel title="Power"><RemoteInstanceStatus key={`power.${selected.id}`} connectionId={connection.connectionId} environment={selected} disabled={busy || loading} invalidated={mutationLocked} autoRead /></Panel>}
+          {selected.status === "registered" && <Panel title="Power"><RemoteInstanceStatus key={`power.${selected.id}.${revision}`} connectionId={connection.connectionId} environment={selected} disabled={busy || loading} invalidated={mutationLocked} autoRead /></Panel>}
           <Panel title="Definition"><RemoteInstanceDetail key={`detail.${selected.id}.${selected.status}`} connectionId={connection.connectionId} environment={selected} disabled={busy || loading} autoRead /></Panel>
         </div>}
         {tab === "snapshots" && selected.status === "registered" && <Panel title="Snapshots" action={<button type="button" disabled={blocked} onClick={() => openDrawer({ kind: "snapshot", environment: selected })}><Icon name="camera" />New snapshot</button>}>
-          <RemoteSnapshots key={`snapshots.${selected.id}`} connectionId={connection.connectionId} environment={selected} disabled={busy || loading} restoreDisabled={mutationLocked} autoLoad showRecovery={false} onRestore={snapshotName => openDrawer({ kind: "restore", environment: selected, snapshotName })} />
+          <RemoteSnapshots key={`snapshots.${selected.id}.${revision}`} connectionId={connection.connectionId} environment={selected} disabled={busy || loading} restoreDisabled={mutationLocked} autoLoad showRecovery={false} onRestore={snapshotName => openDrawer({ kind: "restore", environment: selected, snapshotName })} />
         </Panel>}
         {tab === "history" && <div className="stack">
           <Panel title="Start and shutdown"><RemoteLifecycleRecovery connectionId={connection.connectionId} environment={selected} disabled={busy || loading} /></Panel>
@@ -263,20 +276,19 @@ export function Workspace({ native }: { native: boolean }) {
       </Panel>
     </div>}
 
-    {drawer && <div className="drawer-backdrop" role="presentation">
+    {drawer && <div className="drawer-backdrop" role="presentation" hidden={drawerHidden} onClick={event => { if (event.target === event.currentTarget) closeDrawer(); }}>
       <aside className="drawer" role="dialog" aria-modal="true" aria-label="Review action">
         <header>
           <span className="drawer-target">{drawer.environment.definitionName} · VM {drawer.environment.providerReference.vmid}</span>
-          <button type="button" className="icon" aria-label="Close" disabled={mutationLocked} title={mutationLocked ? "Finish, cancel or acknowledge this action first" : "Close"} onClick={() => setDrawer(null)}><Icon name="close" /></button>
+          <button type="button" className="icon" aria-label="Close" title={mutationLocked ? "Close; the action keeps running" : "Close"} onClick={closeDrawer}><Icon name="close" /></button>
         </header>
         <div className="drawer-body">
-          {drawer.kind === "lifecycle" && <RemoteLifecycle key={`${drawer.environment.id}.${drawer.action}`} connectionId={connection.connectionId} environment={drawer.environment} action={drawer.action} disabled={busy || loading} onLock={setMutationLocked} />}
-          {drawer.kind === "snapshot" && <RemoteSnapshotCreate key={drawer.environment.id} connectionId={connection.connectionId} environment={drawer.environment} disabled={busy || loading} onLock={setMutationLocked} />}
-          {drawer.kind === "restore" && <RemoteSnapshotRestore key={`${drawer.environment.id}.${drawer.snapshotName}`} connectionId={connection.connectionId} environment={drawer.environment} snapshotName={drawer.snapshotName} disabled={busy || loading} onLock={setMutationLocked} />}
-          {drawer.kind === "deletion" && <RemoteDeletion key={drawer.environment.id} connectionId={connection.connectionId} environment={drawer.environment} disabled={busy || loading} onLock={setMutationLocked} onDeleted={instanceId => setEnvironments(current => current?.map(environment => environment.id === instanceId ? { ...environment, status: "deleted" } : environment) ?? null)} />}
-          {drawer.kind === "recreation" && <RemoteRecreation key={drawer.environment.id} connectionId={connection.connectionId} source={drawer.environment} disabled={busy || loading} onLock={setMutationLocked} onSshTarget={(target, username) => { setDrawer(null); selectSshTarget(target, username); }} onEnvironmentsChanged={reloadEnvironments} />}
+          {drawer.kind === "lifecycle" && <RemoteLifecycle key={`${drawer.environment.id}.${drawer.action}`} connectionId={connection.connectionId} environment={drawer.environment} action={drawer.action} disabled={busy || loading} onLock={setMutationLocked} onDone={finishDrawer} />}
+          {drawer.kind === "snapshot" && <RemoteSnapshotCreate key={drawer.environment.id} connectionId={connection.connectionId} environment={drawer.environment} disabled={busy || loading} onLock={setMutationLocked} onDone={finishDrawer} />}
+          {drawer.kind === "restore" && <RemoteSnapshotRestore key={`${drawer.environment.id}.${drawer.snapshotName}`} connectionId={connection.connectionId} environment={drawer.environment} snapshotName={drawer.snapshotName} disabled={busy || loading} onLock={setMutationLocked} onDone={finishDrawer} />}
+          {drawer.kind === "deletion" && <RemoteDeletion key={drawer.environment.id} connectionId={connection.connectionId} environment={drawer.environment} disabled={busy || loading} onLock={setMutationLocked} onDone={finishDrawer} onDeleted={instanceId => setEnvironments(current => current?.map(environment => environment.id === instanceId ? { ...environment, status: "deleted" } : environment) ?? null)} />}
+          {drawer.kind === "recreation" && <RemoteRecreation key={drawer.environment.id} connectionId={connection.connectionId} source={drawer.environment} disabled={busy || loading} onLock={setMutationLocked} onDone={finishDrawer} onSshTarget={(target, username) => { setDrawer(null); selectSshTarget(target, username); }} onEnvironmentsChanged={reloadEnvironments} />}
         </div>
-        {mutationLocked && <footer className="hint">Finish, cancel or acknowledge this action to close the panel.</footer>}
       </aside>
     </div>}
   </Shell>;

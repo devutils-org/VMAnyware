@@ -1,5 +1,6 @@
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { CheckSummary, useOperationPolling } from "./actionFlow";
 
 type Target = { id: string; definitionName: string; providerReference: { scopeId: string; node: string; vmid: number } };
 type CheckStatus = "passed" | "failed" | "unknown";
@@ -10,7 +11,7 @@ const labels: Record<string, string> = { instance_marker: "Instance marker match
 const failures: Record<string, string> = { restore_disabled: "Snapshot restoration is disabled on the server.", restore_target_changed: "The reviewed VM or snapshot changed. Inspect the target before preparing another restore.", restore_preconditions_failed: "Restore prerequisites no longer pass. Inspect the VM and snapshot before another request.", approval_expired: "Confirmation expired before dispatch. Review the target again.", provider_submission_unconfirmed: "Submission outcome is unknown. The server will not repeat the write.", provider_task_unconfirmed: "The provider rollback task is not yet confirmed.", restore_state_unconfirmed: "The selected snapshot and stopped target are not yet verified after rollback.", provider_task_failed: "The provider rollback task failed. Partial changes may remain; inspect this VM." };
 const stopped = (observation: Observation, node: string, vmid: number) => observation.node === node && observation.vmid === vmid && observation.status === "stopped" && (observation.qmpStatus === null || observation.qmpStatus === "stopped");
 
-export function RemoteSnapshotRestore({ connectionId, environment, snapshotName, disabled, onLock }: { connectionId: number; environment: Target; snapshotName: string; disabled: boolean; onLock: (locked: boolean) => void }) {
+export function RemoteSnapshotRestore({ connectionId, environment, snapshotName, disabled, onLock, onDone }: { connectionId: number; environment: Target; snapshotName: string; disabled: boolean; onLock: (locked: boolean) => void; onDone?: () => void }) {
   const [review, setReview] = useState<Review | null>(null), [requestKey, setRequestKey] = useState("");
   const [acknowledgeDataLoss, setAcknowledgeDataLoss] = useState(false);
   const [confirmed, setConfirmed] = useState(false), [submitted, setSubmitted] = useState(false), [busy, setBusy] = useState(false);
@@ -18,12 +19,14 @@ export function RemoteSnapshotRestore({ connectionId, environment, snapshotName,
   const generation = useRef(0);
   useEffect(() => { onLock(busy || review !== null || submitted); }, [busy, review, submitted, onLock]);
   useEffect(() => () => { generation.current++; onLock(false); }, [connectionId, onLock]);
+  // Opening the action is the request to review it; the review is read-only.
+  useEffect(() => { void prepare(); }, []);
   const eligible = review?.executionEnabled && review.restorePreconditions === "passed" && review.checks.length === 13 && review.destructive && !review.startsVm && !!review.snapshotConfigHash && /^[0-9a-f]{64}$/.test(review.snapshotConfigHash) && review.selectedSnapshot?.name === snapshotName && review.selectedSnapshot?.includesRam === false && review.selectedSnapshot?.providerState === null && stopped(review.observation, review.node, review.vmid) && review.checks.every(check => labels[check.code] && check.status === "passed") && new Set(review.checks.map(check => check.code)).size === 13;
   const locked = disabled || busy || review !== null || submitted;
   const terminal = operation && ["succeeded", "failed", "interrupted"].includes(operation.status);
   const report = (failure: unknown) => typeof failure === "string" ? failure : "Cannot complete the snapshot request. Retain its request key.";
-  async function prepare(event: FormEvent) {
-    event.preventDefault(); if (locked) return;
+  async function prepare(event?: FormEvent) {
+    event?.preventDefault(); if (locked) return;
     const current = ++generation.current, key = crypto.randomUUID();
     setRequestKey(key); setBusy(true); setError(""); setConfirmed(false); setAcknowledgeDataLoss(false); setOperation(null);
     try {
@@ -59,46 +62,45 @@ export function RemoteSnapshotRestore({ connectionId, environment, snapshotName,
   async function clear() {
     if (disabled || busy || (submitted && !terminal)) return;
     const current = ++generation.current; setBusy(true); setError("");
-    try { await invoke("clear_remote_snapshot_restore", { connectionId, requestKey }); if (generation.current === current) { setReview(null); setRequestKey(""); setConfirmed(false); setAcknowledgeDataLoss(false); setSubmitted(false); setOperation(null); } }
+    try { await invoke("clear_remote_snapshot_restore", { connectionId, requestKey }); if (generation.current === current) { setReview(null); setRequestKey(""); setConfirmed(false); setAcknowledgeDataLoss(false); setSubmitted(false); setOperation(null); onDone?.(); } }
     catch (failure) { if (generation.current === current) setError(report(failure)); }
     finally { if (generation.current === current) setBusy(false); }
   }
+  const pending = !!operation && !terminal;
+  useOperationPolling(pending && !disabled, operation, () => void refresh());
   return <section className="remote-snapshot-restore" aria-labelledby="snapshot-restore-heading" aria-busy={busy}>
     <h3 id="snapshot-restore-heading">Restore a snapshot</h3>
     <p>Target: {environment.definitionName} · {environment.providerReference.node} · VM {environment.providerReference.vmid}</p>
     <p>Restoring discards current VM data and settings changed since the selected snapshot. Snapshots depend on the original VM/storage and are not independent backups. This path requires an already stopped VM and a disk-only snapshot; it will not shut down or start the VM.</p>
-    <form onSubmit={prepare}>
-      <p>Selected snapshot: <strong>{snapshotName}</strong></p>
-      <button type="submit" disabled={locked}>Review snapshot restoration</button>
-    </form>
-    {busy && <p role="status">Reading or submitting the retained snapshot request…</p>}
+    <p>Selected snapshot: <strong>{snapshotName}</strong></p>
+    {!review && !submitted && !busy && <button type="button" disabled={locked} onClick={() => void prepare()}>Review again</button>}
+    {busy && !operation && <p role="status">{review ? "Submitting…" : "Checking prerequisites…"}</p>}
     {review && <>
-      <p>Reviewed restore: <strong>{review.request.snapshotName}</strong> · {review.node} · VM {review.vmid} · disk only (RAM excluded)</p>
       <p>{review.selectedSnapshot?.description || "No description."}</p>
-      <p className="operation-id">Request key: <code>{requestKey}</code></p>
-      <ul>{review.checks.map(check => <li key={check.code}>{labels[check.code] || "Unrecognized prerequisite"}: {check.status}</li>)}</ul>
+      <CheckSummary checks={review.checks} labels={labels} />
+      {review.checks.some(check => check.code === "restore_vm_stopped" && check.status !== "passed") && <p className="notice">Shut down the VM first, then open Restore again. Restoring never stops or starts the VM.</p>}
       {!review.executionEnabled && <p role="alert">Snapshot restoration is disabled on this server.</p>}
       {!eligible && <p role="alert">Restore prerequisites or server capability do not permit restoration.</p>}
-      <label><input type="checkbox" checked={confirmed} onChange={event => setConfirmed(event.target.checked)} disabled={disabled || busy || submitted || !eligible} />I confirm restoring snapshot {review.request.snapshotName} for {environment.definitionName} ({review.node} / VM {review.vmid}).</label>
-      <label><input type="checkbox" checked={acknowledgeDataLoss} onChange={event => setAcknowledgeDataLoss(event.target.checked)} disabled={disabled || busy || submitted || !eligible} />I understand that restoring {review.request.snapshotName} discards current VM data and settings changed since this snapshot.</label>
-      {!submitted && <div className="connection-fields">
-        <button type="button" disabled={disabled || busy || !eligible || !confirmed || !acknowledgeDataLoss} onClick={submit}>Confirm destructive restore</button>
-        <button type="button" disabled={disabled || busy} onClick={clear}>Cancel restore review</button>
+      {/* One explicit acknowledgement carries both the confirmation and the data-loss consent. */}
+      <label className="consent"><input type="checkbox" checked={confirmed && acknowledgeDataLoss} onChange={event => { setConfirmed(event.target.checked); setAcknowledgeDataLoss(event.target.checked); }} disabled={disabled || busy || submitted || !eligible} />Restore {review.request.snapshotName} on {environment.definitionName} (VM {review.vmid}) and discard current VM data and settings changed since this snapshot.</label>
+      {!submitted && <div className="actions-row">
+        <button type="button" className="danger solid" disabled={disabled || busy || !eligible || !confirmed || !acknowledgeDataLoss} onClick={submit}>Restore snapshot</button>
+        <button type="button" disabled={disabled || busy} onClick={clear}>Cancel</button>
       </div>}
+      <p className="hint">Disk only, RAM excluded · request key <code>{requestKey}</code></p>
     </>}
     {submitted && !operation && <>
       <p role="status">Submission outcome unknown. Keep this request key and retry only the same confirmed restore.</p>
       <button type="button" disabled={disabled || busy} onClick={submit}>Retry same restore request</button>
     </>}
-    {operation && <>
-      <p role="status">Restore operation: {operation.status} · <code>{operation.id}</code></p>
-      <p>Closing or disconnecting does not cancel server work. Save the operation ID before leaving.</p>
+    {operation && <div className={`result ${operation.status}`}>
+      <p role="status"><span className="status-dot" />{pending ? "In progress" : operation.status === "succeeded" ? "Done" : "Not confirmed"} · {operation.status} · <code>{operation.id}</code></p>
+      {pending && <p className="hint">Updating automatically. You can close this panel; the server keeps working and the action stays in History.</p>}
       {operation.status === "succeeded" && <p>Provider rollback verified: {review?.request.snapshotName}. VM observed stopped. Recovered guest contents and application consistency remain unverified.</p>}
       {operation.failure && <p role="alert">{failures[operation.failure] || "The operation did not confirm success. Inspect this VM before another action."}</p>}
-      {operation.status === "uncertain" && <p>This request remains retained. Refresh reads its operation without submitting another rollback.</p>}
-      <button type="button" disabled={disabled || busy} onClick={refresh}>Refresh restore operation</button>
-      {terminal && <button type="button" disabled={disabled || busy} onClick={clear}>Acknowledge restore result</button>}
-    </>}
+      {operation.status === "uncertain" && <p>This request remains retained and is re-read without submitting another rollback.</p>}
+      {terminal && <button type="button" className="primary" disabled={disabled || busy} onClick={clear}>Done</button>}
+    </div>}
     {error && <p role="alert" className="error">{error}</p>}
   </section>;
 }

@@ -1,4 +1,5 @@
 import { ProvisioningProgress } from "./ProvisioningProgress";
+import { useOperationPolling } from "./actionFlow";
 import { ProvisioningFailure } from "./ProvisioningFailure";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
@@ -32,7 +33,7 @@ export function RemoteCreate({ connectionId, endpoint, disabled, onSshTarget, on
     finally { if (generation.current === current) setBusy(false); }
   }
   async function submit() {
-    if (!plan || !plan.creationEnabled || !confirmed || busy || disabled) return;
+    if (!plan || !plan.creationEnabled || busy || disabled) return;
     const current = ++generation.current; setSubmitted(true); setBusy(true); setError("");
     try { const result = await invoke<Operation>("confirm_remote_create", { connectionId, requestKey, confirmed: true }); if (generation.current === current) setOperation(result); }
     catch (failure) { if (generation.current === current) setError(report(failure)); }
@@ -44,6 +45,9 @@ export function RemoteCreate({ connectionId, endpoint, disabled, onSshTarget, on
     catch (failure) { if (generation.current === current) setError(report(failure)); }
     finally { if (generation.current === current) setBusy(false); }
   }
+  // Readiness may report uncertain while its retained probe continues; keep reading.
+  const pending = !!operation && !["succeeded", "failed"].includes(operation.status);
+  useOperationPolling(pending && !disabled, operation, () => void refresh());
   return <section className="remote-create">
     <h3>Create an environment</h3>
     <AppIdentity disabled={locked} onUse={publicKey => setKey(current => [...new Set([...current.split("\n").map(value => value.trim()).filter(Boolean), publicKey])].join("\n"))} />
@@ -77,9 +81,9 @@ export function RemoteCreate({ connectionId, endpoint, disabled, onSshTarget, on
       <p>Declared packages: {plan.packages.length ? plan.packages.join(", ") : "None declared"}</p>
       <p>Final provisioning snapshot: {plan.snapshotAfterProvisioning ? "Requested · disk-only, after all steps succeed" : "Not requested"}</p>
       <details><summary>Definition and plan identifiers</summary><p>{plan.definitionHash}</p><p>{plan.planHash}</p></details>
-      {!submitted && <><label><input id="create-confirm" type="checkbox" checked={confirmed} onChange={event => setConfirmed(event.target.checked)} disabled={disabled || busy} />I confirm creating this VM on this server.</label>
-        <button type="button" disabled={disabled || busy || !confirmed || !plan.creationEnabled} onClick={submit}>Create confirmed VM</button>
-        <button type="button" disabled={disabled || busy} onClick={() => { generation.current++; setPlan(null); setConfirmed(false); setError(""); }}>Edit definition</button></>}
+      {!submitted && <div className="actions-row">
+        <button type="button" className="primary" disabled={disabled || busy || !plan.creationEnabled} onClick={submit}>Create VM {plan.target.vmid}</button>
+        <button type="button" disabled={disabled || busy} onClick={() => { generation.current++; setPlan(null); setConfirmed(false); setError(""); }}>Edit definition</button></div>}
       {submitted && <>
         <p>Request key: <code>{requestKey}</code></p><p>Disconnecting or closing the app does not cancel creation. Keep this key and the operation ID for recovery.</p>
         {!operation && <button type="button" disabled={disabled || busy} onClick={submit}>Retry same confirmed request</button>}
@@ -92,7 +96,7 @@ export function RemoteCreate({ connectionId, endpoint, disabled, onSshTarget, on
       </>}
       {["failed", "interrupted", "uncertain"].includes(operation.status) && <ProvisioningFailure code={operation.failure} />}
       {operation.status === "failed" && <p role="alert">Creation failed. The target is retained for inspection.</p>}
-      <button type="button" disabled={disabled || busy} onClick={refresh}>Refresh creation status</button>
+      {pending && <p className="hint">Updating automatically. You can leave this view; the server keeps working.</p>}
       {["succeeded", "failed"].includes(operation.status) && <button type="button" disabled={disabled || busy} onClick={() => { generation.current++; setPlan(null); setRequestKey(""); setConfirmed(false); setSubmitted(false); setOperation(null); setError(""); }}>Prepare another creation</button>}</>}
     {busy && <p role="status">Contacting the server…</p>}
     {error && <p role="alert" className="error">{error}</p>}

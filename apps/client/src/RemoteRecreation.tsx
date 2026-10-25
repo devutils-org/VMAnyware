@@ -2,6 +2,7 @@ import { ProvisioningProgress } from "./ProvisioningProgress";
 import { ProvisioningFailure } from "./ProvisioningFailure";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { CheckSummary, useOperationPolling } from "./actionFlow";
 
 type Source = { id: string; definitionName: string; providerReference: { node: string; vmid: number } };
 type Plan = { definitionName: string; definitionHash: string; planHash: string; providerScopeId: string; creationEnabled: boolean; sshKeyCount: number; packages: string[]; snapshotAfterProvisioning: boolean; source: { templateVmid: number; templateVersion: string }; target: { node: string; vmid: number; storage: string; bridge: string; guestUser: string; resources: { cpu: number; memoryMiB: number; diskGiB: number } } };
@@ -10,7 +11,7 @@ type Operation = { id: string; kind: string; instanceId: string; status: "queued
 const labels: Record<string, string> = { template: "Source is a template", source_disk: "Template disk matches catalog", cloud_init_drive: "Cloud-Init drive exists", storage: "Storage supports VM images", storage_capacity: "Reported storage capacity", bridge: "Network bridge is active", target_vmid: "Target VMID was observed free", template_revision: "Template image identity", execution_permissions: "Provider write permissions", guest_readiness: "Actual guest readiness" };
 const required = Object.keys(labels).slice(0, 7);
 function usableIpv4(value: string) { const parts = value.split("."); return parts.length === 4 && parts.every(part => /^(0|[1-9][0-9]{0,2})$/.test(part) && Number(part) <= 255) && Number(parts[0]) > 0 && Number(parts[0]) < 224 && parts[0] !== "127" && !(parts[0] === "169" && parts[1] === "254"); }
-export function RemoteRecreation({ connectionId, source, disabled, onLock, onSshTarget, onEnvironmentsChanged }: { connectionId: number; source: Source; disabled: boolean; onLock: (locked: boolean) => void; onSshTarget: (host: string, username: string) => void; onEnvironmentsChanged?: () => void }) {
+export function RemoteRecreation({ connectionId, source, disabled, onLock, onSshTarget, onEnvironmentsChanged, onDone }: { connectionId: number; source: Source; disabled: boolean; onLock: (locked: boolean) => void; onSshTarget: (host: string, username: string) => void; onEnvironmentsChanged?: () => void; onDone?: () => void }) {
   const [vmid, setVmid] = useState(""), [review, setReview] = useState<Review | null>(null), [key, setKey] = useState("");
   const [confirmed, setConfirmed] = useState(false), [submitted, setSubmitted] = useState(false), [busy, setBusy] = useState(false);
   const [operation, setOperation] = useState<Operation | null>(null), [error, setError] = useState("");
@@ -43,7 +44,7 @@ export function RemoteRecreation({ connectionId, source, disabled, onLock, onSsh
     setOperation(result);
   }
   async function submit() {
-    if (!review || !eligible || !confirmed || disabled || busy || operation) return;
+    if (!review || !eligible || disabled || busy || operation) return;
     const current = ++generation.current; setSubmitted(true); setBusy(true); setError("");
     try { const result = await invoke<Operation>("confirm_remote_recreation", { connectionId, requestKey: key, confirmed: true }); if (generation.current === current) accept(result); }
     catch (failure) { if (generation.current === current) setError(report(failure)); }
@@ -59,15 +60,18 @@ export function RemoteRecreation({ connectionId, source, disabled, onLock, onSsh
   async function clear() {
     if (disabled || busy || (submitted && !terminal)) return;
     const current = ++generation.current; setBusy(true); setError("");
-    try { await invoke("clear_remote_recreation", { connectionId, requestKey: key }); if (generation.current === current) { setReview(null); setKey(""); setConfirmed(false); setSubmitted(false); setOperation(null); } }
+    try { await invoke("clear_remote_recreation", { connectionId, requestKey: key }); if (generation.current === current) { setReview(null); setKey(""); setConfirmed(false); setSubmitted(false); setOperation(null); onDone?.(); } }
     catch (failure) { if (generation.current === current) setError(report(failure)); }
     finally { if (generation.current === current) setBusy(false); }
   }
+  // Readiness may report uncertain while its retained probe continues; keep reading.
+  const pending = !!operation && !terminal;
+  useOperationPolling(pending && !disabled, operation, () => void refresh());
   return <section className="remote-recreation" aria-labelledby="recreation-heading" aria-busy={busy}>
     <h3 id="recreation-heading">Recreate from a retained definition</h3>
     <p>Deleted source: {source.definitionName} · {source.providerReference.node} · VM {source.providerReference.vmid}</p>
     <p>Creates a fresh VM from the saved definition. Previous disk contents and snapshots are not restored. The deleted source and its history remain.</p>
-    <form onSubmit={prepare}><label htmlFor="recreation-vmid">New target VMID</label><input id="recreation-vmid" inputMode="numeric" pattern="[1-9][0-9]*" required value={vmid} disabled={disabled || busy || review !== null || submitted} onChange={event => setVmid(event.target.value)} /><button type="submit" disabled={disabled || busy || review !== null || submitted}>Review recreation</button></form>
+    <form onSubmit={prepare}><label htmlFor="recreation-vmid">New target VMID</label><input id="recreation-vmid" inputMode="numeric" pattern="[1-9][0-9]*" required value={vmid} disabled={disabled || busy || review !== null || submitted} onChange={event => setVmid(event.target.value)} />{!review && !submitted && <button type="submit" disabled={disabled || busy}>Continue</button>}</form>
     {review && <>
       <p>Reviewed recreation: {review.plan.definitionName} · revision {review.sourceDefinitionRevision} · {review.plan.target.node} · VM {review.plan.target.vmid}</p>
       <p>Definition hash: <code>{review.sourceDefinitionHash}</code></p>
@@ -78,19 +82,21 @@ export function RemoteRecreation({ connectionId, source, disabled, onLock, onSsh
       {review.plan.snapshotAfterProvisioning && <p>The new snapshot requires server snapshot permission. It does not recover an old snapshot or replace an independent backup.</p>}
       <details><summary>Retained definition</summary><pre>{review.definitionYaml}</pre></details>
       <p>Server recreation: {review.recreationEnabled ? "enabled" : "disabled"}. Checks are observations, not a VMID reservation or proof of guest access.</p>
-      <ul>{review.preflight.checks.map(check => <li key={check.code}>{labels[check.code] || "Unsupported prerequisite"}: {check.status}</li>)}</ul>
-      <label><input id="recreation-confirm" type="checkbox" checked={confirmed} onChange={event => setConfirmed(event.target.checked)} disabled={!eligible || disabled || busy || submitted} /> I confirm a fresh VM {review.plan.target.vmid} on {review.plan.target.node} from this retained definition.</label>
-      {!operation && <button type="button" disabled={!eligible || !confirmed || disabled || busy} onClick={submit}>{submitted ? "Retry the same recreation request" : "Confirm recreation"}</button>}
-      <p>Request key: <code>{key}</code></p>
-      {(!submitted || terminal) && <button type="button" disabled={disabled || busy} onClick={clear}>{submitted ? "Acknowledge recreation result" : "Cancel recreation review"}</button>}
+      <CheckSummary checks={review.preflight.checks} labels={labels} />
+      <div className="actions-row">
+        {!operation && <button type="button" className="primary" disabled={!eligible || disabled || busy} onClick={submit}>{submitted ? "Retry the same recreation request" : `Create VM ${review.plan.target.vmid}`}</button>}
+        {!submitted && <button type="button" disabled={disabled || busy} onClick={clear}>Cancel</button>}
+        {terminal && <button type="button" className="primary" disabled={disabled || busy} onClick={clear}>Done</button>}
+      </div>
+      <p className="hint">Request key <code>{key}</code></p>
     </>}
     {submitted && !operation && <p role="status">No verified operation ID received. Keep this request key and retry only this same confirmed recreation.</p>}
     {operation && <><ProvisioningProgress key={operation.id + operation.status} connectionId={connectionId} operationId={operation.id} instanceId={operation.instanceId} disabled={disabled || busy} planHash={review?.plan.planHash} definitionHash={review?.plan.definitionHash} sourceInstanceId={source.id} node={review?.plan.target.node} vmid={review?.plan.target.vmid} /><p role="status">Recreation status: {operation.status} · operation <code>{operation.id}</code> · new instance <code>{operation.instanceId}</code></p>
       {operation.status === "succeeded" && operation.result && <><p>New guest initialized at {operation.result.guest.ipv4}. Previous disk contents were not recovered. SSH access and host identity still need verification.</p><button type="button" disabled={disabled || busy} onClick={() => onSshTarget(operation.result!.guest.ipv4, review!.plan.target.guestUser)}>Prepare SSH for recreated VM</button></>}
       {["failed", "interrupted", "uncertain"].includes(operation.status) && <ProvisioningFailure code={operation.failure} />}
       {["failed", "interrupted", "uncertain"].includes(operation.status) && <p role="alert">Recreation did not confirm readiness. The new target is retained for inspection; refreshing does not submit another creation.</p>}
-      <button type="button" disabled={disabled || busy} onClick={refresh}>Refresh recreation status</button></>}
-    {busy && <p role="status">Reading or submitting the retained recreation request…</p>}
+      {pending && <p className="hint">Updating automatically. You can close this panel; the server keeps working and the action stays in History.</p>}</>}
+    {busy && !operation && <p role="status">{review ? "Submitting…" : "Checking the plan and prerequisites…"}</p>}
     {error && <p role="alert" className="error">{error}</p>}
     <p>Closing or disconnecting does not cancel server work. Consent is not restored automatically.</p>
   </section>;

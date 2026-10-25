@@ -37,3 +37,25 @@ snapshot tab now performs the same read the previous explicit button did; reads
 never submit work. Screenshots were produced from the built bundle with a
 preview-only fake bridge outside the repository; native GUI acceptance remains
 a separate manual check.
+
+## Amendment — streamlined action flow (same day)
+
+Real use showed each action needed about seven interactions (review button,
+one or two checkboxes, confirm, manual refresh, acknowledge, close). Now:
+
+- Actions without inputs (start, shutdown, restore, delete) run their
+  read-only review when the drawer opens; snapshot and recreation keep one
+  Continue step for their inputs.
+- The labelled primary button ("Start VM 9004", "Create snapshot ui-base") is
+  the explicit confirmation for non-destructive actions. Destructive actions
+  (restore, delete) keep one consent checkbox that sets both the confirmation
+  and the data-loss acknowledgement the native command still requires.
+- Submitted operations are re-read automatically (bounded polling, reads only)
+  until succeeded/failed; uncertain readiness keeps being read as before.
+- The drawer can always be closed: running or pending work stays mounted in
+  the background with a top-bar indicator, and "Done" releases the retained
+  native request state (the former acknowledge) and closes the drawer. Power
+  and snapshot views re-read after an action settles.
+
+Prerequisite checks, request-key retention, same-key retry and evidence
+validation are unchanged.

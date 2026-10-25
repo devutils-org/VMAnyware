@@ -174,8 +174,17 @@ change. tsc, vite build, 28 client tests pass; desktop 1440x900 and phone
 scratchpad, not committed) show no horizontal overflow. Native GUI check by
 user pending.
 
-Next: user relaunches app and checks the new UI; then UI snapshot/restore on
-9004 (marker via qm guest exec), then UI delete/recreate with the app key; then registered-VMID defect fix and template
+UI snapshot via deployed server on 9004: ui-base, 9/9 checks, operation
+18c825e9a64493558c591763069a77a9; user marker before→after then, after UI
+shutdown/restore/start, `qm guest exec 9004 -- cat /root/marker` = before
+(restore proven through the app; user did not paste each UI step result).
+User feedback: ~7 interactions per action. ADR 0094 amendment: auto-review,
+primary button as confirmation (single consent for destructive), automatic
+operation polling, closable background drawer, Done releases state; power and
+snapshots re-read afterwards. tsc/build/28 tests pass; simulated snapshot flow
+in preview harness: Snapshot→Continue→Create→(auto)→Done.
+
+Next: user relaunches and validates the streamlined actions; then UI delete/recreate with the app key; then registered-VMID defect fix and template
 r2 (empty machine-id). Deletion via app needs temporary grants again.
 Remaining MVP
 gaps per docs/roadmap-status.md: HTTPS remote-mode UI on real infra, mobile,

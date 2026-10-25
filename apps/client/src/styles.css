@@ -293,3 +293,26 @@ legend { padding: 0 6px; color: var(--soft); font-size: 12px; }
   .tabbar .nav-item:has(.nav-short) .nav-label { display: none; }
   .tabbar .nav-short { display: block; }
 }
+
+/* ---------- streamlined action flow ---------- */
+.actions-row { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 16px; }
+button.danger.solid { color: #12070a; background: var(--danger); border-color: var(--danger); }
+button.danger.solid:hover:not(:disabled) { background: #ffa6b0; border-color: #ffa6b0; }
+.consent { margin-top: 16px; padding: 12px 14px; border: 1px solid #ff8f9c40; border-radius: var(--radius-control); background: #ff8f9c08; color: var(--fg); }
+.checks summary { display: flex; align-items: center; gap: 10px; }
+.checks summary span { padding: 1px 8px; border-radius: 999px; font: 11px var(--mono); }
+.checks summary .ok { color: var(--ok); background: #7ef0b414; }
+.checks summary .warn { color: var(--danger); background: #ff8f9c14; }
+.checks li { padding: 4px 0; border: 0; font-size: 12px; }
+.checks li.failed { color: var(--danger); }
+.result { margin-top: 16px; padding: 14px 16px; border: 1px solid var(--line-strong); border-radius: var(--radius-control); background: var(--raised); }
+.result.succeeded { border-color: #7ef0b440; }
+.result.failed, .result.interrupted { border-color: #ff8f9c40; }
+.result [role="status"] { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; margin: 0 0 6px; color: var(--fg); }
+.status-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--purple); animation: pulse 1.2s ease-in-out infinite; }
+.result.succeeded .status-dot { background: var(--ok); animation: none; }
+.result.failed .status-dot, .result.interrupted .status-dot { background: var(--danger); animation: none; }
+.running-pill { min-height: 32px; border-radius: 999px; font-size: 12px; border-color: #b7a0ff50; background: #b7a0ff10; }
+.dot.busy { background: var(--purple); animation: pulse 1.2s ease-in-out infinite; }
+@keyframes pulse { 50% { opacity: .35; } }
+@media (max-width: 820px) { .running-pill { font-size: 0; gap: 0; width: 32px; padding: 0; } }
