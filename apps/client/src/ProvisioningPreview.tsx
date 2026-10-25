@@ -1,7 +1,9 @@
-import { useState, type FormEvent } from "react";
+import { useCallback, useState, type FormEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { LocalCreation } from "./LocalCreation";
 
-type Plan = {
+export type Plan = {
+  providerScopeId: string | null;
   definitionName: string;
   definitionHash: string;
   planHash: string;
@@ -16,14 +18,20 @@ type Plan = {
   creationEnabled: boolean;
 };
 
-type Preflight = {
+export type Preflight = {
   planHash: string;
   checks: { code: string; status: "passed" | "failed" | "unknown"; message: string }[];
   creationEnabled: boolean;
   vmidReserved: false;
 };
 
-export function ProvisioningPreview({ port, yaml, native }: { port: string; yaml: string; native: boolean }) {
+export function ProvisioningPreview({ port, yaml, native, onCreationLockedChange }: {
+  port: string; yaml: string; native: boolean; onCreationLockedChange: (locked: boolean) => void;
+}) {
+  const [creationLocked, setCreationLocked] = useState(true);
+  const onLockedChange = useCallback((locked: boolean) => {
+    setCreationLocked(locked); onCreationLockedChange(locked);
+  }, [onCreationLockedChange]);
   const [vmid, setVmid] = useState("");
   const [busy, setBusy] = useState<"preview" | "preflight" | null>(null);
   const [checked, setChecked] = useState<{ port: string; yaml: string; vmid: string; result: Preflight } | null>(null);
@@ -36,6 +44,7 @@ export function ProvisioningPreview({ port, yaml, native }: { port: string; yaml
 
   async function preview(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
+    if (creationLocked) return;
     if (!Number.isInteger(Number(port)) || Number(port) < 1 || Number(port) > 65535) {
       reportError("Enter a local service port between 1 and 65535.");
       return;
@@ -57,7 +66,7 @@ export function ProvisioningPreview({ port, yaml, native }: { port: string; yaml
   }
 
   async function checkAgainstProxmox() {
-    if (!plan) return;
+    if (!plan || creationLocked) return;
     setBusy("preflight");
     setError(null);
     setChecked(null);
@@ -81,8 +90,8 @@ export function ProvisioningPreview({ port, yaml, native }: { port: string; yaml
       <label htmlFor="target-vmid">Requested VMID</label>
       <div className="connection-fields">
         <input id="target-vmid" type="number" min="100" max="999999999" step="1" required value={vmid}
-          disabled={busy !== null} onChange={event => { setVmid(event.target.value); setError(null); }} />
-        <button disabled={!native || busy !== null} type="submit">{busy === "preview" ? "Preparing preview…" : "Preview provisioning"}</button>
+          disabled={busy !== null || creationLocked} onChange={event => { setVmid(event.target.value); setError(null); }} />
+        <button disabled={!native || busy !== null || creationLocked} type="submit">{busy === "preview" ? "Preparing preview…" : "Preview provisioning"}</button>
       </div>
     </form>
     {errorMessage && <p role="alert" className="error">{errorMessage}</p>}
@@ -99,7 +108,7 @@ export function ProvisioningPreview({ port, yaml, native }: { port: string; yaml
         <dt>Packages</dt><dd>{plan.packages.length ? plan.packages.join(", ") : "None declared"}</dd>
         <dt>Snapshot after provisioning</dt><dd>{plan.snapshotAfterProvisioning ? "Requested" : "Not requested"}</dd>
       </dl>
-      <button type="button" disabled={!native || busy !== null} onClick={checkAgainstProxmox}>
+      <button type="button" disabled={!native || busy !== null || creationLocked} onClick={checkAgainstProxmox}>
         {busy === "preflight" ? "Checking Proxmox…" : "Check against Proxmox"}
       </button>
       {preflight && <div aria-labelledby="preflight-heading">
@@ -107,14 +116,16 @@ export function ProvisioningPreview({ port, yaml, native }: { port: string; yaml
         <ul>{preflight.checks.map(check => <li key={check.code}>
           <strong>{check.status === "passed" ? "Passed" : check.status === "failed" ? "Failed" : "Unknown"}:</strong> {check.message}
         </li>)}</ul>
-        <p>These results describe the host at the time of the check. Unknown checks need further verification. The VMID is not reserved and creation remains unavailable.</p>
+        <p>These results describe the host at the time of the check. Unknown checks need further verification. These reads do not reserve a VMID or authorize creation.</p>
       </div>}
       {!preflight && <p>Offline preview only. The template, available capacity, network and VMID have not been checked against Proxmox. The VMID is not reserved.</p>}
-      <p>Creation is not available yet. Package installation and snapshots are declarations in this plan.</p>
+      {!plan.creationEnabled && <p>Creation is disabled for this service or template. The preview does not execute any steps.</p>}
       <details><summary>Configuration references</summary>
         <p className="operation-id">Definition: {plan.definitionHash}</p>
         <p className="operation-id">Plan: {plan.planHash}</p>
       </details>
     </div>}
+    <LocalCreation port={port} plan={plan} preflight={preflight} native={native}
+      onLockedChange={onLockedChange} onAcknowledged={() => { setResponse(null); setChecked(null); }} />
   </section>;
 }

@@ -142,6 +142,8 @@ pub fn run() {
             control_plane::check_instance_lifecycle,
             control_plane::begin_lifecycle_action,
             control_plane::read_lifecycle_operation,
+            control_plane::creation::begin_local_creation,
+            control_plane::creation::read_local_creation,
             control_plane::preview_provisioning,
             control_plane::preflight_provisioning
         ])

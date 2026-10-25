@@ -9,7 +9,7 @@ use std::{
     time::Duration,
 };
 
-fn response(
+pub(super) fn response(
     method: &str,
     path: &str,
     status: &str,
@@ -157,7 +157,7 @@ fn definitions_use_yaml_post_and_list_saved_records() {
 fn provisioning_preview_posts_explicit_target_and_decodes_offline_plan() {
     let sample = include_str!("../../../../../examples/kernel-lab.yaml");
     let plan = serde_json::json!({
-        "definitionName":"kernel-lab", "definitionHash":"definition-hash", "planHash":"plan-hash", "provider":"proxmox",
+        "definitionName":"kernel-lab", "definitionHash":"definition-hash", "planHash":"plan-hash", "provider":"proxmox", "providerScopeId":"c".repeat(64),
         "source":{"image":"debian-13","node":"pve-test","templateVmid":9000,"templateVersion":"debian-13-cloud-20261016","storage":"local-lvm","bridge":"vmbr0","diskDevice":"scsi0","sourceDiskGiB":8,"guestUser":"debian"},
         "target":{"node":"pve-test","vmid":201,"name":"kernel-lab","storage":"local-lvm","bridge":"vmbr0","resources":{"cpu":4,"memoryMiB":8192,"diskGiB":40},"guestUser":"debian","ipv4":"dhcp"},
         "sshKeyCount":1,"packages":["git"],"snapshotAfterProvisioning":false,"steps":["full_clone"],
@@ -172,6 +172,10 @@ fn provisioning_preview_posts_explicit_target_and_decodes_offline_plan() {
     let result =
         tauri::async_runtime::block_on(preview_provisioning(port, sample.into(), 201)).unwrap();
     assert_eq!(result.target.vmid, 201);
+    assert_eq!(
+        serde_json::to_value(&result).unwrap()["providerScopeId"],
+        "c".repeat(64)
+    );
     assert!(!result.live_verified && !result.vmid_reserved && !result.creation_enabled);
     let request = task.join().unwrap();
     assert!(request

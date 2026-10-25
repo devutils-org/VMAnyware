@@ -80,6 +80,8 @@ pub const COMMANDS: &[&str] = &[
     "check_instance_lifecycle",
     "begin_lifecycle_action",
     "read_lifecycle_operation",
+    "begin_local_creation",
+    "read_local_creation",
     "preview_provisioning",
     "preflight_provisioning",
 ];

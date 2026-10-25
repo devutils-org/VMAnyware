@@ -65,7 +65,7 @@ pub struct Operation {
     failure: Option<Failure>,
 }
 impl Operation {
-    pub(super) fn id(&self) -> &str {
+    pub(crate) fn id(&self) -> &str {
         &self.id
     }
     pub(super) fn instance_id(&self) -> Option<&str> {
@@ -184,7 +184,7 @@ fn valid_package(value: &str) -> bool {
 }
 
 impl Plan {
-    pub(super) fn valid(&self, vmid: u32) -> bool {
+    pub(crate) fn valid(&self, vmid: u32) -> bool {
         (!self.definition_name.is_empty()
             && self.definition_name.len() <= 63
             && !self.definition_name.starts_with('-')
@@ -216,10 +216,10 @@ impl Plan {
     pub(super) fn matches_definition(&self, name: &str, hash: &str) -> bool {
         self.definition_name == name && self.definition_hash == hash
     }
-    pub(super) fn target_vmid(&self) -> u32 {
+    pub(crate) fn target_vmid(&self) -> u32 {
         self.target.vmid
     }
-    pub(super) fn enabled(&self) -> bool {
+    pub(crate) fn enabled(&self) -> bool {
         self.creation_enabled
     }
     pub(super) fn same_configuration(&self, other: &Self) -> bool {
@@ -231,7 +231,7 @@ impl Plan {
         b.as_object_mut().unwrap().remove("creationEnabled");
         a == b
     }
-    pub(super) fn approval(&self) -> serde_json::Value {
+    pub(crate) fn approval(&self) -> serde_json::Value {
         json!({"definitionName":self.definition_name,"definitionHash":self.definition_hash,"providerScopeId":self.provider_scope_id,"planHash":self.plan_hash,"targetNode":self.target.node,"targetVmid":self.target.vmid,"sourceVmid":self.source.template_vmid,"storage":self.target.storage,"bridge":self.target.bridge,"confirmed":true})
     }
 }
@@ -518,7 +518,7 @@ fn validate_read_operation(operation: &Operation) -> Result<(), String> {
     }
     Ok(())
 }
-pub(super) fn validate_operation(operation: &Operation, plan: &Plan) -> Result<(), String> {
+pub(crate) fn validate_operation(operation: &Operation, plan: &Plan) -> Result<(), String> {
     validate_read_operation(operation)?;
     if let Some(result) = operation
         .result

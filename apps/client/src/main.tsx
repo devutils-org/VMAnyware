@@ -8,6 +8,7 @@ import { ProvisioningPreview } from "./ProvisioningPreview";
 import { OperationHistory } from "./OperationHistory";
 import { Instances } from "./Instances";
 import { RemoteConnection } from "./RemoteConnection";
+import { AppIdentity } from "./AppIdentity";
 
 type DefinitionRecord = {
   name: string;
@@ -68,10 +69,12 @@ function App() {
   const [yaml, setYaml] = useState(sampleDefinition);
   const [definitions, setDefinitions] = useState<DefinitionRecord[]>([]);
   const [definitionBusy, setDefinitionBusy] = useState(false);
+  const [creationLocked, setCreationLocked] = useState(false);
   const [definitionMessage, setDefinitionMessage] = useState("");
   const [definitionError, setDefinitionError] = useState("");
 
   async function definitionsAction(action: "save" | "load" | "validate") {
+    if (creationLocked) return;
     const value = Number(port);
     if (!Number.isInteger(value) || value < 1 || value > 65535) {
       setDefinitionError("Enter a port between 1 and 65535.");
@@ -199,7 +202,7 @@ function App() {
         <p className="panel-kicker">01 / Connect</p>
         <h2 id="connection-heading" tabIndex={-1}>Control plane</h2>
         <label htmlFor="connection-mode">Connection mode</label>{" "}
-        <select id="connection-mode" value={remoteMode ? "remote" : "local"} disabled={connecting || definitionBusy || serviceState === "checking"} onChange={event => { setRemoteMode(event.target.value === "remote"); setServiceState("unchecked"); setInventory(null); setDefinitions([]); setOperation(null); }}>
+        <select id="connection-mode" value={remoteMode ? "remote" : "local"} disabled={connecting || definitionBusy || creationLocked || serviceState === "checking"} onChange={event => { setRemoteMode(event.target.value === "remote"); setServiceState("unchecked"); setInventory(null); setDefinitions([]); setOperation(null); }}>
           <option value="local">Local service</option><option value="remote">Remote HTTPS server</option>
         </select>
         {remoteMode ? <RemoteConnection native={native} /> : <>
@@ -208,7 +211,7 @@ function App() {
           <label htmlFor="port">Local service port</label>
           <div className="connection-fields">
             <input id="port" type="number" min="1" max="65535" required value={port}
-              disabled={connecting || definitionBusy || serviceState === "checking"} onChange={(event) => {
+              disabled={connecting || definitionBusy || creationLocked || serviceState === "checking"} onChange={(event) => {
                 setPort(event.target.value);
                 setServiceState("unchecked");
                 setServiceError("");
@@ -249,26 +252,27 @@ function App() {
         <p className="panel-kicker">02 / Define</p>
         <h2 id="definitions-heading" tabIndex={-1}>Environment definitions</h2>
         <p>Save a reusable configuration before provisioning. Replace the example public key with your own. Saving does not create a VM.</p>
+        {native && <AppIdentity disabled={definitionBusy || creationLocked} />}
         <label htmlFor="definition-yaml">Environment YAML</label>
-        <textarea id="definition-yaml" value={yaml} spellCheck={false} disabled={definitionBusy}
+        <textarea id="definition-yaml" value={yaml} spellCheck={false} disabled={definitionBusy || creationLocked}
           onChange={(event) => { setYaml(event.target.value); setDefinitionMessage(""); setDefinitionError(""); }} />
         <div className="connection-fields">
-          <button disabled={!native || definitionBusy} onClick={() => definitionsAction("validate")}>Validate YAML</button>
-          <button className="definition-save" disabled={!native || definitionBusy} onClick={() => definitionsAction("save")}>
+          <button disabled={!native || definitionBusy || creationLocked} onClick={() => definitionsAction("validate")}>Validate YAML</button>
+          <button className="definition-save" disabled={!native || definitionBusy || creationLocked} onClick={() => definitionsAction("save")}>
             {definitionBusy ? "Working…" : "Save definition"}
           </button>
-          <button disabled={!native || definitionBusy} onClick={() => definitionsAction("load")}>Load saved definitions</button>
+          <button disabled={!native || definitionBusy || creationLocked} onClick={() => definitionsAction("load")}>Load saved definitions</button>
         </div>
         <p>CPU: 1–64 · Memory: 256–262144 MiB · Disk: 4–4096 GiB</p>
         {definitionMessage && <p role="status">{definitionMessage}</p>}
         {definitionError && <p role="alert" className="error">{definitionError}</p>}
         {definitions.length > 0 && <ul>{definitions.map(record => <li key={record.name}>
-          <button disabled={definitionBusy} onClick={() => { setYaml(record.yaml); setDefinitionMessage(`Loaded ${record.name}. Change its name to save a new definition.`); setDefinitionError(""); }}>
+          <button disabled={definitionBusy || creationLocked} onClick={() => { setYaml(record.yaml); setDefinitionMessage(`Loaded ${record.name}. Change its name to save a new definition.`); setDefinitionError(""); }}>
             {record.name}
           </button> · Revision {record.revision}
         </li>)}</ul>}
       </section>
-      <ProvisioningPreview port={port} yaml={yaml} native={native} />
+      <ProvisioningPreview port={port} yaml={yaml} native={native} onCreationLockedChange={setCreationLocked} />
       </div>
       <SshHostTrust native={native} />
       {inventory && <>
@@ -283,7 +287,7 @@ function App() {
             <ul>{inventory.templates.map(template => <li key={`${template.node}:${template.vmid}`}>
               <strong>{template.name ?? "Unnamed template"}</strong> · {template.node} · VMID {template.vmid}
             </li>)}</ul>}
-          <p>Inventory is read-only. Creating environments is not available yet.</p>
+          <p>Inventory is read-only. Use the reviewed provisioning plan to create an environment.</p>
         </section>
       </>}
       </>}

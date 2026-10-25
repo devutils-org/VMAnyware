@@ -1,3 +1,6 @@
+#[path = "control_plane/creation.rs"]
+pub(crate) mod creation;
+
 use reqwest::{redirect::Policy, Client};
 use serde::{de::DeserializeOwned, Deserialize, Serialize};
 use std::time::Duration;
@@ -204,6 +207,7 @@ pub struct PlanTarget {
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct ProvisioningPlan {
+    provider_scope_id: Option<String>,
     definition_name: String,
     definition_hash: String,
     plan_hash: String,

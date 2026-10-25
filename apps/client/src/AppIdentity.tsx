@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
 
 type PublicIdentity = { publicKey: string; fingerprint: string };
-export function AppIdentity({ disabled, onUse }: { disabled: boolean; onUse: (publicKey: string) => void }) {
+export function AppIdentity({ disabled, onUse }: { disabled: boolean; onUse?: (publicKey: string) => void }) {
   const [supported, setSupported] = useState(false), [systemSupported, setSystemSupported] = useState(false);
   const [rememberConsent, setRememberConsent] = useState(false), [forgetConsent, setForgetConsent] = useState(false), [notice, setNotice] = useState("");
   const [passphrase, setPassphrase] = useState(""), [confirmation, setConfirmation] = useState("");
@@ -73,7 +73,7 @@ export function AppIdentity({ disabled, onUse }: { disabled: boolean; onUse: (pu
       <p>SSH identity: <code>{identity.fingerprint}</code></p>
       <label htmlFor="identity-public-key">Application public key</label>
       <textarea id="identity-public-key" readOnly value={identity.publicKey} spellCheck={false} />
-      <button type="button" disabled={disabled || busy} onClick={() => onUse(identity.publicKey)}>Add this public key to the definition</button>
+      {onUse && <button type="button" disabled={disabled || busy} onClick={() => onUse(identity.publicKey)}>Add this public key to the definition</button>}
     </>}
     {error && <p role="alert" className="error">{error}</p>}
   </details>;

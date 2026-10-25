@@ -79,6 +79,8 @@
     "allow-check-instance-lifecycle",
     "allow-begin-lifecycle-action",
     "allow-read-lifecycle-operation",
+    "allow-begin-local-creation",
+    "allow-read-local-creation",
     "allow-preview-provisioning",
     "allow-preflight-provisioning",
     "allow-prepare-remote-lifecycle",

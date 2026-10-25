@@ -98,7 +98,10 @@ fn smoke_report(app: tauri::AppHandle, ok: bool, failure: Option<String>) {
             );
         }
         if ok && state.system_identity {
-            assert_eq!(state.identity.unlock_system().err().as_deref(), Some("No saved unlock secret for this application SSH identity."));
+            assert_eq!(
+                state.identity.unlock_system().err().as_deref(),
+                Some("No saved unlock secret for this application SSH identity.")
+            );
             eprintln!("Owned system vault: explicit production save/read/forget IPC, native SSH source and forgotten-secret refusal");
         }
         state.peer.shutdown();
@@ -161,7 +164,9 @@ fn main() {
         config["sshFingerprint"] = fingerprint.into();
         let system_identity = config["systemIdentity"].as_bool().unwrap_or(false);
         if system_identity {
-            let root = std::path::PathBuf::from(std::env::var("VMANYWARE_OWNED_VAULT_TEST").expect("Owned vault root required"));
+            let root = std::path::PathBuf::from(
+                std::env::var("VMANYWARE_OWNED_VAULT_TEST").expect("Owned vault root required"),
+            );
             assert!(root.join("owned-test-bus").is_file());
         }
         snapshots = Some(config.to_string());
