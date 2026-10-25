@@ -86,7 +86,8 @@ export function RemoteCreate({ connectionId, endpoint, disabled, onSshTarget }: 
       </>}
       {["failed", "interrupted", "uncertain"].includes(operation.status) && <ProvisioningFailure code={operation.failure} />}
       {operation.status === "failed" && <p role="alert">Creation failed. The target is retained for inspection.</p>}
-      <button type="button" disabled={disabled || busy} onClick={refresh}>Refresh creation status</button></>}
+      <button type="button" disabled={disabled || busy} onClick={refresh}>Refresh creation status</button>
+      {["succeeded", "failed"].includes(operation.status) && <button type="button" disabled={disabled || busy} onClick={() => { generation.current++; setPlan(null); setRequestKey(""); setConfirmed(false); setSubmitted(false); setOperation(null); setError(""); }}>Prepare another creation</button>}</>}
     {busy && <p role="status">Contacting the server…</p>}
     {error && <p role="alert" className="error">{error}</p>}
   </section>;

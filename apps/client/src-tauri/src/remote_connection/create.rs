@@ -50,6 +50,8 @@ pub(super) struct Prepared {
     submitted: bool,
     inflight: bool,
     operation: Option<String>,
+    // Set only after the server reports a definitive succeeded/failed result.
+    terminal: bool,
 }
 #[derive(Debug, Deserialize, Serialize)]
 #[serde(rename_all = "camelCase")]
@@ -67,6 +69,10 @@ pub struct Operation {
 impl Operation {
     pub(crate) fn id(&self) -> &str {
         &self.id
+    }
+    /// Uncertain and interrupted outcomes may still progress; never treat them as final.
+    fn is_terminal(&self) -> bool {
+        matches!(self.status, Status::Succeeded | Status::Failed)
     }
     pub(super) fn instance_id(&self) -> Option<&str> {
         self.instance_id.as_deref()
@@ -302,7 +308,11 @@ impl RemoteConnection {
             if state.generation != id {
                 return Err("The connection changed.".into());
             }
-            if state.prepared.as_ref().is_some_and(|p| p.submitted) {
+            if state
+                .prepared
+                .as_ref()
+                .is_some_and(|p| p.submitted && !p.terminal)
+            {
                 return Err("Resume the submitted request before preparing another target. Disconnecting does not cancel it.".into());
             }
             state.prepared = None;
@@ -365,7 +375,10 @@ impl RemoteConnection {
         let mut state = self.0.lock().map_err(|_| "Connection state unavailable.")?;
         if state.generation != id
             || state.profile.is_none()
-            || state.prepared.as_ref().is_some_and(|p| p.submitted)
+            || state
+                .prepared
+                .as_ref()
+                .is_some_and(|p| p.submitted && !p.terminal)
         {
             return Err("The connection or creation changed. Prepare again.".into());
         }
@@ -375,6 +388,7 @@ impl RemoteConnection {
             submitted: false,
             inflight: false,
             operation: None,
+            terminal: false,
         });
         Ok(plan)
     }
@@ -434,6 +448,7 @@ impl RemoteConnection {
         let operation = result?;
         validate_operation(&operation, &plan)?;
         prepared.operation = Some(operation.id.clone());
+        prepared.terminal = operation.is_terminal();
         Ok(operation)
     }
     async fn create_status(&self, id: u64, key: &str) -> Result<Operation, String> {
@@ -466,6 +481,12 @@ impl RemoteConnection {
         validate_operation(&operation, &prepared.plan)?;
         if Some(&operation.id) != prepared.operation.as_ref() {
             return Err("The server returned a different operation.".into());
+        }
+        if operation.is_terminal() {
+            let mut state = self.0.lock().map_err(|_| "Connection state unavailable.")?;
+            if let Some(current) = state.prepared.as_mut().filter(|p| p.key == key) {
+                current.terminal = true;
+            }
         }
         Ok(operation)
     }
@@ -668,6 +689,7 @@ mod tests {
             submitted: true,
             inflight: false,
             operation: Some("d".repeat(32)),
+            terminal: false,
         });
         let operation = manager.create_status(id, "retained-key").await.unwrap();
         let safe = serde_json::to_value(operation).unwrap();
@@ -688,6 +710,55 @@ mod tests {
             .await
             .unwrap()
             .starts_with(&format!("GET /api/v1/operations/{} ", "d".repeat(32))));
+        // Uncertain work may still progress: another preparation stays locked.
+        assert!(manager
+            .prepare_create(id, "next-key-1234567890".into(), "x".into(), 9004)
+            .await
+            .err()
+            .unwrap()
+            .starts_with("Resume the submitted request"));
+    }
+    #[tokio::test]
+    async fn definitive_failure_unlocks_a_new_creation_request() {
+        let body=json!({"id":"d".repeat(32),"kind":"vm_provision","instanceId":"e".repeat(32),"status":"failed","result":null,"failure":"provisioning_preconditions_failed"}).to_string();
+        let (endpoint, ca, task) =
+            super::super::tests::fixture("200 OK", &body, "x-vmanyware-authenticated: bearer\r\n")
+                .await;
+        let manager = RemoteConnection::default();
+        let id = manager.begin().unwrap();
+        manager
+            .complete(id, Profile::new(&endpoint, TOKEN, Some(ca)).unwrap())
+            .unwrap();
+        manager.0.lock().unwrap().prepared = Some(Prepared {
+            key: "retained-key".into(),
+            plan: plan(),
+            submitted: true,
+            inflight: false,
+            operation: Some("d".repeat(32)),
+            terminal: false,
+        });
+        manager.create_status(id, "retained-key").await.unwrap();
+        task.await.unwrap();
+        assert!(
+            manager
+                .0
+                .lock()
+                .unwrap()
+                .prepared
+                .as_ref()
+                .unwrap()
+                .terminal
+        );
+        // The lock no longer refuses; the new request reaches validation/transport instead.
+        let error = manager
+            .prepare_create(id, "next-key-1234567890".into(), "x".into(), 9004)
+            .await
+            .err()
+            .unwrap();
+        assert!(
+            !error.starts_with("Resume the submitted request"),
+            "{error}"
+        );
     }
     #[tokio::test]
     async fn declared_plan_preparation_and_unknown_reply_retry_keep_exact_retained_approval() {
@@ -770,6 +841,7 @@ mod tests {
             submitted: false,
             inflight: false,
             operation: None,
+            terminal: false,
         });
         assert!(manager.confirm_create(id, "wrong-key", true).await.is_err());
         assert!(manager
@@ -822,6 +894,7 @@ mod tests {
             submitted: false,
             inflight: false,
             operation: None,
+            terminal: false,
         });
         assert_eq!(
             manager
@@ -882,11 +955,13 @@ mod tests {
                 submitted: false,
                 inflight: false,
                 operation: None,
+                terminal: false,
             });
             let error = manager
                 .confirm_create(id, "retained-key", true)
                 .await
-                .unwrap_err();
+                .err()
+                .unwrap();
             assert!(!error.contains(TOKEN));
             assert!(!error.contains("PRIVATE_SERVER_BODY"));
             let request = task.await.unwrap();
@@ -931,6 +1006,7 @@ mod tests {
             submitted: false,
             inflight: false,
             operation: None,
+            terminal: false,
         });
         let connection = manager.clone();
         let task =
@@ -970,6 +1046,7 @@ mod tests {
                 submitted: true,
                 inflight: false,
                 operation: Some("d".repeat(32)),
+                terminal: false,
             });
             let result = manager.create_status(id, "retained-key").await;
             assert_eq!(result.is_ok(), !different);
