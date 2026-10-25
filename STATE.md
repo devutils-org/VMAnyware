@@ -102,8 +102,15 @@ while reviewed previous key is pinned; UI shows both). 30 ssh:: tests (2 new +
 extended changed-key test), strict client Clippy, examples check, tsc + vite
 build, 85 command/capability allow-list consistency pass.
 
-Next: user verifies 9002 fingerprint independently (qm guest exec ssh-keygen),
-relaunches app, replaces key in UI, SSH terminal on 9002. Then remaining MVP
+Real replacement proven: user `qm guest exec 9002 -- ssh-keygen -lf
+/etc/ssh/ssh_host_ed25519_key.pub` → ...ZSM; relaunched app showed changed
+status with previous ...6aM and new ...ZSM, Replace saved ...ZSM; native
+terminal on 9002: home-smoke, eth0 10.10.10.205/24, fresh home (only skel
+files + .ssh, no marker), cloud-init done. Real home journey now covers
+create → ready → SSH → snapshot → modify → restore → delete → recreate → SSH
+(server API for snapshot/restore/delete/recreate; native app for SSH).
+
+Next: remaining MVP
 gaps per docs/roadmap-status.md: HTTPS remote-mode UI on real infra, mobile,
 platform secret stores, real server deployment, release.
 
