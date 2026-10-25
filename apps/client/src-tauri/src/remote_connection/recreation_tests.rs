@@ -330,10 +330,11 @@ async fn native_recreation_confirmation_rejects_source_identity_reuse_and_false_
             .confirm_recreation(id, "fixed-key", true)
             .await
             .is_err());
-        let state = manager.0.lock().unwrap();
-        assert!(state.recreation.submitted);
-        assert!(state.recreation.operation.is_none());
-        drop(state);
+        {
+            let state = manager.0.lock().unwrap();
+            assert!(state.recreation.submitted);
+            assert!(state.recreation.operation.is_none());
+        }
         task.await.unwrap();
     }
 }

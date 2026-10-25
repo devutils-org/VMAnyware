@@ -46,9 +46,10 @@ async fn remote_restore_recovery_reads_fixed_scoped_authenticated_gets_without_i
         serde_json::to_value(result).unwrap()["request"]["snapshotName"],
         "before-work"
     );
-    let state = manager.0.lock().unwrap();
-    assert!(state.prepared.is_none());
-    drop(state);
+    {
+        let state = manager.0.lock().unwrap();
+        assert!(state.prepared.is_none());
+    }
     // Recovery never installs a prepared snapshot approval, even after reconnect.
     assert!(manager.snapshot_restore_is_empty());
     let requests = task.await.unwrap();

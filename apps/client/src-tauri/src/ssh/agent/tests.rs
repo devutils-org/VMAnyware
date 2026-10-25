@@ -1,5 +1,4 @@
-#[path = "fixture.rs"]
-mod fixture;
+use super::fixture;
 use super::*;
 use crate::ssh::trust::Store;
 use fixture::*;

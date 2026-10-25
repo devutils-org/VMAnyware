@@ -1,7 +1,5 @@
+use super::fixture;
 use super::*;
-#[path = "agent/fixture.rs"]
-#[allow(dead_code)]
-mod fixture;
 use crate::ssh::{
     identity::IdentityStore,
     session::{Event, SessionManager},

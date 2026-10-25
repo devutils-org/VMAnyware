@@ -529,5 +529,9 @@ impl Signer for SelectedSigner {
 #[cfg(test)]
 #[path = "app_tests.rs"]
 mod app_tests;
+#[cfg(test)]
+#[path = "agent/fixture.rs"]
+#[allow(dead_code)]
+mod fixture;
 #[cfg(all(test, target_os = "macos"))]
 mod tests;
