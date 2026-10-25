@@ -51,6 +51,15 @@ pub enum Status {
     Released,
 }
 
+/// The last guest address proven by a readiness check: a hint for connecting, not host proof.
+#[derive(Debug, Serialize)]
+#[serde(rename_all = "camelCase")]
+pub struct Guest {
+    pub address: String,
+    pub user: String,
+    pub observed_at: String,
+}
+
 #[derive(Debug, Serialize)]
 #[serde(rename_all = "camelCase")]
 pub struct Summary {
@@ -60,6 +69,7 @@ pub struct Summary {
     pub definition_revision: u32,
     pub provider_reference: ProviderReference,
     pub status: Status,
+    pub last_guest: Option<Guest>,
     pub created_at: String,
 }
 

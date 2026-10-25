@@ -298,8 +298,9 @@ mod tests {
             include_str!("../../../migrations/0013_deletion_intent.sql"),
             include_str!("../../../migrations/0014_instance_retirement.sql"),
             include_str!("../../../migrations/0015_recreation_lineage.sql"),
+            include_str!("../../../migrations/0016_instance_release.sql"),
         ];
-        for version in [0, 10, 11, 12, 13, 14, 15] {
+        for version in [0, 10, 11, 12, 13, 14, 15, 16] {
             let directory = tempfile::tempdir().unwrap();
             let path = directory.path().join("fk.sqlite");
             let fixture = rusqlite::Connection::open(&path).unwrap();
@@ -320,7 +321,7 @@ mod tests {
                 connection
                     .pragma_query_value(None, "user_version", |r| r.get::<_, u32>(0))
                     .unwrap(),
-                16
+                17
             );
             assert!(!connection
                 .prepare("PRAGMA foreign_key_check")

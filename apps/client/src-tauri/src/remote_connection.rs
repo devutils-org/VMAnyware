@@ -236,6 +236,29 @@ pub struct RemoteEnvironment {
     definition_name: String,
     provider_reference: RemoteProvider,
     status: RemoteEnvironmentStatus,
+    // Absent from older servers; a connection hint only, never host identity.
+    #[serde(default)]
+    last_guest: Option<RemoteGuest>,
+}
+#[derive(Deserialize, Serialize)]
+#[serde(rename_all = "camelCase")]
+struct RemoteGuest {
+    address: String,
+    user: String,
+    observed_at: String,
+}
+impl RemoteGuest {
+    fn valid(&self) -> bool {
+        self.address.parse::<std::net::Ipv4Addr>().is_ok_and(|ip| {
+            !ip.is_unspecified() && !ip.is_loopback() && !ip.is_multicast() && !ip.is_broadcast()
+        }) && identifier(&self.user, 32)
+            && !self.observed_at.is_empty()
+            && self.observed_at.len() <= 40
+            && self
+                .observed_at
+                .bytes()
+                .all(|b| b.is_ascii_digit() || b"-:.TZ".contains(&b))
+    }
 }
 #[derive(Deserialize, Serialize)]
 #[serde(rename_all = "snake_case")]
@@ -337,6 +360,7 @@ impl RemoteConnection {
                     || !hex(&e.provider_reference.scope_id, 64)
                     || !identifier(&e.provider_reference.node, 63)
                     || !(100..=999999999).contains(&e.provider_reference.vmid)
+                    || e.last_guest.as_ref().is_some_and(|guest| !guest.valid())
             })
         {
             return Err("The server returned an invalid environment list.".into());
@@ -631,6 +655,14 @@ mod tests {
                 environments_body().replace("registered", "deleted"),
                 "/api/v1/environments",
             ),
+            (
+                false,
+                environments_body().replace(
+                    r#""status":"registered""#,
+                    r#""status":"registered","lastGuest":{"address":"10.10.10.205","user":"debian","observedAt":"2026-10-25T14:00:00.000Z"}"#,
+                ),
+                "/api/v1/environments",
+            ),
         ] {
             let (endpoint, ca, task) = fixture("200 OK", &body, AUTH).await;
             let manager = RemoteConnection::default();
@@ -669,6 +701,24 @@ mod tests {
                 false,
                 "200 OK",
                 environments_body().replace("registered", "ready"),
+                AUTH,
+            ),
+            (
+                false,
+                "200 OK",
+                environments_body().replace(
+                    r#""status":"registered""#,
+                    r#""status":"registered","lastGuest":{"address":"127.0.0.1","user":"debian","observedAt":"2026-10-25T14:00:00.000Z"}"#,
+                ),
+                AUTH,
+            ),
+            (
+                false,
+                "200 OK",
+                environments_body().replace(
+                    r#""status":"registered""#,
+                    r#""status":"registered","lastGuest":{"address":"10.10.10.205","user":"bad user","observedAt":"2026-10-25T14:00:00.000Z"}"#,
+                ),
                 AUTH,
             ),
             (true, "401 Unauthorized", "private-raw-error".into(), ""),

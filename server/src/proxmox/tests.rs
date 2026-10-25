@@ -1142,6 +1142,7 @@ fn lifecycle_summary(provider: &Proxmox) -> crate::instance::Summary {
         definition_revision: 1,
         status: crate::instance::Status::Registered,
         created_at: "2026-10-18".into(),
+        last_guest: None,
         provider_reference: crate::instance::ProviderReference {
             provider: "proxmox",
             scope_id: provider.scope_id(),

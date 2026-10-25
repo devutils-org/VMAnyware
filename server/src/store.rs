@@ -101,7 +101,7 @@ impl Store {
         let version: u32 = transaction
             .pragma_query_value(None, "user_version", |row| row.get(0))
             .map_err(|_| Error::Unavailable)?;
-        if version > 16 {
+        if version > 17 {
             return Err(Error::Unavailable);
         }
         if version < 1 {
@@ -240,6 +240,16 @@ impl Store {
                 .map_err(|_| Error::Unavailable)?;
             transaction
                 .pragma_update(None, "user_version", 16)
+                .map_err(|_| Error::Unavailable)?;
+        }
+        if version < 17 {
+            transaction
+                .execute_batch(include_str!(
+                    "../../migrations/0017_instance_last_guest.sql"
+                ))
+                .map_err(|_| Error::Unavailable)?;
+            transaction
+                .pragma_update(None, "user_version", 17)
                 .map_err(|_| Error::Unavailable)?;
         }
         if version < 16 {

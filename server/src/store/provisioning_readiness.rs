@@ -178,6 +178,7 @@ impl Store {
         } else {
             outcome
         };
+        let mut guest_address = None;
         let (status, op_status, result, failure) = match outcome {
             ReadinessOutcome::Completed(proof) => {
                 let ip = proof.guest.ipv4;
@@ -207,6 +208,7 @@ impl Store {
                 {
                     return Err(ProvisioningError::InvalidOperation);
                 }
+                guest_address = Some(ip.to_string());
                 (
                     "succeeded",
                     if last { "succeeded" } else { "running" },
@@ -264,6 +266,16 @@ impl Store {
         )
         .map_err(unavailable)?;
         tx.execute("UPDATE provisioning_stages SET status=?2,result_json=?3 WHERE operation_id=?1 AND kind='wait_for_guest_readiness'",params![id,status,result]).map_err(unavailable)?;
+        // Remember the proven address as the instance's connection hint.
+        if let (Some(address), Some(instance)) =
+            (&guest_address, job.operation.instance_id.as_deref())
+        {
+            tx.execute(
+                "UPDATE instances SET guest_address=?2, guest_user=?3, guest_observed_at=strftime('%Y-%m-%dT%H:%M:%fZ','now') WHERE id=?1 AND status='registered'",
+                params![instance, address, job.plan.target.guest_user],
+            )
+            .map_err(unavailable)?;
+        }
         let operation_result = if last && op_status == "succeeded" {
             result
         } else {

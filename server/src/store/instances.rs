@@ -1,11 +1,11 @@
 use super::Store;
 use crate::{
     definition::Definition,
-    instance::{valid_hash, Instance, ProviderReference, Registration, Status, Summary},
+    instance::{valid_hash, Guest, Instance, ProviderReference, Registration, Status, Summary},
 };
 use rusqlite::{params, Connection, OptionalExtension, TransactionBehavior};
 
-const SUMMARY_COLUMNS: &str = "id, definition_name, definition_hash, definition_revision, provider_scope, node, vmid, status, created_at";
+const SUMMARY_COLUMNS: &str = "id, definition_name, definition_hash, definition_revision, provider_scope, node, vmid, status, created_at, guest_address, guest_user, guest_observed_at";
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
 pub enum RegistrationError {
@@ -38,6 +38,18 @@ fn summary(row: &rusqlite::Row<'_>) -> rusqlite::Result<Summary> {
         },
         status,
         created_at: row.get(8)?,
+        last_guest: match (
+            row.get::<_, Option<String>>(9)?,
+            row.get::<_, Option<String>>(10)?,
+            row.get::<_, Option<String>>(11)?,
+        ) {
+            (Some(address), Some(user), Some(observed_at)) => Some(Guest {
+                address,
+                user,
+                observed_at,
+            }),
+            _ => None,
+        },
     })
 }
 
@@ -52,7 +64,7 @@ pub(super) fn read(
             |row| {
                 Ok(Instance {
                     summary: summary(row)?,
-                    definition_yaml: row.get(9)?,
+                    definition_yaml: row.get(12)?,
                 })
             },
         )

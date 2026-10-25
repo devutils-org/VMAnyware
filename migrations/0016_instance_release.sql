@@ -15,7 +15,8 @@ CREATE TABLE instances_v16 (
     status TEXT NOT NULL DEFAULT 'registered' CHECK (status IN ('registered', 'deleted', 'released')),
     created_at TEXT NOT NULL DEFAULT (strftime('%Y-%m-%dT%H:%M:%fZ', 'now'))
 );
-INSERT INTO instances_v16 SELECT * FROM instances;
+INSERT INTO instances_v16 (id, definition_name, definition_hash, definition_revision, definition_yaml, provider_scope, node, vmid, status, created_at)
+    SELECT id, definition_name, definition_hash, definition_revision, definition_yaml, provider_scope, node, vmid, status, created_at FROM instances;
 DROP TABLE instances;
 ALTER TABLE instances_v16 RENAME TO instances;
 CREATE UNIQUE INDEX one_registered_provider_vmid ON instances(provider_scope, vmid)

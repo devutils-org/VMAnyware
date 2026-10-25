@@ -318,7 +318,7 @@ fn deletion_schema_twelve_upgrade_preserves_restore_and_failed_provisioning_grap
     let store = Store::open(&path).unwrap();
     let approval = setup(&store);
     let connection = rusqlite::Connection::open(&path).unwrap();
-    // Remove schema-15 objects before constructing this historical schema fixture.
+    // Remove schema-15+ objects before constructing this historical schema fixture.
     connection
         .execute_batch("DROP TABLE recreation_sources;")
         .unwrap();
@@ -360,6 +360,14 @@ fn deletion_schema_twelve_upgrade_preserves_restore_and_failed_provisioning_grap
     let provision = "d".repeat(32);
     connection.execute("INSERT INTO operations(id,request_key,kind,instance_id,status,approval_json,input_hash,confirmed_at,failure_code) VALUES (?1,'failed-provision','vm_provision',?2,'failed','{}',?3,1,'provider_unavailable')",rusqlite::params![provision,approval.instance_id,"e".repeat(64)]).unwrap();
     for sql in ["INSERT INTO provisioning_intents(operation_id,catalog_yaml,plan_json) VALUES (?1,'retained','{}')","INSERT INTO provisioning_stages(operation_id,position,kind,status) VALUES (?1,0,'full_clone','queued')","INSERT INTO provisioning_seed_regeneration(operation_id,journal_json) VALUES (?1,'{}')"] {connection.execute(sql,[&provision]).unwrap();}
+    // Schema-17 columns did not exist at schema 12; drop them before the upgrade.
+    connection
+        .execute_batch(
+            "ALTER TABLE instances DROP COLUMN guest_address;
+             ALTER TABLE instances DROP COLUMN guest_user;
+             ALTER TABLE instances DROP COLUMN guest_observed_at;",
+        )
+        .unwrap();
     drop(connection);
     drop(store);
     let store = Store::open(&path).unwrap();
@@ -378,7 +386,7 @@ fn deletion_schema_twelve_upgrade_preserves_restore_and_failed_provisioning_grap
         connection
             .pragma_query_value(None, "user_version", |row| row.get::<_, u32>(0))
             .unwrap(),
-        16
+        17
     );
     assert!(!connection
         .prepare("PRAGMA foreign_key_check")
@@ -575,7 +583,7 @@ fn retirement_schema_thirteen_preserves_marked_delete_and_rejects_orphan_atomica
                 connection
                     .pragma_query_value(None, "user_version", |r| r.get::<_, u32>(0))
                     .unwrap(),
-                16
+                17
             );
             assert!(!connection
                 .prepare("PRAGMA foreign_key_check")

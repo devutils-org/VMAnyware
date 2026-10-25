@@ -425,7 +425,7 @@ fn schema_five_upgrade_preserves_dispatched_lifecycle_identity_and_recovery() {
         connection
             .pragma_query_value(None, "user_version", |r| r.get::<_, u32>(0))
             .unwrap(),
-        16
+        17
     );
     assert!(connection
         .prepare("PRAGMA foreign_key_check")
@@ -841,7 +841,7 @@ fn schema_six_upgrade_preserves_completed_clone_and_resource_queue() {
         connection
             .pragma_query_value(None, "user_version", |r| r.get::<_, u32>(0))
             .unwrap(),
-        16
+        17
     );
     assert!(connection
         .prepare("PRAGMA foreign_key_check")
@@ -1236,7 +1236,7 @@ fn disk_journal_schema_seven_upgrade_preserves_resource_evidence() {
         connection
             .pragma_query_value(None, "user_version", |r| r.get::<_, u32>(0))
             .unwrap(),
-        16
+        17
     );
     assert!(connection
         .prepare("PRAGMA foreign_key_check")
@@ -1673,7 +1673,7 @@ fn cloud_init_journal_schema_eight_upgrade_preserves_completed_disk_evidence() {
         connection
             .pragma_query_value(None, "user_version", |r| r.get::<_, u32>(0))
             .unwrap(),
-        16
+        17
     );
     assert!(connection
         .prepare("PRAGMA foreign_key_check")
@@ -1950,7 +1950,7 @@ fn seed_journal_schema_nine_upgrade_preserves_settings_without_inventing_regener
         connection
             .pragma_query_value(None, "user_version", |r| r.get::<_, u32>(0))
             .unwrap(),
-        16
+        17
     );
     assert!(!connection
         .prepare("PRAGMA foreign_key_check")
@@ -2278,6 +2278,15 @@ fn durable_readiness_requires_start_pid_and_strict_proof_without_skipping_later_
             "{variant}"
         );
     }
+    let instance_id = operation.instance_id.clone().unwrap();
+    // Rejected proofs record no address.
+    assert!(store
+        .instance(&instance_id)
+        .unwrap()
+        .unwrap()
+        .summary
+        .last_guest
+        .is_none());
     let result = store
         .finish_provisioning_readiness(
             &operation.id,
@@ -2285,6 +2294,17 @@ fn durable_readiness_requires_start_pid_and_strict_proof_without_skipping_later_
         )
         .unwrap();
     assert_eq!(result.status, Status::Running);
+    // The verified guest address becomes the instance's last observed address.
+    let guest = store
+        .instance(&instance_id)
+        .unwrap()
+        .unwrap()
+        .summary
+        .last_guest
+        .unwrap();
+    assert_eq!(guest.address, "192.0.2.42");
+    assert!(!guest.user.is_empty());
+    assert!(guest.observed_at.ends_with('Z'));
     let job = store.provisioning_job(&operation.id).unwrap().unwrap();
     assert_eq!(
         job.stages

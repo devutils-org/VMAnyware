@@ -194,7 +194,7 @@ fn recreation_schema_fourteen_upgrade_preserves_ordinary_provisioning() {
         connection
             .pragma_query_value(None, "user_version", |r| r.get::<_, u32>(0))
             .unwrap(),
-        16
+        17
     );
     assert!(!connection
         .prepare("PRAGMA foreign_key_check")

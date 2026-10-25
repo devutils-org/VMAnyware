@@ -383,7 +383,7 @@ fn snapshot_schema_migration_preserves_provisioning_graph_and_restores_foreign_k
         connection
             .pragma_query_value(None, "user_version", |r| r.get::<_, u32>(0))
             .unwrap(),
-        16
+        17
     );
     // Use the store's connection through an operation, not an unrelated handle's pragma.
     connection
