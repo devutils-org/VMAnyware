@@ -185,6 +185,18 @@ pub struct ResourceObservation {
     pub memory_mib: u32,
 }
 
+// Config fields can retain their decimal form from the provider's text config.
+// Accept only exact unsigned integers, never expressions, signs or whitespace.
+fn config_integer(value: &serde_json::Value) -> Option<u64> {
+    match value {
+        serde_json::Value::String(text) => text
+            .parse::<u64>()
+            .ok()
+            .filter(|number| number.to_string() == *text),
+        _ => value.as_u64(),
+    }
+}
+
 impl Proxmox {
     /// Call only after the resource stage's durable dispatch marker. No retry is safe
     /// from an ambiguous reply; reconcile exact applied values by GET instead.
@@ -250,13 +262,15 @@ impl Proxmox {
             let target = self.observe_full_clone(&request.clone).await?;
             if config.get("digest").and_then(|v| v.as_str()) != Some(target.config_digest.as_str())
                 || config.get("tags").and_then(|v| v.as_str()) != Some(request.clone.tag.as_str())
-                || config.get("sockets").and_then(|v| v.as_u64()) != Some(1)
-                || config.get("cores").and_then(|v| v.as_u64()) != Some(u64::from(request.cpu))
-                || config.get("vcpus").and_then(|v| v.as_u64()) != Some(u64::from(request.cpu))
-                || config.get("cpulimit").and_then(|v| v.as_f64()) != Some(0.0)
-                || config.get("memory").and_then(|v| v.as_u64())
+                || config.get("sockets").and_then(config_integer) != Some(1)
+                || config.get("cores").and_then(config_integer) != Some(u64::from(request.cpu))
+                || config.get("vcpus").and_then(config_integer) != Some(u64::from(request.cpu))
+                || !config
+                    .get("cpulimit")
+                    .is_some_and(|value| value.as_f64() == Some(0.0) || value.as_str() == Some("0"))
+                || config.get("memory").and_then(config_integer)
                     != Some(u64::from(request.memory_mib))
-                || config.get("balloon").and_then(|v| v.as_u64()) != Some(0)
+                || config.get("balloon").and_then(config_integer) != Some(0)
                 || self.vm_has_pending_changes(&request.clone.target).await?
             {
                 return Err(Error::InvalidResponse);

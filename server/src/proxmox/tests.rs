@@ -2988,6 +2988,59 @@ async fn resource_observation_requires_exact_applied_settings_and_consistent_rev
 }
 
 #[tokio::test]
+async fn resource_observation_accepts_provider_strings_but_refuses_ambiguous_numeric_values() {
+    let plan = full_clone_plan();
+    let request = plan
+        .resource_request(&"a".repeat(32), &"c".repeat(40))
+        .unwrap();
+    for (field, value, valid) in [
+        ("memory", serde_json::json!("8192"), true),
+        ("cpulimit", serde_json::json!("0"), true),
+        ("cpulimit", serde_json::json!(0.0), true),
+        ("cores", serde_json::json!("4"), true),
+        ("sockets", serde_json::json!("1"), true),
+        ("vcpus", serde_json::json!("4"), true),
+        ("balloon", serde_json::json!("0"), true),
+        ("memory", serde_json::json!("08192"), false),
+        ("memory", serde_json::json!("8192 "), false),
+        ("memory", serde_json::json!("+8192"), false),
+        ("memory", serde_json::json!("8192.0"), false),
+        ("memory", serde_json::json!("8*1024"), false),
+        ("memory", serde_json::json!("8193"), false),
+        ("memory", serde_json::json!(true), false),
+        ("memory", serde_json::Value::Null, false),
+        ("cpulimit", serde_json::json!("1"), false),
+        ("cpulimit", serde_json::json!("0 "), false),
+        ("balloon", serde_json::json!("00"), false),
+    ] {
+        let mut config = resource_config(&plan);
+        config[field] = value;
+        let body = serde_json::json!({"data":config}).to_string();
+        let mut fixture = Fixture::responses(
+            "200 OK",
+            &[
+                ("*", &body),
+                ("*", &body),
+                ("*", r#"{"data":{"vmid":202,"status":"stopped"}}"#),
+                ("*", r#"{"data":[]}"#),
+            ],
+            "",
+            Duration::ZERO,
+            true,
+        )
+        .await;
+        assert_eq!(
+            fixture.client().observe_resources(&request).await.is_ok(),
+            valid,
+            "{field}"
+        );
+        assert!(
+            std::iter::from_fn(|| fixture.requests.try_recv().ok()).all(|r| r.starts_with("GET "))
+        );
+    }
+}
+
+#[tokio::test]
 async fn resource_transport_never_replays_put_after_invalid_submission_reply() {
     let plan = full_clone_plan();
     let request = plan
@@ -3088,6 +3141,11 @@ async fn resource_executor_fixture(reply: &str, applied: bool, reconcile_only: b
     config["digest"] = serde_json::json!("e".repeat(40));
     if !applied {
         config["memory"] = serde_json::json!(1024);
+    }
+    if reconcile_only && applied {
+        // Actual Proxmox config returns these fields as decimal strings.
+        config["memory"] = serde_json::json!("8192");
+        config["cpulimit"] = serde_json::json!("0");
     }
     let current = serde_json::json!({"data":config}).to_string();
     let power = r#"{"data":{"vmid":202,"status":"stopped"}}"#;
