@@ -91,9 +91,14 @@ export function Workspace({ native }: { native: boolean }) {
   }, []);
   useEffect(() => {
     if (!focusMode) return;
-    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape" && event.shiftKey) setMaximized(false); };
-    window.addEventListener("keydown", onKey);
-    return () => window.removeEventListener("keydown", onKey);
+    // Capture phase: the terminal handles Escape itself when it has focus.
+    const onKey = (event: KeyboardEvent) => {
+      if (event.key !== "Escape" || !event.shiftKey) return;
+      event.preventDefault(); event.stopPropagation();
+      setMaximized(false);
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
   }, [focusMode]);
   // Ad-hoc connection target for the Sessions view (for example after a creation).
   const [adhoc, setAdhoc] = useState<{ target: ConsoleTarget | null; key: number }>({ target: null, key: 0 });
