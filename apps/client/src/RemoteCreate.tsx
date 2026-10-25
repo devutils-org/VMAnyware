@@ -89,7 +89,7 @@ export function RemoteCreate({ connectionId, endpoint, disabled, onSshTarget, on
         {!operation && <button type="button" disabled={disabled || busy} onClick={submit}>Retry same confirmed request</button>}
       </>}
     </>}
-    {operation && <><ProvisioningProgress key={operation.id + operation.status} connectionId={connectionId} operationId={operation.id} disabled={disabled || busy} planHash={plan?.planHash} definitionHash={plan?.definitionHash} sourceInstanceId={null} node={plan?.target.node} vmid={plan?.target.vmid} /><p role="status">Creation: {operation.status} · operation <code>{operation.id}</code></p>
+    {operation && <><ProvisioningProgress key={operation.id} refreshToken={operation} connectionId={connectionId} operationId={operation.id} disabled={disabled} planHash={plan?.planHash} definitionHash={plan?.definitionHash} sourceInstanceId={null} node={plan?.target.node} vmid={plan?.target.vmid} /><p role="status">Creation: {operation.status} · operation <code>{operation.id}</code></p>
       {operation.status === "succeeded" && operation.result?.guestReady && <>
         <p>Guest initialized at {operation.result.guest.ipv4}. SSH access and host identity still need verification.</p>
         {plan && <button type="button" disabled={disabled || busy} onClick={() => onSshTarget(operation.result!.guest.ipv4, plan.target.guestUser)}>Prepare SSH connection</button>}
@@ -98,7 +98,7 @@ export function RemoteCreate({ connectionId, endpoint, disabled, onSshTarget, on
       {operation.status === "failed" && <p role="alert">Creation failed. The target is retained for inspection.</p>}
       {pending && <p className="hint">Updating automatically. You can leave this view; the server keeps working.</p>}
       {["succeeded", "failed"].includes(operation.status) && <button type="button" disabled={disabled || busy} onClick={() => { generation.current++; setPlan(null); setRequestKey(""); setConfirmed(false); setSubmitted(false); setOperation(null); setError(""); }}>Prepare another creation</button>}</>}
-    {busy && <p role="status">Contacting the server…</p>}
+    {busy && !operation && <p role="status">Contacting the server…</p>}
     {error && <p role="alert" className="error">{error}</p>}
   </section>;
 }

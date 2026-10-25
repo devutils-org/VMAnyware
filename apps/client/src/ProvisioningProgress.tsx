@@ -12,18 +12,18 @@ type Status = "queued" | "running" | "succeeded" | "failed" | "interrupted" | "u
 type Progress = { operationId: string; instanceId: string; sourceInstanceId: string | null; definitionHash: string; planHash: string; node: string; vmid: number; status: Status; stages: { position: number; kind: keyof typeof labels; status: Status; submissionStarted: boolean }[] };
 type Props = { connectionId: number; operationId: string; disabled: boolean; instanceId?: string; planHash?: string; definitionHash?: string; sourceInstanceId?: string | null; node?: string; vmid?: number };
 const statuses = ["queued", "running", "succeeded", "failed", "interrupted", "uncertain"];
-export function ProvisioningProgress({ connectionId, operationId, disabled, instanceId, planHash, definitionHash, sourceInstanceId, node, vmid }: Props) {
+export function ProvisioningProgress({ connectionId, operationId, disabled, instanceId, planHash, definitionHash, sourceInstanceId, node, vmid, refreshToken }: Props & { refreshToken?: unknown }) {
   const [progress, setProgress] = useState<Progress | null>(null), [busy, setBusy] = useState(false), [error, setError] = useState("");
   const generation = useRef(0);
   useEffect(() => {
     generation.current++; setProgress(null); setError(""); setBusy(false);
     return () => { generation.current++; };
   }, [connectionId, operationId, instanceId, planHash, definitionHash, sourceInstanceId, node, vmid]);
-  // Shown with a submitted operation; each status change remounts and re-reads the steps.
-  useAutoRun(true, () => void read(), [connectionId, operationId]);
+  // Re-read in place whenever the parent re-reads its operation; keep the last steps shown.
+  useAutoRun(true, () => void read(), [connectionId, operationId, refreshToken]);
   async function read() {
     if (disabled || busy) return;
-    const current = ++generation.current; setBusy(true); setProgress(null); setError("");
+    const current = ++generation.current; setBusy(true); setError("");
     try {
       const result = await invoke<Progress>("read_remote_provisioning_progress", { connectionId, operationId });
       if (generation.current !== current) return;
@@ -34,7 +34,7 @@ export function ProvisioningProgress({ connectionId, operationId, disabled, inst
   }
   return <section className="provisioning-progress" aria-label="Recorded provisioning steps">
     <button type="button" disabled={disabled || busy} onClick={read}>{progress ? "Refresh recorded steps" : "Read recorded steps"}</button>
-    {busy && <p role="status">Reading recorded provisioning steps…</p>}
+    {busy && !progress && <p role="status">Reading recorded provisioning steps…</p>}
     {progress && <>
       <p>Recorded steps: {progress.status} · {progress.node} · VM {progress.vmid}</p>
       <p>Saved stage evidence only. Current power, guest readiness and SSH access have not been checked by this read. A started marker does not confirm completion.</p>
