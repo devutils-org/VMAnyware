@@ -126,8 +126,25 @@ vmanyware@pve!control-plane (privsep) with Source/Storage/Bridge roles and
 Create+Snapshot on /vms/9003-9004 (user too). Its secret was pasted into chat;
 user accepted the risk for local dev — rotate before any non-lab use.
 
-Next: native app remote mode against https://10.10.10.110, then full UI journey
-on 9003 (create→SSH→snapshot→restore), deletion needs temporary grants again.
+Native remote mode connected to https://10.10.10.110 with the Caddy CA (UI
+rejects tokens with surrounding text/whitespace before any request). First UI
+create (home-remote-2, VM 9003, 6 packages + final snapshot; `yazi` removed as
+absent from trixie; first name home-remote kept by server with yazi) failed
+`provisioning_preconditions_failed`: deployed server's Proxmox token secret was
+wrong (provider_unauthorized). Token recreated; on-VM PVEAPIToken test 200.
+
+Found and fixed (a6a7043): native/UI kept a definitively failed submitted
+create locked until reconnect; now unlocked only after succeeded/failed.
+
+OPEN SERVER DEFECT (next task): a clone-stage failure before dispatch leaves
+the instance `registered` on its VMID (9003 here, VM never existed), and the
+unique registered-VMID index then blocks any new creation on that VMID. Needs a
+schema status for never-provisioned associations (not `deleted`, which offers
+recreation) plus migration; do not hand-edit the deployed SQLite. Workaround:
+user retries on VM 9004 as home-remote-3.
+
+Next: UI creation on 9004 → SSH → snapshot → restore via app; then fix the
+defect above. Deletion via app needs temporary grants again.
 Remaining MVP
 gaps per docs/roadmap-status.md: HTTPS remote-mode UI on real infra, mobile,
 platform secret stores, real server deployment, release.
