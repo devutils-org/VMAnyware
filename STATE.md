@@ -236,9 +236,9 @@ down, Restore t1, Start (all succeeded, ordered); delete via app → lab-1
 Deleted (definition kept, Recreate offered); recreate on VM 9002 → native
 terminal, host key SHA256:znzU88toL9iQJWQLMGiBCUrB9a8sp/wRAUfFI+ZNOlY verified
 via qm guest exec, home directory empty (fresh disk). Console pre-fill from
-lastGuest on 9002 not explicitly confirmed by user.
+lastGuest on 9002 confirmed by user (address pre-filled, ADR 0096 proven).
 
-Next: confirm Console pre-fill on the recreated machine; REVOKE temporary
+Next: REVOKE temporary
 Sys.Audit (/) and Datastore.Allocate (local-lvm) grants (user + control-plane
 token) and set VMANYWARE_DELETIONS_ENABLED back if desired. Then remaining
 MVP: mobile (Android APK runtime, iOS), platform secret stores, creation on
