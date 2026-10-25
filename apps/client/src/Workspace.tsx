@@ -5,6 +5,7 @@ import { BrandMark } from "./BrandMark";
 import { Console, type ConsoleTarget, type Session } from "./Console";
 import { Keychain } from "./Keychain";
 import { Sessions } from "./Sessions";
+import { matchShortcut, shortcutLabel, shortcuts, type ShortcutId } from "./shortcuts";
 import { LocalWorkspace } from "./LocalWorkspace";
 import { RemoteCreate } from "./RemoteCreate";
 import { RemoteDeletion } from "./RemoteDeletion";
@@ -69,6 +70,25 @@ export function Workspace({ native }: { native: boolean }) {
   // Full-window terminal: hides navigation while the Sessions view is shown.
   const [maximized, setMaximized] = useState(false);
   const focusMode = maximized && view === "sessions" && sessions.length > 0;
+  const [helpOpen, setHelpOpen] = useState(false);
+  useEffect(() => {
+    if (!helpOpen) return;
+    const onKey = (event: KeyboardEvent) => { if (event.key === "Escape") setHelpOpen(false); };
+    window.addEventListener("keydown", onKey);
+    return () => window.removeEventListener("keydown", onKey);
+  }, [helpOpen]);
+  // Keyboard shortcuts act on the latest state; the listener itself is installed once.
+  const shortcut = useRef<(id: ShortcutId) => void>(() => {});
+  useEffect(() => {
+    const onKey = (event: KeyboardEvent) => {
+      const id = matchShortcut(event);
+      if (!id) return;
+      event.preventDefault(); event.stopPropagation();
+      shortcut.current(id);
+    };
+    window.addEventListener("keydown", onKey, true);
+    return () => window.removeEventListener("keydown", onKey, true);
+  }, []);
   useEffect(() => {
     if (!focusMode) return;
     const onKey = (event: KeyboardEvent) => { if (event.key === "Escape" && event.shiftKey) setMaximized(false); };
@@ -168,6 +188,36 @@ export function Workspace({ native }: { native: boolean }) {
   function closedSession(id: string) {
     setSessions(current => { const rest = current.filter(session => session.id !== id); setActiveSession(active => active === id ? rest.at(-1)?.id ?? null : active); return rest; });
   }
+  shortcut.current = id => {
+    if (!connection || (drawer && !drawerHidden)) return; // A review dialog keeps the focus.
+    const views: View[] = ["environments", "create", "sessions", "activity", "keychain", "settings"];
+    if (id.startsWith("nav")) { setView(views[Number(id.slice(3)) - 1]); return; }
+    const focus = (elementId: string) => window.setTimeout(() => (document.getElementById(elementId) as HTMLInputElement | null)?.focus(), 50);
+    const cycle = (step: number) => {
+      if (!sessions.length) return;
+      const index = sessions.findIndex(session => session.id === activeSession);
+      setActiveSession(sessions[(index + step + sessions.length) % sessions.length].id); setView("sessions");
+    };
+    switch (id) {
+      case "new": setView("create"); break;
+      case "refresh":
+        if (view === "environments" || view === "settings") void loadWorkspace();
+        else { setRevision(value => value + 1); reloadEnvironments(); }
+        break;
+      case "connect":
+        if (view === "environment" && selected?.status === "registered") { setTab("console"); focus("console-host"); }
+        else { setView("sessions"); focus("adhoc-host"); }
+        break;
+      case "fullWindow": if (sessions.length) { setView("sessions"); setMaximized(value => !value); } break;
+      case "prevSession": cycle(-1); break;
+      case "nextSession": cycle(1); break;
+      case "closeSession":
+        if (activeSession) { void invoke("close_ssh_session", { sessionId: activeSession }).catch(() => {}); closedSession(activeSession); }
+        break;
+      case "back": if (view === "environment") setView("environments"); break;
+      case "help": setHelpOpen(value => !value); break;
+    }
+  };
   // Settings shows the platform the native bridge reports; read when the view opens.
   useEffect(() => {
     if (view !== "settings" || !native || runtime) return;
@@ -206,12 +256,12 @@ export function Workspace({ native }: { native: boolean }) {
 
   const registered = environments?.filter(environment => environment.status === "registered").length ?? 0;
   const nav = <>
-    <NavItem icon="servers" label="Environments" short="VMs" active={view === "environments" || view === "environment"} badge={environments ? String(registered) : undefined} onClick={() => setView("environments")} />
-    <NavItem icon="plus" label="New environment" short="New" active={view === "create"} onClick={() => setView("create")} />
-    <NavItem icon="terminal" label="Sessions" active={view === "sessions"} badge={sessions.length ? String(sessions.length) : undefined} onClick={() => setView("sessions")} />
-    <NavItem icon="activity" label="Activity" active={view === "activity"} onClick={() => setView("activity")} />
-    <NavItem icon="key" label="Keychain" short="Keys" active={view === "keychain"} onClick={() => setView("keychain")} />
-    <NavItem icon="settings" label="Settings" active={view === "settings"} onClick={() => setView("settings")} />
+    <NavItem icon="servers" label="Environments" short="VMs" hint={shortcutLabel("nav1")} active={view === "environments" || view === "environment"} badge={environments ? String(registered) : undefined} onClick={() => setView("environments")} />
+    <NavItem icon="plus" label="New environment" short="New" hint={shortcutLabel("nav2")} active={view === "create"} onClick={() => setView("create")} />
+    <NavItem icon="terminal" label="Sessions" hint={shortcutLabel("nav3")} active={view === "sessions"} badge={sessions.length ? String(sessions.length) : undefined} onClick={() => setView("sessions")} />
+    <NavItem icon="activity" label="Activity" hint={shortcutLabel("nav4")} active={view === "activity"} onClick={() => setView("activity")} />
+    <NavItem icon="key" label="Keychain" short="Keys" hint={shortcutLabel("nav5")} active={view === "keychain"} onClick={() => setView("keychain")} />
+    <NavItem icon="settings" label="Settings" hint={shortcutLabel("nav6")} active={view === "settings"} onClick={() => setView("settings")} />
   </>;
   const server = <div className="server-chip" title={connection.endpoint}><span className="dot online" />{host(connection.endpoint)}</div>;
   const running = drawer && drawerHidden ? <button type="button" className="running-pill" onClick={() => setDrawerHidden(false)}><span className="dot busy" />Open action · VM {drawer.environment.providerReference.vmid}</button> : null;
@@ -227,10 +277,10 @@ export function Workspace({ native }: { native: boolean }) {
   const [title, subtitle] = titles[view];
 
   return <Shell nav={nav} server={server} title={title} subtitle={subtitle} focus={focusMode}
-    back={view === "environment" ? () => setView("environments") : undefined}
+    back={view === "environment" ? () => setView("environments") : undefined} backHint={shortcutLabel("back")}
     actions={view === "environments" ? <>{running}
-      <button type="button" className="ghost" disabled={loading} onClick={() => void loadWorkspace()}><Icon name="refresh" />{loading ? "Refreshing…" : "Refresh"}</button>
-      <button type="button" className="primary" onClick={() => setView("create")}><Icon name="plus" />New environment</button>
+      <button type="button" className="ghost" title={`Refresh (${shortcutLabel("refresh")})`} disabled={loading} onClick={() => void loadWorkspace()}><Icon name="refresh" />{loading ? "Refreshing…" : "Refresh"}</button>
+      <button type="button" className="primary" title={`New environment (${shortcutLabel("new")})`} onClick={() => setView("create")}><Icon name="plus" />New environment</button>
     </> : running}>
     {loadError && <p role="alert" className="error banner">{loadError}</p>}
 
@@ -246,7 +296,7 @@ export function Workspace({ native }: { native: boolean }) {
             <button type="button" disabled={blocked || (power?.id === selected.id && power.status === "running")} title={power?.id === selected.id && power.status === "running" ? "Already running" : undefined} onClick={() => openDrawer({ kind: "lifecycle", environment: selected, action: "start" })}><Icon name="play" />Start</button>
             <button type="button" disabled={blocked || (power?.id === selected.id && power.status === "stopped")} title={power?.id === selected.id && power.status === "stopped" ? "Already stopped" : undefined} onClick={() => openDrawer({ kind: "lifecycle", environment: selected, action: "shutdown" })}><Icon name="power" />Shut down</button>
             <button type="button" disabled={blocked} onClick={() => openDrawer({ kind: "snapshot", environment: selected })}><Icon name="camera" />Snapshot</button>
-            <button type="button" disabled={blocked} onClick={() => openConsole(selected)}><Icon name="terminal" />Connect</button>
+            <button type="button" disabled={blocked} title={`Connect (${shortcutLabel("connect")})`} onClick={() => openConsole(selected)}><Icon name="terminal" />Connect</button>
             <button type="button" className="danger" disabled={blocked} onClick={() => openDrawer({ kind: "deletion", environment: selected })}><Icon name="trash" />Delete</button>
           </> : <button type="button" className="primary" disabled={blocked} onClick={() => openDrawer({ kind: "recreation", environment: selected })}><Icon name="repeat" />Recreate</button>}
         </div>
@@ -281,7 +331,7 @@ export function Workspace({ native }: { native: boolean }) {
     <div className="stack" hidden={view !== "sessions"}>
       <Sessions sessions={sessions} active={activeSession} onSelect={setActiveSession} onClosed={closedSession} maximized={focusMode} onToggleMaximize={() => setMaximized(value => !value)} />
       {!focusMode && <Panel title={sessions.length ? "New connection" : "Connect to a guest"}>
-        <Console key={`adhoc.${adhoc.key}`} native={native} target={adhoc.target} onSession={addSession} onOpenKeychain={() => setView("keychain")} />
+        <Console key={`adhoc.${adhoc.key}`} idPrefix="adhoc" native={native} target={adhoc.target} onSession={addSession} onOpenKeychain={() => setView("keychain")} />
         <p className="hint">Tip: open a machine and use its Console tab to connect with its known address.</p>
       </Panel>}
     </div>
@@ -303,6 +353,14 @@ export function Workspace({ native }: { native: boolean }) {
       </Panel>
     </div>}
 
+    {helpOpen && <div className="drawer-backdrop" role="presentation" onClick={event => { if (event.target === event.currentTarget) setHelpOpen(false); }}>
+      <aside className="drawer dialog" role="dialog" aria-modal="true" aria-label="Keyboard shortcuts">
+        <header><span className="drawer-target">Keyboard shortcuts</span><button type="button" className="icon" aria-label="Close" onClick={() => setHelpOpen(false)}><Icon name="close" /></button></header>
+        <div className="drawer-body"><dl className="shortcut-list">{(Object.keys(shortcuts) as ShortcutId[]).map(id => <div key={id}><dt><kbd>{shortcutLabel(id)}</kbd></dt><dd>{shortcuts[id].description}</dd></div>)}
+          <div><dt><kbd>⇧Esc</kbd></dt><dd>Leave the full-window terminal</dd></div><div><dt><kbd>Esc</kbd></dt><dd>Close a dialog</dd></div></dl></div>
+      </aside>
+    </div>}
+
     {drawer && <div className="drawer-backdrop" role="presentation" hidden={drawerHidden} onClick={event => { if (event.target === event.currentTarget) closeDrawer(); }}>
       <aside className="drawer dialog" role="dialog" aria-modal="true" aria-label="Review action">
         <header>
@@ -321,7 +379,7 @@ export function Workspace({ native }: { native: boolean }) {
   </Shell>;
 }
 
-function Shell({ nav, server, title, subtitle, back, actions, narrow = false, focus = false, children }: { nav: ReactNode; server?: ReactNode; title: string; subtitle: string; back?: () => void; actions?: ReactNode; narrow?: boolean; focus?: boolean; children: ReactNode }) {
+function Shell({ nav, server, title, subtitle, back, backHint, actions, narrow = false, focus = false, children }: { nav: ReactNode; server?: ReactNode; title: string; subtitle: string; back?: () => void; backHint?: string; actions?: ReactNode; narrow?: boolean; focus?: boolean; children: ReactNode }) {
   return <div className={`${nav ? "app" : "app no-nav"}${focus ? " focus-mode" : ""}`}>
     {nav && <aside className="sidebar" aria-label="Main navigation">
       <div className="brand"><BrandMark />VMAnyware</div>
@@ -331,7 +389,7 @@ function Shell({ nav, server, title, subtitle, back, actions, narrow = false, fo
     <div className="main">
       <header className="topbar">
         <div className="title">
-          {back && <button type="button" className="icon" aria-label="Back" onClick={back}><Icon name="back" /></button>}
+          {back && <button type="button" className="icon" aria-label="Back" title={backHint ? `Back (${backHint})` : "Back"} onClick={back}><Icon name="back" /></button>}
           <div><h1 id="workspace-title" tabIndex={-1}>{title}</h1>{subtitle && <p>{subtitle}</p>}</div>
         </div>
         <div className="topbar-actions">{actions}<span className="mobile-only">{server}</span></div>
@@ -342,8 +400,8 @@ function Shell({ nav, server, title, subtitle, back, actions, narrow = false, fo
   </div>;
 }
 
-function NavItem({ icon, label, short, active, badge, dot, onClick }: { icon: IconName; label: string; short?: string; active: boolean; badge?: string; dot?: boolean; onClick: () => void }) {
-  return <button type="button" className="nav-item" aria-current={active ? "page" : undefined} onClick={onClick}>
+function NavItem({ icon, label, short, hint, active, badge, dot, onClick }: { icon: IconName; label: string; short?: string; hint?: string; active: boolean; badge?: string; dot?: boolean; onClick: () => void }) {
+  return <button type="button" className="nav-item" aria-current={active ? "page" : undefined} title={hint ? `${label} (${hint})` : label} onClick={onClick}>
     <Icon name={icon} size={18} /><span className="nav-label">{label}</span>{short && <span className="nav-short">{short}</span>}
     {badge !== undefined && <span className="nav-badge">{badge}</span>}
     {dot && <span className="dot online" aria-label="active" />}

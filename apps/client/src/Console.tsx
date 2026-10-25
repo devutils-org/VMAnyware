@@ -15,7 +15,7 @@ const loadTerminal = () => import("./SshTerminal");
  * unknown or changed), open the application identity, then start the session. Trust
  * decisions and identity use stay explicit; an address is a hint, never host proof.
  */
-export function Console({ native, target, onSession, onOpenKeychain }: { native: boolean; target: ConsoleTarget | null; onSession: (session: Session) => void; onOpenKeychain?: () => void }) {
+export function Console({ native, target, onSession, onOpenKeychain, idPrefix = "console" }: { native: boolean; target: ConsoleTarget | null; onSession: (session: Session) => void; onOpenKeychain?: () => void; idPrefix?: string }) {
   const [host, setHost] = useState(target?.host ?? ""), [port, setPort] = useState(String(target?.port ?? 22)), [username, setUsername] = useState(target?.username ?? "debian");
   const [step, setStep] = useState<Step>("address");
   const [inspection, setInspection] = useState<Inspection | null>(null), [verified, setVerified] = useState(false);
@@ -101,9 +101,9 @@ export function Console({ native, target, onSession, onOpenKeychain }: { native:
   const busy = step === "inspecting" || step === "connecting";
   return <div className="console">
     <form className="inline-form" onSubmit={inspect}>
-      <div className="field grow"><label htmlFor="console-host">Address</label><input id="console-host" required value={host} autoCapitalize="none" autoCorrect="off" spellCheck={false} onChange={event => { reset(); setHost(event.target.value.trim()); }} placeholder="10.10.10.205" /></div>
-      <div className="field port"><label htmlFor="console-port">Port</label><input id="console-port" type="number" min={1} max={65535} value={port} onChange={event => { reset(); setPort(event.target.value); }} /></div>
-      <div className="field user"><label htmlFor="console-user">User</label><input id="console-user" required pattern="[a-zA-Z0-9_.\-]+" value={username} autoCapitalize="none" autoCorrect="off" spellCheck={false} onChange={event => { reset(); setUsername(event.target.value.trim()); }} /></div>
+      <div className="field grow"><label htmlFor={`${idPrefix}-host`}>Address</label><input id={`${idPrefix}-host`} required value={host} autoCapitalize="none" autoCorrect="off" spellCheck={false} onChange={event => { reset(); setHost(event.target.value.trim()); }} placeholder="10.10.10.205" /></div>
+      <div className="field port"><label htmlFor={`${idPrefix}-port`}>Port</label><input id={`${idPrefix}-port`} type="number" min={1} max={65535} value={port} onChange={event => { reset(); setPort(event.target.value); }} /></div>
+      <div className="field user"><label htmlFor={`${idPrefix}-user`}>User</label><input id={`${idPrefix}-user`} required pattern="[a-zA-Z0-9_.\-]+" value={username} autoCapitalize="none" autoCorrect="off" spellCheck={false} onChange={event => { reset(); setUsername(event.target.value.trim()); }} /></div>
       <button type="submit" disabled={!native || busy || !host}>{step === "address" ? "Connect" : "Check again"}</button>
     </form>
     {!native && <p className="hint">Open the native application to connect.</p>}
@@ -129,8 +129,8 @@ export function Console({ native, target, onSession, onOpenKeychain }: { native:
     </div>}
 
     {(step === "identity" || step === "connecting") && !selection && <form className="identity-card" onSubmit={connect}>
-      {source === "application" && <div className="field"><label htmlFor="console-passphrase">Application key passphrase</label>
-        <input id="console-passphrase" type="password" minLength={16} required autoComplete="off" value={passphrase} onChange={event => setPassphrase(event.target.value)} /></div>}
+      {source === "application" && <div className="field"><label htmlFor={`${idPrefix}-passphrase`}>Application key passphrase</label>
+        <input id={`${idPrefix}-passphrase`} type="password" minLength={16} required autoComplete="off" value={passphrase} onChange={event => setPassphrase(event.target.value)} /></div>}
       {source === "system" && <p className="hint">Using the application key unlocked by your system key store.</p>}
       {source === "agent" && <p className="hint">Using an identity from your configured SSH agent.</p>}
       <div className="actions-row">
