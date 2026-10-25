@@ -2,13 +2,14 @@ import { ProvisioningProgress } from "./ProvisioningProgress";
 import { ProvisioningFailure } from "./ProvisioningFailure";
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { useAutoRun } from "./actionFlow";
 
 type Source = { id: string; definitionName: string; providerReference: { node: string; vmid: number } };
 type Status = "queued" | "running" | "uncertain" | "interrupted" | "failed" | "succeeded";
 type History = { sourceInstanceId: string; operations: { id: string; instanceId: string; status: Status; createdAt: string }[] };
 type Saved = { sourceInstanceId: string; restoresPreviousDiskContents: boolean; requiresNewInstanceIdentity: boolean; plan: { definitionName: string; definitionHash: string; providerScopeId: string; planHash: string; source: { templateVmid: number; templateVersion: string }; target: { node: string; vmid: number; storage: string; bridge: string; guestUser: string; resources: { cpu: number; memoryMiB: number; diskGiB: number } } }; operation: { id: string; kind: string; instanceId: string; status: Status; failure?: string | null; result: null | { instanceId: string; providerScopeId: string; planHash: string; guestReady: boolean; guest: { ipv4: string; cloudInitClean: boolean; cloudInitExitCode: number } } } };
 const statuses = ["queued", "running", "uncertain", "interrupted", "failed", "succeeded"];
-export function RemoteRecreationRecovery({ connectionId, source, disabled }: { connectionId: number; source: Source; disabled: boolean }) {
+export function RemoteRecreationRecovery({ connectionId, source, disabled, focus }: { connectionId: number; source: Source; disabled: boolean; focus?: string }) {
   const [history, setHistory] = useState<History | null>(null), [operationId, setOperationId] = useState("");
   const [saved, setSaved] = useState<Saved | null>(null), [busy, setBusy] = useState(false), [error, setError] = useState("");
   const generation = useRef(0), inputId = useId();
@@ -43,12 +44,16 @@ export function RemoteRecreationRecovery({ connectionId, source, disabled }: { c
     finally { if (generation.current === current) setBusy(false); }
   }
   function submit(event: FormEvent) { event.preventDefault(); void inspect(operationId); }
+  // Opened from the activity timeline: read that operation directly.
+  useAutoRun(!!focus, () => void inspect(focus!), [focus]);
   return <section className="recreation-recovery" aria-label={`Saved recreations from VM ${source.providerReference.vmid}`} aria-busy={busy}>
+    {!focus && <>
     <h4>Saved recreations</h4>
     <p>Read recorded recreations from {source.definitionName} · {source.providerReference.node} · source VM {source.providerReference.vmid}. These controls never submit a new creation or restore consent.</p>
     <button type="button" disabled={disabled || busy} onClick={load}>Find recreations from VM {source.providerReference.vmid}</button>
     {history && (history.operations.length === 0 ? <p role="status">No recreations in this source's recent history.</p> : <ul>{history.operations.map(operation => <li key={operation.id}><button type="button" disabled={disabled || busy} onClick={() => inspect(operation.id)}>Inspect recreation operation {operation.id}</button> · {operation.status} · {operation.createdAt} · new instance <code>{operation.instanceId}</code></li>)}</ul>)}
     <form onSubmit={submit}><label htmlFor={inputId}>Saved recreation operation ID</label><input id={inputId} value={operationId} onChange={event => { generation.current++; setOperationId(event.target.value); setSaved(null); setError(""); setBusy(false); }} required minLength={32} maxLength={32} pattern="[0-9a-f]{32}" disabled={disabled} autoCapitalize="none" autoCorrect="off" spellCheck={false} /><button type="submit" disabled={disabled || busy}>Read saved recreation operation</button></form>
+    </>}
     {busy && <p role="status">Reading saved recreation records…</p>}
     {saved && <>
       <ProvisioningProgress key={saved.operation.id} refreshToken={saved.operation} connectionId={connectionId} operationId={saved.operation.id} instanceId={saved.operation.instanceId} disabled={disabled || busy} planHash={saved.plan.planHash} definitionHash={saved.plan.definitionHash} sourceInstanceId={source.id} node={saved.plan.target.node} vmid={saved.plan.target.vmid} />

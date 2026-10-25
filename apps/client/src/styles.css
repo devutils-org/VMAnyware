@@ -429,3 +429,27 @@ button + label { margin-top: 14px; }
   .tabbar { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   .inline-form .field.user, .inline-form .field.port { flex: 1 1 6rem; }
 }
+
+/* ---------- activity timeline ---------- */
+.timeline-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 8px; }
+.timeline-list { list-style: none; margin: 0; padding: 0; border: 1px solid var(--line); border-radius: var(--radius-control); overflow: hidden; }
+.timeline-list > li { padding: 0; border-bottom: 1px solid var(--line); }
+.timeline-list > li:last-child { border-bottom: 0; }
+.timeline-row { display: grid; grid-template-columns: 28px minmax(0, 1fr) auto auto; align-items: center; gap: 14px; width: 100%; min-height: 48px; padding: 0 14px; border: 0; border-radius: 0; background: none; text-align: left; font-weight: 400; color: var(--soft); }
+.timeline-row:hover:not(:disabled) { background: #ffffff06; border-color: transparent; }
+.timeline-list > li.open .timeline-row { background: #ffffff05; }
+.timeline-icon { display: grid; place-items: center; width: 28px; height: 28px; border-radius: 8px; background: #ffffff08; color: var(--muted); }
+.timeline-icon.snapshot, .timeline-icon.create { color: var(--cyan); }
+.timeline-icon.restore, .timeline-icon.recreate { color: var(--purple); }
+.timeline-icon.delete { color: var(--danger); }
+.timeline-label { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; color: var(--fg); }
+.timeline-row time { font-size: 11px; }
+.timeline-detail { padding: 4px 16px 16px 56px; }
+.chip.state.succeeded { color: var(--ok); border-color: #7ef0b440; background: #7ef0b40a; }
+.chip.state.failed, .chip.state.interrupted { color: var(--danger); border-color: #ff8f9c40; background: #ff8f9c0a; }
+.chip.state.queued, .chip.state.running, .chip.state.uncertain { color: var(--purple); border-color: #b7a0ff40; background: #b7a0ff0a; }
+@media (max-width: 820px) {
+  .timeline-row { grid-template-columns: 28px minmax(0, 1fr) auto; }
+  .timeline-row time { display: none; }
+  .timeline-detail { padding-left: 16px; }
+}

@@ -2,10 +2,11 @@ import { ProvisioningProgress } from "./ProvisioningProgress";
 import { ProvisioningFailure } from "./ProvisioningFailure";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { useAutoRun } from "./actionFlow";
 
 type Summary = { id: string; status: string; instanceId: string | null; createdAt: string };
 type Recovered = { operation: { id: string; status: string; failure?: string | null; result: null | { guestReady: boolean; guest: { ipv4: string } } }; environment: { definitionName: string; providerReference: { node: string; vmid: number } } };
-export function RemoteRecovery({ connectionId, endpoint, disabled, onSshTarget }: { connectionId: number; endpoint: string; disabled: boolean; onSshTarget: (host: string, username: string) => void }) {
+export function RemoteRecovery({ connectionId, endpoint, disabled, onSshTarget, focus }: { connectionId: number; endpoint: string; disabled: boolean; onSshTarget: (host: string, username: string) => void; focus?: string }) {
   const [recent, setRecent] = useState<Summary[] | null>(null), [operationId, setOperationId] = useState("");
   const [result, setResult] = useState<Recovered | null>(null), [busy, setBusy] = useState(false), [error, setError] = useState("");
   const generation = useRef(0);
@@ -24,7 +25,10 @@ export function RemoteRecovery({ connectionId, endpoint, disabled, onSshTarget }
     finally { if (generation.current === current) setBusy(false); }
   }
   function submit(event: FormEvent) { event.preventDefault(); void inspect(operationId); }
+  // Opened from the activity timeline: read that operation directly.
+  useAutoRun(!!focus, () => void inspect(focus!), [focus]);
   return <section className="remote-recovery">
+    {!focus && <>
     <h3>Find an existing creation</h3>
     <p>Read operations retained on {endpoint}, including after reconnecting or restarting the app. These controls never submit creation again.</p>
     <button type="button" disabled={disabled || busy} onClick={loadRecent}>Find recent creations</button>
@@ -36,6 +40,7 @@ export function RemoteRecovery({ connectionId, endpoint, disabled, onSshTarget }
       <input id="recover-operation-id" value={operationId} onChange={event => { generation.current++; setOperationId(event.target.value); setResult(null); setError(""); }} minLength={32} maxLength={32} pattern="[0-9a-f]{32}" required disabled={disabled || busy} autoCapitalize="none" autoCorrect="off" spellCheck={false} />
       <button type="submit" disabled={disabled || busy}>Read saved creation</button>
     </form>
+    </>}
     {busy && <p role="status">Reading this server's retained operation…</p>}
     {result && <>
       <ProvisioningProgress key={result.operation.id} refreshToken={result.operation} connectionId={connectionId} operationId={result.operation.id} disabled={disabled || busy} node={result.environment.providerReference.node} vmid={result.environment.providerReference.vmid} />

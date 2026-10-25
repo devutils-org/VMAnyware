@@ -8,17 +8,12 @@ import { Sessions } from "./Sessions";
 import { LocalWorkspace } from "./LocalWorkspace";
 import { RemoteCreate } from "./RemoteCreate";
 import { RemoteDeletion } from "./RemoteDeletion";
-import { RemoteDeletionRecovery } from "./RemoteDeletionRecovery";
 import { RemoteInstanceDetail } from "./RemoteInstanceDetail";
 import { RemoteInstanceStatus } from "./RemoteInstanceStatus";
 import { RemoteLifecycle } from "./RemoteLifecycle";
-import { RemoteLifecycleRecovery } from "./RemoteLifecycleRecovery";
-import { RemoteRecovery } from "./RemoteRecovery";
+import { OperationTimeline } from "./OperationTimeline";
 import { RemoteRecreation } from "./RemoteRecreation";
-import { RemoteRecreationRecovery } from "./RemoteRecreationRecovery";
-import { RemoteRestoreRecovery } from "./RemoteRestoreRecovery";
 import { RemoteSnapshotCreate } from "./RemoteSnapshotCreate";
-import { RemoteSnapshotRecovery } from "./RemoteSnapshotRecovery";
 import { RemoteSnapshotRestore } from "./RemoteSnapshotRestore";
 import { RemoteSnapshots } from "./RemoteSnapshots";
 
@@ -265,15 +260,7 @@ export function Workspace({ native }: { native: boolean }) {
           {sessions.some(session => session.title === selected.definitionName) && <div className="actions-row">{sessions.filter(session => session.title === selected.definitionName).map(session =>
             <button key={session.id} type="button" onClick={() => { setActiveSession(session.id); setView("sessions"); }}><Icon name="terminal" />Open session {session.account}</button>)}</div>}
         </Panel>}
-        {tab === "activity" && <div className="stack">
-          <Panel title="Start and shutdown"><RemoteLifecycleRecovery connectionId={connection.connectionId} environment={selected} disabled={busy || loading} /></Panel>
-          {selected.status === "registered" && <Panel title="Snapshots and restores">
-            <RemoteSnapshotRecovery connectionId={connection.connectionId} environment={selected} disabled={busy || loading} />
-            <RemoteRestoreRecovery connectionId={connection.connectionId} environment={selected} disabled={busy || loading} />
-          </Panel>}
-          <Panel title="Deletion"><RemoteDeletionRecovery connectionId={connection.connectionId} environment={selected} disabled={busy || loading} /></Panel>
-          {selected.status === "deleted" && <Panel title="Recreations"><RemoteRecreationRecovery connectionId={connection.connectionId} source={selected} disabled={busy || loading} /></Panel>}
-        </div>}
+        {tab === "activity" && <Panel title="Activity"><OperationTimeline key={`timeline.${selected.id}.${revision}`} connectionId={connection.connectionId} environments={[selected]} includeCreations={false} endpoint={connection.endpoint} disabled={busy || loading} onSshTarget={selectSshTarget} /></Panel>}
       </div>
     </div> : <Empty title="Environment unavailable" text="It is no longer listed on this server." action={<button type="button" onClick={() => setView("environments")}>Back to environments</button>} />)}
 
@@ -290,7 +277,7 @@ export function Workspace({ native }: { native: boolean }) {
       </Panel>
     </div>
 
-    {view === "activity" && <Panel title="Creations"><RemoteRecovery key={`recovery-${connection.connectionId}`} connectionId={connection.connectionId} endpoint={connection.endpoint} disabled={busy || mutationLocked} onSshTarget={selectSshTarget} /></Panel>}
+    {view === "activity" && <Panel title="All operations"><OperationTimeline key={`timeline.all.${revision}`} connectionId={connection.connectionId} environments={environments ?? []} includeCreations endpoint={connection.endpoint} disabled={busy || loading} onSshTarget={selectSshTarget} /></Panel>}
 
     {view === "keychain" && <Keychain native={native} panel={(title, body, action) => <Panel title={title} action={action}>{body}</Panel>} />}
 

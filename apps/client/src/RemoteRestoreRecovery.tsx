@@ -1,12 +1,13 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { useAutoRun } from "./actionFlow";
 
 type Target = { id: string; definitionName: string; providerReference: { scopeId: string; node: string; vmid: number } };
 type Status = "queued" | "running" | "succeeded" | "failed" | "interrupted" | "uncertain";
 type History = { instanceId: string; operations: { id: string; snapshotName: string; status: Status; createdAt: string }[] };
 type Recovered = { target: { instanceId: string; providerScopeId: string; definitionHash: string; node: string; vmid: number }; request: { snapshotName: string }; snapshotConfigHash: string; submissionStarted: boolean; operation: { id: string; kind: string; instanceId: string; status: Status; providerTaskKnown: boolean; failure: string | null; result: null | { instanceId: string; providerScopeId: string; node: string; vmid: number; taskStatus: string; snapshotName: string; snapshotConfigHash: string; observation: { node: string; vmid: number; status: string; qmpStatus: string | null } } } };
 
-export function RemoteRestoreRecovery({ connectionId, environment, disabled }: { connectionId: number; environment: Target; disabled: boolean }) {
+export function RemoteRestoreRecovery({ connectionId, environment, disabled, focus }: { connectionId: number; environment: Target; disabled: boolean; focus?: string }) {
   const [history, setHistory] = useState<History | null>(null), [operationId, setOperationId] = useState("");
   const [recovered, setRecovered] = useState<Recovered | null>(null), [busy, setBusy] = useState(false), [error, setError] = useState("");
   const generation = useRef(0), inputId = useId();
@@ -42,7 +43,10 @@ export function RemoteRestoreRecovery({ connectionId, environment, disabled }: {
     finally { if (generation.current === current) setBusy(false); }
   }
   function submit(event: FormEvent) { event.preventDefault(); void inspect(operationId); }
+  // Opened from the activity timeline: read that operation directly.
+  useAutoRun(!!focus, () => void inspect(focus!), [focus]);
   return <section className="restore-recovery" aria-label={`Saved restore operations for VM ${environment.providerReference.vmid}`} aria-busy={busy}>
+    {!focus && <>
     <h4>Saved restore operations</h4>
     <p>Read requests for {environment.definitionName} · {environment.providerReference.node} · VM {environment.providerReference.vmid}, including after reconnecting. These controls never submit rollback or recreate consent.</p>
     <button type="button" disabled={disabled || busy} onClick={load}>Find restore operations for VM {environment.providerReference.vmid}</button>
@@ -54,6 +58,7 @@ export function RemoteRestoreRecovery({ connectionId, environment, disabled }: {
       <input id={inputId} value={operationId} onChange={event => { generation.current++; setOperationId(event.target.value); setRecovered(null); setError(""); setBusy(false); }} required minLength={32} maxLength={32} pattern="[0-9a-f]{32}" disabled={disabled} autoCapitalize="none" autoCorrect="off" spellCheck={false} />
       <button type="submit" disabled={disabled || busy}>Read saved restore operation</button>
     </form>
+    </>}
     {busy && <p role="status">Reading saved restore records…</p>}
     {recovered && <>
       <p>Saved restore request: <strong>{recovered.request.snapshotName}</strong> · {recovered.target.node} · VM {recovered.target.vmid}</p>

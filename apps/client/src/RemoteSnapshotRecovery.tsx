@@ -1,12 +1,13 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { useAutoRun } from "./actionFlow";
 
 type Target = { id: string; definitionName: string; providerReference: { scopeId: string; node: string; vmid: number } };
 type Status = "queued" | "running" | "succeeded" | "failed" | "interrupted" | "uncertain";
 type History = { instanceId: string; operations: { id: string; name: string; status: Status; createdAt: string }[] };
 type Recovered = { target: { instanceId: string; providerScopeId: string; definitionHash: string; node: string; vmid: number }; request: { name: string; description: string }; submissionStarted: boolean; operation: { id: string; kind: string; instanceId: string; status: Status; providerTaskKnown: boolean; failure: string | null; result: null | { instanceId: string; providerScopeId: string; node: string; vmid: number; taskStatus: string; snapshot: { name: string; description: string; includesRam: boolean | null; providerState: string | null } } } };
 
-export function RemoteSnapshotRecovery({ connectionId, environment, disabled }: { connectionId: number; environment: Target; disabled: boolean }) {
+export function RemoteSnapshotRecovery({ connectionId, environment, disabled, focus }: { connectionId: number; environment: Target; disabled: boolean; focus?: string }) {
   const [history, setHistory] = useState<History | null>(null), [operationId, setOperationId] = useState("");
   const [recovered, setRecovered] = useState<Recovered | null>(null), [busy, setBusy] = useState(false), [error, setError] = useState("");
   const generation = useRef(0), inputId = useId();
@@ -42,7 +43,10 @@ export function RemoteSnapshotRecovery({ connectionId, environment, disabled }: 
     finally { if (generation.current === current) setBusy(false); }
   }
   function submit(event: FormEvent) { event.preventDefault(); void inspect(operationId); }
+  // Opened from the activity timeline: read that operation directly.
+  useAutoRun(!!focus, () => void inspect(focus!), [focus]);
   return <section className="snapshot-recovery" aria-label={`Saved snapshot operations for VM ${environment.providerReference.vmid}`} aria-busy={busy}>
+    {!focus && <>
     <h4>Saved snapshot operations</h4>
     <p>Read requests for {environment.definitionName} · {environment.providerReference.node} · VM {environment.providerReference.vmid}, including after reconnecting. These controls never submit snapshot creation.</p>
     <button type="button" disabled={disabled || busy} onClick={load}>Find snapshot operations for VM {environment.providerReference.vmid}</button>
@@ -54,6 +58,7 @@ export function RemoteSnapshotRecovery({ connectionId, environment, disabled }: 
       <input id={inputId} value={operationId} onChange={event => { generation.current++; setOperationId(event.target.value); setRecovered(null); setError(""); setBusy(false); }} required minLength={32} maxLength={32} pattern="[0-9a-f]{32}" disabled={disabled} autoCapitalize="none" autoCorrect="off" spellCheck={false} />
       <button type="submit" disabled={disabled || busy}>Read saved snapshot operation</button>
     </form>
+    </>}
     {busy && <p role="status">Reading saved snapshot records…</p>}
     {recovered && <>
       <p>Saved snapshot request: <strong>{recovered.request.name}</strong> · {recovered.target.node} · VM {recovered.target.vmid}</p>

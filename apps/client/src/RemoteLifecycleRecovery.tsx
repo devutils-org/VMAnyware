@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { useAutoRun } from "./actionFlow";
 
 type Environment = { id: string; definitionName: string; providerReference: { node: string; vmid: number } };
 type Action = "start" | "shutdown";
@@ -9,7 +10,7 @@ type History = { instanceId: string; operations: Entry[] };
 type Saved = { action: Action; submissionStarted: boolean; target: { instanceId: string; providerScopeId: string; definitionHash: string; node: string; vmid: number }; operation: { id: string; kind: string; instanceId: string; status: Status; providerTaskKnown: boolean; failure: string | null; result: null | { action: Action; instanceId: string; providerScopeId: string; taskStatus: string; observation: { node: string; vmid: number; status: string } } } };
 const statuses = ["queued", "running", "succeeded", "failed", "interrupted", "uncertain"];
 const actions = ["start", "shutdown"];
-export function RemoteLifecycleRecovery({ connectionId, environment, disabled }: { connectionId: number; environment: Environment; disabled: boolean }) {
+export function RemoteLifecycleRecovery({ connectionId, environment, disabled, focus }: { connectionId: number; environment: Environment; disabled: boolean; focus?: string }) {
   const [history, setHistory] = useState<History | null>(null), [operationId, setOperationId] = useState("");
   const [saved, setSaved] = useState<Saved | null>(null), [busy, setBusy] = useState(false), [error, setError] = useState("");
   const generation = useRef(0), inputId = useId();
@@ -46,12 +47,16 @@ export function RemoteLifecycleRecovery({ connectionId, environment, disabled }:
     finally { if (generation.current === current) setBusy(false); }
   }
   function submit(event: FormEvent) { event.preventDefault(); void inspect(operationId); }
+  // Opened from the activity timeline: read that operation directly.
+  useAutoRun(!!focus, () => void inspect(focus!), [focus]);
   return <section className="lifecycle-recovery" aria-label={`Saved lifecycle work for VM ${environment.providerReference.vmid}`} aria-busy={busy}>
+    {!focus && <>
     <h4>Saved start/shutdown operations</h4>
     <p>Read recorded work for {environment.definitionName}. These controls never repeat an action or restore confirmation.</p>
     <button type="button" disabled={disabled || busy} onClick={load}>Find lifecycle operations for VM {environment.providerReference.vmid}</button>
     {history && (history.operations.length === 0 ? <p role="status">No lifecycle operations in this instance's recent history.</p> : <ul>{history.operations.map(op => <li key={op.id}><button type="button" disabled={disabled || busy} onClick={() => inspect(op.id)}>Inspect lifecycle operation {op.id}</button> · {op.action === "start" ? "start" : "graceful shutdown"} · {op.status} · {op.createdAt}</li>)}</ul>)}
     <form onSubmit={submit}><label htmlFor={inputId}>Saved lifecycle operation ID</label><input id={inputId} value={operationId} onChange={event => { generation.current++; setOperationId(event.target.value); setSaved(null); setError(""); setBusy(false); }} required minLength={32} maxLength={32} pattern="[0-9a-f]{32}" disabled={disabled} autoCapitalize="none" autoCorrect="off" spellCheck={false} /><button type="submit" disabled={disabled || busy}>Read saved lifecycle operation</button></form>
+    </>}
     {busy && <p role="status">Reading saved lifecycle records…</p>}
     {saved && <>
       <p>Saved lifecycle action: {saved.action === "start" ? "start" : "graceful shutdown"} · {saved.target.node} · VM {saved.target.vmid}</p>

@@ -1,5 +1,6 @@
 import { useEffect, useId, useRef, useState, type FormEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
+import { useAutoRun } from "./actionFlow";
 
 type Target = { id: string; definitionName: string; providerReference: { scopeId: string; node: string; vmid: number } };
 type Status = "queued" | "running" | "succeeded" | "failed" | "interrupted" | "uncertain";
@@ -7,7 +8,7 @@ type History = { instanceId: string; operations: { id: string; status: Status; c
 type Recovered = { target: { instanceId: string; providerScopeId: string; definitionHash: string; node: string; vmid: number }; configDigest: string; approvalHash: string; submissionStarted: boolean; plan: { scopeHash: string; volumes: { volume: string; references: string[]; ownerVerified: boolean; effect: string }[]; snapshots: string[]; preservedMedia: string[]; preservedOwnedVolumes: string[] }; operation: { id: string; kind: string; instanceId: string; status: Status; providerTaskKnown: boolean; failure: string | null; result: null | { instanceId: string; providerScopeId: string; node: string; vmid: number; approvalHash: string; taskStatus: string; vmAbsenceVerified: boolean; volumesAbsenceVerified: boolean; definitionRetained: boolean; associationRetired: boolean } } };
 const failures: Record<string, string> = { provider_task_failed: "The recorded destroy task failed; cleanup may be partial and remains uncertain.", provider_submission_unconfirmed: "The recorded submission is unknown. No DELETE is repeated by these controls.", deletion_state_unconfirmed: "Recorded VM or reviewed-volume absence remains unconfirmed.", provider_task_unconfirmed: "The recorded task outcome remains unconfirmed.", deletion_preconditions_failed: "The recorded attempt failed its deletion prerequisites.", deletion_target_changed: "The reviewed target or cleanup scope changed before the recorded attempt.", deletion_disabled: "Deletion was disabled for this recorded attempt.", approval_expired: "The recorded consent expired before dispatch." };
 
-export function RemoteDeletionRecovery({ connectionId, environment, disabled }: { connectionId: number; environment: Target; disabled: boolean }) {
+export function RemoteDeletionRecovery({ connectionId, environment, disabled, focus }: { connectionId: number; environment: Target; disabled: boolean; focus?: string }) {
   const [history, setHistory] = useState<History | null>(null), [operationId, setOperationId] = useState("");
   const [saved, setSaved] = useState<Recovered | null>(null), [busy, setBusy] = useState(false), [error, setError] = useState("");
   const generation = useRef(0), inputId = useId();
@@ -43,7 +44,10 @@ export function RemoteDeletionRecovery({ connectionId, environment, disabled }: 
     finally { if (generation.current === current) setBusy(false); }
   }
   function submit(event: FormEvent) { event.preventDefault(); void inspect(operationId); }
+  // Opened from the activity timeline: read that operation directly.
+  useAutoRun(!!focus, () => void inspect(focus!), [focus]);
   return <section className="deletion-recovery" aria-label={`Saved deletion operations for VM ${environment.providerReference.vmid}`} aria-busy={busy}>
+    {!focus && <>
     <h4>Saved deletion operations</h4>
     <p>Read requests for {environment.definitionName} · {environment.providerReference.node} · VM {environment.providerReference.vmid}, including deleted associations and after reconnecting. These controls never submit deletion or restore consent.</p>
     <button type="button" disabled={disabled || busy} onClick={load}>Find deletion operations for VM {environment.providerReference.vmid}</button>
@@ -55,6 +59,7 @@ export function RemoteDeletionRecovery({ connectionId, environment, disabled }: 
       <input id={inputId} value={operationId} onChange={event => { generation.current++; setOperationId(event.target.value); setSaved(null); setError(""); setBusy(false); }} required minLength={32} maxLength={32} pattern="[0-9a-f]{32}" disabled={disabled} autoCapitalize="none" autoCorrect="off" spellCheck={false} />
       <button type="submit" disabled={disabled || busy}>Read saved deletion operation</button>
     </form>
+    </>}
     {busy && <p role="status">Reading saved deletion records…</p>}
     {saved && <>
       <p>Saved deletion target: {saved.target.node} · VM {saved.target.vmid}</p>
