@@ -1,6 +1,7 @@
 import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNode } from "react";
 import { invoke } from "@tauri-apps/api/core";
 import { Icon, type IconName } from "./icons";
+import { BrandMark } from "./BrandMark";
 import { AppIdentity } from "./AppIdentity";
 import { LocalWorkspace } from "./LocalWorkspace";
 import { RemoteCreate } from "./RemoteCreate";
@@ -170,7 +171,7 @@ export function Workspace({ native }: { native: boolean }) {
 
   if (!connection) return <div className="connect-screen">
     <form className="connect-card" onSubmit={connect} aria-busy={busy}>
-      <div className="brand"><span className="brand-mark" aria-hidden="true">›_</span>VMAnyware</div>
+      <div className="brand"><BrandMark />VMAnyware</div>
       <h1>Connect to your control plane</h1>
       <p className="muted">Proxmox credentials stay on the server. This device only holds a session token in memory.</p>
       <label htmlFor="remote-endpoint">Server address</label>
@@ -311,7 +312,7 @@ export function Workspace({ native }: { native: boolean }) {
 function Shell({ nav, server, title, subtitle, back, actions, narrow = false, children }: { nav: ReactNode; server?: ReactNode; title: string; subtitle: string; back?: () => void; actions?: ReactNode; narrow?: boolean; children: ReactNode }) {
   return <div className={nav ? "app" : "app no-nav"}>
     {nav && <aside className="sidebar" aria-label="Main navigation">
-      <div className="brand"><span className="brand-mark" aria-hidden="true">›_</span>VMAnyware</div>
+      <div className="brand"><BrandMark />VMAnyware</div>
       <nav>{nav}</nav>
       <div className="sidebar-footer">{server}</div>
     </aside>}

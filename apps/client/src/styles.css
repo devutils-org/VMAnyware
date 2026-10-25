@@ -388,3 +388,6 @@ button + label { margin-top: 14px; }
   .form-grid { grid-template-columns: repeat(6, minmax(0, 1fr)); }
   .form-grid .span-2 { grid-column: span 3; }
 }
+
+/* devutils mark replaces the placeholder glyph. */
+.brand .brand-mark { width: 24px; height: 24px; border: 0; border-radius: 0; background: none; filter: drop-shadow(0 0 10px #a7b6ff55); }
