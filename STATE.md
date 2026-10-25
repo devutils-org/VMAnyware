@@ -229,9 +229,20 @@ terminal (e723611, c093f2a, c66f039), status colour code (c6259fd), keyboard
 shortcuts with tooltips/help (73280ca, Node tests). ⌘R/⌘N may be caught by the
 native macOS menu: unverified in the real app.
 
-Next: user continues the deep test on lab-1 (snapshot t1 → modify → shutdown →
-restore → start → marker; Activity; delete; recreate on 9002 with pre-filled
-Console), then revoke temporary deletion grants.
+FULL JOURNEY THROUGH THE APP (deployed server, real Proxmox), user-run:
+lab-1 9001 snapshot t1 → marker modified → shutdown → restore t1 → start →
+`cat marker` = before; machine Activity timeline lists Snapshot t1, Shut
+down, Restore t1, Start (all succeeded, ordered); delete via app → lab-1
+Deleted (definition kept, Recreate offered); recreate on VM 9002 → native
+terminal, host key SHA256:znzU88toL9iQJWQLMGiBCUrB9a8sp/wRAUfFI+ZNOlY verified
+via qm guest exec, home directory empty (fresh disk). Console pre-fill from
+lastGuest on 9002 not explicitly confirmed by user.
+
+Next: confirm Console pre-fill on the recreated machine; REVOKE temporary
+Sys.Audit (/) and Datastore.Allocate (local-lvm) grants (user + control-plane
+token) and set VMANYWARE_DELETIONS_ENABLED back if desired. Then remaining
+MVP: mobile (Android APK runtime, iOS), platform secret stores, creation on
+the reviewed-operation module, release hardening (rotate exposed tokens).
 
 Next: user relaunches and validates the streamlined actions; then UI delete/recreate with the app key; then registered-VMID defect fix and template
 r2 (empty machine-id). Deletion via app needs temporary grants again.
