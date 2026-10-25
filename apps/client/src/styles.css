@@ -489,3 +489,9 @@ button + label { margin-top: 14px; }
 .result.succeeded [role="status"] { color: var(--ok); }
 .result.failed [role="status"], .result.interrupted [role="status"] { color: var(--danger); }
 [role="alert"]:not(.error) { color: #ffc2c9; }
+
+/* The terminal canvas must never widen its grid track; otherwise the tab bar
+   (and its full-window button) stays wider than the view after shrinking. */
+.sessions { grid-template-columns: minmax(0, 1fr); }
+.session-tabs, .session-panel, .session-panel > *, .ssh-terminal { min-width: 0; max-width: 100%; }
+.session-tabs .session-maximize { position: sticky; right: 0; background: var(--surface); }
