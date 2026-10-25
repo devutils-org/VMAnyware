@@ -58,6 +58,8 @@ pub const COMMANDS: &[&str] = &[
     "inspect_ssh_host",
     "confirm_ssh_host",
     "replace_ssh_host",
+    "list_ssh_hosts",
+    "forget_ssh_host",
     "cancel_ssh_host",
     "list_ssh_identities",
     "check_ssh_authentication",

@@ -2,7 +2,7 @@ import { useEffect, useRef, useState, type FormEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
 
 type PublicIdentity = { publicKey: string; fingerprint: string };
-export function AppIdentity({ disabled, onUse }: { disabled: boolean; onUse?: (publicKey: string) => void }) {
+export function AppIdentity({ disabled, onUse, onVault, open = false }: { disabled: boolean; onUse?: (publicKey: string) => void; onVault?: (action: "remember" | "unlock" | "forget") => void; open?: boolean }) {
   const [supported, setSupported] = useState(false), [systemSupported, setSystemSupported] = useState(false);
   const [rememberConsent, setRememberConsent] = useState(false), [forgetConsent, setForgetConsent] = useState(false), [notice, setNotice] = useState("");
   const [passphrase, setPassphrase] = useState(""), [confirmation, setConfirmation] = useState("");
@@ -34,17 +34,17 @@ export function AppIdentity({ disabled, onUse }: { disabled: boolean; onUse?: (p
     try {
       if (action === "forget") {
         await invoke("forget_app_identity", { confirmed: true });
-        if (generation.current === current) setNotice("Saved unlock secret forgotten. The encrypted SSH key is unchanged; keep its passphrase.");
+        if (generation.current === current) { setNotice("Saved unlock secret forgotten. The encrypted SSH key is unchanged; keep its passphrase."); onVault?.("forget"); }
       } else {
         const result = action === "remember" ? await invoke<PublicIdentity>("remember_app_identity", { passphrase: secret, confirmed: true }) : await invoke<PublicIdentity>("unlock_system_app_identity");
-        if (generation.current === current) { setIdentity(result); setNotice(action === "remember" ? "Unlock secret saved in the system key store." : "Identity unlocked using the system key store."); }
+        if (generation.current === current) { setIdentity(result); onVault?.(action); setNotice(action === "remember" ? "Unlock secret saved in the system key store." : "Identity unlocked using the system key store."); }
       }
     } catch { if (generation.current === current) setError("System key store unavailable or unable to open this identity. Retry the read, use the passphrase, or explicitly forget the saved secret before saving again."); }
     finally { if (generation.current === current) setBusy(false); }
   }
   function unlock(event: FormEvent) { event.preventDefault(); void read(false); }
   if (!supported) return null;
-  return <details className="app-identity">
+  return <details className="app-identity" open={open || undefined}>
     <summary>Use an application SSH key</summary>
     <p>Create once, then unlock the same key after reopening the app. Keep the passphrase: it cannot be recovered. The private key is stored encrypted on this device; only its public key goes into the VM definition.</p>
     <p>Device migration and key backup are not available yet. Keep another public key authorized if you need independent access.</p>

@@ -3,13 +3,13 @@ import { useOperationPolling } from "./actionFlow";
 import { ProvisioningFailure } from "./ProvisioningFailure";
 import { useEffect, useRef, useState, type FormEvent } from "react";
 import { invoke } from "@tauri-apps/api/core";
-import { AppIdentity } from "./AppIdentity";
+import { KeyPicker } from "./KeyPicker";
 
 type Plan = { definitionName: string; definitionHash: string; planHash: string; creationEnabled: boolean; sshKeyCount: number; packages: string[]; snapshotAfterProvisioning: boolean; source: { templateVmid: number; templateVersion: string }; target: { node: string; vmid: number; storage: string; bridge: string; guestUser: string; resources: { cpu: number; memoryMiB: number; diskGiB: number } } };
 type Operation = { id: string; status: "queued" | "running" | "uncertain" | "interrupted" | "succeeded" | "failed"; failure?: string | null; result: null | { guestReady: boolean; guest: { ipv4: string } } };
-export function RemoteCreate({ connectionId, endpoint, disabled, onSshTarget, onEnvironmentsChanged, images }: { connectionId: number; endpoint: string; disabled: boolean; onSshTarget: (host: string, username: string) => void; onEnvironmentsChanged?: () => void; images?: string[] }) {
+export function RemoteCreate({ connectionId, endpoint, disabled, onSshTarget, onEnvironmentsChanged, images, onOpenKeychain }: { connectionId: number; endpoint: string; disabled: boolean; onSshTarget: (host: string, username: string) => void; onEnvironmentsChanged?: () => void; images?: string[]; onOpenKeychain?: () => void }) {
   const [name, setName] = useState("mobile-lab"), [image, setImage] = useState("debian-13"), [vmid, setVmid] = useState("202");
-  const [cpu, setCpu] = useState("2"), [memory, setMemory] = useState("2048"), [disk, setDisk] = useState("8"), [key, setKey] = useState("");
+  const [cpu, setCpu] = useState("2"), [memory, setMemory] = useState("2048"), [disk, setDisk] = useState("8"), [key, setKey] = useState(""), [appKey, setAppKey] = useState<string | null>(null);
   const [packages, setPackages] = useState(""), [snapshot, setSnapshot] = useState(false);
   const [plan, setPlan] = useState<Plan | null>(null), [requestKey, setRequestKey] = useState("");
   const [confirmed, setConfirmed] = useState(false), [submitted, setSubmitted] = useState(false), [busy, setBusy] = useState(false);
@@ -22,6 +22,7 @@ export function RemoteCreate({ connectionId, endpoint, disabled, onSshTarget, on
   const report = (failure: unknown) => typeof failure === "string" ? failure : "Creation request unavailable. Retain its request key.";
   async function prepare(event: FormEvent) {
     event.preventDefault(); if (locked) return; const current = ++generation.current;
+    if (!key.trim()) { setError("Add the application key (or another public key) so you can log in to the VM."); return; }
     const nextKey = crypto.randomUUID(); setBusy(true); setError(""); setConfirmed(false); setPlan(null);
     const declaredPackages = packages.split("\n").map(value => value.trim()).filter(Boolean);
     const yaml = JSON.stringify({ apiVersion: "vmanyware.dev/v1", kind: "Environment", metadata: { name }, spec: { image, resources: { cpu: Number(cpu), memoryMiB: Number(memory), diskGiB: Number(disk) }, provisioning: { cloudInit: true, sshAuthorizedKeys: key.split("\n").map(value => value.trim()).filter(Boolean), packages: declaredPackages }, lifecycle: { snapshotAfterProvisioning: snapshot } } });
@@ -50,7 +51,6 @@ export function RemoteCreate({ connectionId, endpoint, disabled, onSshTarget, on
   useOperationPolling(pending && !disabled, operation, () => void refresh());
   return <section className="remote-create">
     <h3>Create an environment</h3>
-    <AppIdentity disabled={locked} onUse={publicKey => setKey(current => [...new Set([...current.split("\n").map(value => value.trim()).filter(Boolean), publicKey])].join("\n"))} />
     <form className="create-definition" onSubmit={prepare}>
       <fieldset disabled={locked}>
         <div className="form-grid">
@@ -62,8 +62,11 @@ export function RemoteCreate({ connectionId, endpoint, disabled, onSshTarget, on
           <div className="field"><label htmlFor="create-cpu">CPUs</label><input id="create-cpu" type="number" min={1} max={64} value={cpu} onChange={event => setCpu(event.target.value)} required /></div>
           <div className="field"><label htmlFor="create-memory">Memory (MiB)</label><input id="create-memory" type="number" min={256} max={262144} value={memory} onChange={event => setMemory(event.target.value)} required /></div>
           <div className="field"><label htmlFor="create-disk">Disk (GiB)</label><input id="create-disk" type="number" min={4} max={4096} value={disk} onChange={event => setDisk(event.target.value)} required /></div>
-          <div className="field span-4"><label htmlFor="create-public-key">SSH public keys, one per line</label><textarea id="create-public-key" value={key} onChange={event => setKey(event.target.value)} required spellCheck={false} autoCapitalize="none" autoCorrect="off" />
-            <p className="hint">Public keys only. Private keys and passphrases must never be included.</p></div>
+          <div className="field span-4"><label>SSH access</label>
+            <KeyPicker disabled={locked} added={appKey} onOpenKeychain={() => onOpenKeychain?.()} onUse={identity => { setAppKey(identity.fingerprint); setKey(current => [...new Set([...current.split("\n").map(value => value.trim()).filter(Boolean), identity.publicKey])].join("\n")); }} />
+            <details className="extra-keys"><summary>Additional public keys</summary>
+              <textarea id="create-public-key" aria-label="SSH public keys, one per line" value={key} onChange={event => setKey(event.target.value)} spellCheck={false} autoCapitalize="none" autoCorrect="off" />
+              <p className="hint">One per line. Public keys only; private keys and passphrases must never be included.</p></details></div>
           <div className="field span-4"><label htmlFor="create-packages">Debian packages, one per line (optional)</label>
             <textarea id="create-packages" value={packages} onChange={event => setPackages(event.target.value)} maxLength={16512} spellCheck={false} autoCapitalize="none" autoCorrect="off" />
             <p className="hint">Up to 128 unique declarations, with optional =version. Packages use the guest’s configured repositories; unpinned dependencies may change.</p></div>

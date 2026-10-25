@@ -1,4 +1,4 @@
-use super::{trust, HostConfirmation, HostInspection};
+use super::{trust, HostConfirmation, HostInspection, TrustedHost};
 use russh::{
     client,
     keys::{HashAlg, PublicKeyOrCertificate},
@@ -325,6 +325,36 @@ impl HostManager {
         })
         .await
         .map_err(|_| "SSH confirmation unavailable")?
+    }
+    pub async fn trusted(&self) -> Result<Vec<TrustedHost>, String> {
+        let store = self.store().await?;
+        tokio::task::spawn_blocking(move || store.trusted())
+            .await
+            .map_err(|_| "Host trust storage unavailable")?
+            .map_err(|error| error.to_string())
+            .map(|entries| {
+                entries
+                    .into_iter()
+                    .map(|(endpoint, algorithm, fingerprint)| TrustedHost {
+                        host: endpoint.host().into(),
+                        port: endpoint.port(),
+                        algorithm,
+                        fingerprint,
+                    })
+                    .collect()
+            })
+    }
+    pub async fn forget(&self, host: &str, port: u16, fingerprint: &str) -> Result<(), String> {
+        let endpoint = trust::Endpoint::new(host, port).map_err(|error| error.to_string())?;
+        if fingerprint.len() > 128 {
+            return Err(trust::Error::ConfirmationMismatch.to_string());
+        }
+        let store = self.store().await?;
+        let fingerprint = fingerprint.to_owned();
+        tokio::task::spawn_blocking(move || store.forget(&endpoint, &fingerprint))
+            .await
+            .map_err(|_| "Host trust storage unavailable")?
+            .map_err(|error| error.to_string())
     }
     pub fn cancel(&self, owner: &str, id: &str) -> Result<(), String> {
         if id.len() > 64 {

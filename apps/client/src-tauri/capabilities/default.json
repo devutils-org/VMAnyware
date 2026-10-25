@@ -57,6 +57,8 @@
     "allow-inspect-ssh-host",
     "allow-confirm-ssh-host",
     "allow-replace-ssh-host",
+    "allow-list-ssh-hosts",
+    "allow-forget-ssh-host",
     "allow-cancel-ssh-host",
     "allow-list-ssh-identities",
     "allow-check-ssh-authentication",

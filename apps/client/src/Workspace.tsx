@@ -2,7 +2,9 @@ import { useCallback, useEffect, useRef, useState, type FormEvent, type ReactNod
 import { invoke } from "@tauri-apps/api/core";
 import { Icon, type IconName } from "./icons";
 import { BrandMark } from "./BrandMark";
-import { AppIdentity } from "./AppIdentity";
+import { Console, type ConsoleTarget, type Session } from "./Console";
+import { Keychain } from "./Keychain";
+import { Sessions } from "./Sessions";
 import { LocalWorkspace } from "./LocalWorkspace";
 import { RemoteCreate } from "./RemoteCreate";
 import { RemoteDeletion } from "./RemoteDeletion";
@@ -19,20 +21,20 @@ import { RemoteSnapshotCreate } from "./RemoteSnapshotCreate";
 import { RemoteSnapshotRecovery } from "./RemoteSnapshotRecovery";
 import { RemoteSnapshotRestore } from "./RemoteSnapshotRestore";
 import { RemoteSnapshots } from "./RemoteSnapshots";
-import { SshHostTrust } from "./SshHostTrust";
 
 type Image = { image: string; node: string; templateVmid: number; templateVersion: string; sourceDiskGiB: number; guestUser: string };
-type Environment = { id: string; definitionName: string; providerReference: { scopeId: string; node: string; vmid: number }; status: "registered" | "deleted" };
+// lastGuest is the last address observed by the server: a connection hint, never host proof.
+type Environment = { id: string; definitionName: string; providerReference: { scopeId: string; node: string; vmid: number }; status: "registered" | "deleted"; lastGuest?: { address: string; user: string; observedAt: string } | null };
 type Connection = { connectionId: number; endpoint: string };
-type View = "environments" | "environment" | "create" | "terminal" | "activity" | "settings";
-type Tab = "overview" | "snapshots" | "history";
+type View = "environments" | "environment" | "create" | "sessions" | "activity" | "keychain" | "settings";
+type Tab = "overview" | "console" | "snapshots" | "activity";
 type Drawer =
   | { kind: "lifecycle"; environment: Environment; action: "start" | "shutdown" }
   | { kind: "snapshot"; environment: Environment }
   | { kind: "restore"; environment: Environment; snapshotName: string }
   | { kind: "deletion"; environment: Environment }
   | { kind: "recreation"; environment: Environment };
-type SshTarget = { host: string; username: string; generation: number; instance?: Environment };
+
 
 // Only the public endpoint and public CA are remembered; the access token never is.
 const SAVED_SERVER = "vmanyware.remote.server";
@@ -68,9 +70,11 @@ export function Workspace({ native }: { native: boolean }) {
   const [revision, setRevision] = useState(0);
   const [power, setPower] = useState<{ id: string; status: "running" | "stopped" } | null>(null);
   const [mutationLocked, setMutationLocked] = useState(false);
-  const [sshTarget, setSshTarget] = useState<SshTarget | null>(null);
+  const [sessions, setSessions] = useState<Session[]>([]), [activeSession, setActiveSession] = useState<string | null>(null);
+  // Ad-hoc connection target for the Sessions view (for example after a creation).
+  const [adhoc, setAdhoc] = useState<{ target: ConsoleTarget | null; key: number }>({ target: null, key: 0 });
   const [runtime, setRuntime] = useState("");
-  const generation = useRef(0), sshGeneration = useRef(0);
+  const generation = useRef(0);
   const connectionId = connection?.connectionId;
 
   useEffect(() => () => { generation.current++; if (native) void invoke("disconnect_remote").catch(() => {}); }, [native]);
@@ -91,7 +95,7 @@ export function Workspace({ native }: { native: boolean }) {
   }
   function resetWorkspace() {
     setConnection(null); setImages(null); setEnvironments(null); setLoadError(""); setDrawer(null);
-    setMutationLocked(false); setSshTarget(null); setSelectedId(null); setDrawerHidden(false);
+    setMutationLocked(false); setSelectedId(null); setDrawerHidden(false); setSessions([]); setActiveSession(null);
   }
   async function disconnect() {
     generation.current++; setBusy(true); setError("");
@@ -153,11 +157,12 @@ export function Workspace({ native }: { native: boolean }) {
   function openEnvironment(environment: Environment) { setSelectedId(environment.id); setTab("overview"); setView("environment"); }
   function openDrawer(next: Drawer) { if (!blocked) { setDrawer(next); setDrawerHidden(false); } }
   function selectSshTarget(target: string, username: string) {
-    setSshTarget({ host: target, username, generation: ++sshGeneration.current }); setView("terminal");
+    setAdhoc(current => ({ target: { host: target, port: 22, username: username || "debian", label: target }, key: current.key + 1 })); setView("sessions");
   }
-  function sshForInstance(environment: Environment) {
-    if (blocked || environment.status !== "registered") return;
-    setSshTarget({ host: "", username: "", generation: ++sshGeneration.current, instance: environment }); setView("terminal");
+  function openConsole(environment: Environment) { setSelectedId(environment.id); setTab("console"); setView("environment"); }
+  function addSession(session: Session) { setSessions(current => [...current, session]); setActiveSession(session.id); setView("sessions"); }
+  function closedSession(id: string) {
+    setSessions(current => { const rest = current.filter(session => session.id !== id); setActiveSession(active => active === id ? rest.at(-1)?.id ?? null : active); return rest; });
   }
   // Settings shows the platform the native bridge reports; read when the view opens.
   useEffect(() => {
@@ -197,10 +202,11 @@ export function Workspace({ native }: { native: boolean }) {
 
   const registered = environments?.filter(environment => environment.status === "registered").length ?? 0;
   const nav = <>
-    <NavItem icon="servers" label="Environments" active={view === "environments" || view === "environment"} badge={environments ? String(registered) : undefined} onClick={() => setView("environments")} />
+    <NavItem icon="servers" label="Environments" short="VMs" active={view === "environments" || view === "environment"} badge={environments ? String(registered) : undefined} onClick={() => setView("environments")} />
     <NavItem icon="plus" label="New environment" short="New" active={view === "create"} onClick={() => setView("create")} />
-    <NavItem icon="terminal" label="Terminal" active={view === "terminal"} dot={sshTarget !== null} onClick={() => setView("terminal")} />
+    <NavItem icon="terminal" label="Sessions" active={view === "sessions"} badge={sessions.length ? String(sessions.length) : undefined} onClick={() => setView("sessions")} />
     <NavItem icon="activity" label="Activity" active={view === "activity"} onClick={() => setView("activity")} />
+    <NavItem icon="key" label="Keychain" short="Keys" active={view === "keychain"} onClick={() => setView("keychain")} />
     <NavItem icon="settings" label="Settings" active={view === "settings"} onClick={() => setView("settings")} />
   </>;
   const server = <div className="server-chip" title={connection.endpoint}><span className="dot online" />{host(connection.endpoint)}</div>;
@@ -209,9 +215,10 @@ export function Workspace({ native }: { native: boolean }) {
     environments: ["Environments", "Virtual machines registered on this control plane"],
     environment: [selected?.definitionName ?? "Environment", selected ? `VM ${selected.providerReference.vmid} · ${selected.providerReference.node}` : ""],
     create: ["New environment", "Define, review and create a VM from a configured template"],
-    terminal: ["Terminal", "Verified SSH sessions to your guests"],
+    sessions: ["Sessions", "Open terminals to your guests"],
+    keychain: ["Keychain", "Your SSH identity and the host keys you trust"],
     activity: ["Activity", "Operations retained on the server, including after restarts"],
-    settings: ["Settings", "Server, identity and application"],
+    settings: ["Settings", "Server and application"],
   };
   const [title, subtitle] = titles[view];
 
@@ -235,13 +242,13 @@ export function Workspace({ native }: { native: boolean }) {
             <button type="button" disabled={blocked || (power?.id === selected.id && power.status === "running")} title={power?.id === selected.id && power.status === "running" ? "Already running" : undefined} onClick={() => openDrawer({ kind: "lifecycle", environment: selected, action: "start" })}><Icon name="play" />Start</button>
             <button type="button" disabled={blocked || (power?.id === selected.id && power.status === "stopped")} title={power?.id === selected.id && power.status === "stopped" ? "Already stopped" : undefined} onClick={() => openDrawer({ kind: "lifecycle", environment: selected, action: "shutdown" })}><Icon name="power" />Shut down</button>
             <button type="button" disabled={blocked} onClick={() => openDrawer({ kind: "snapshot", environment: selected })}><Icon name="camera" />Snapshot</button>
-            <button type="button" disabled={blocked} onClick={() => sshForInstance(selected)}><Icon name="terminal" />Connect</button>
+            <button type="button" disabled={blocked} onClick={() => openConsole(selected)}><Icon name="terminal" />Connect</button>
             <button type="button" className="danger" disabled={blocked} onClick={() => openDrawer({ kind: "deletion", environment: selected })}><Icon name="trash" />Delete</button>
           </> : <button type="button" className="primary" disabled={blocked} onClick={() => openDrawer({ kind: "recreation", environment: selected })}><Icon name="repeat" />Recreate</button>}
         </div>
       </div>
       <div className="tabs" role="tablist">
-        {(["overview", "snapshots", "history"] as Tab[]).filter(value => value !== "snapshots" || selected.status === "registered").map(value =>
+        {(["overview", "console", "snapshots", "activity"] as Tab[]).filter(value => selected.status === "registered" || value === "overview" || value === "activity").map(value =>
           <button key={value} type="button" role="tab" aria-selected={tab === value} onClick={() => setTab(value)}>{value[0].toUpperCase() + value.slice(1)}</button>)}
       </div>
       <div className="tab-panel" role="tabpanel">
@@ -253,7 +260,12 @@ export function Workspace({ native }: { native: boolean }) {
         {tab === "snapshots" && selected.status === "registered" && <Panel title="Snapshots" action={<button type="button" disabled={blocked} onClick={() => openDrawer({ kind: "snapshot", environment: selected })}><Icon name="camera" />New snapshot</button>}>
           <RemoteSnapshots key={`snapshots.${selected.id}.${revision}`} connectionId={connection.connectionId} environment={selected} disabled={busy || loading} restoreDisabled={mutationLocked} autoLoad showRecovery={false} onRestore={snapshotName => openDrawer({ kind: "restore", environment: selected, snapshotName })} />
         </Panel>}
-        {tab === "history" && <div className="stack">
+        {tab === "console" && selected.status === "registered" && <Panel title="Console">
+          <Console key={`console.${selected.id}`} native={native} target={{ host: selected.lastGuest?.address ?? "", port: 22, username: selected.lastGuest?.user ?? "debian", label: selected.definitionName }} onSession={addSession} onOpenKeychain={() => setView("keychain")} />
+          {sessions.some(session => session.title === selected.definitionName) && <div className="actions-row">{sessions.filter(session => session.title === selected.definitionName).map(session =>
+            <button key={session.id} type="button" onClick={() => { setActiveSession(session.id); setView("sessions"); }}><Icon name="terminal" />Open session {session.account}</button>)}</div>}
+        </Panel>}
+        {tab === "activity" && <div className="stack">
           <Panel title="Start and shutdown"><RemoteLifecycleRecovery connectionId={connection.connectionId} environment={selected} disabled={busy || loading} /></Panel>
           {selected.status === "registered" && <Panel title="Snapshots and restores">
             <RemoteSnapshotRecovery connectionId={connection.connectionId} environment={selected} disabled={busy || loading} />
@@ -266,16 +278,21 @@ export function Workspace({ native }: { native: boolean }) {
     </div> : <Empty title="Environment unavailable" text="It is no longer listed on this server." action={<button type="button" onClick={() => setView("environments")}>Back to environments</button>} />)}
 
     <div hidden={view !== "create"}>
-      <Panel><RemoteCreate key={connection.connectionId} connectionId={connection.connectionId} endpoint={connection.endpoint} disabled={busy || mutationLocked} onSshTarget={selectSshTarget} onEnvironmentsChanged={reloadEnvironments} images={images?.map(image => image.image)} /></Panel>
+      <Panel><RemoteCreate key={connection.connectionId} connectionId={connection.connectionId} endpoint={connection.endpoint} disabled={busy || mutationLocked} onSshTarget={selectSshTarget} onEnvironmentsChanged={reloadEnvironments} images={images?.map(image => image.image)} onOpenKeychain={() => setView("keychain")} /></Panel>
     </div>
 
-    {/* Kept mounted while hidden so a live SSH session survives navigation. */}
-    <div hidden={view !== "terminal"}>
-      {sshTarget?.instance && <p className="notice">Connecting to {sshTarget.instance.definitionName} · VM {sshTarget.instance.providerReference.vmid}. Enter the guest address yourself: power state and the saved definition do not reveal or verify it.</p>}
-      <Panel><SshHostTrust key={sshTarget?.generation ?? 0} native={native} initialHost={sshTarget?.host ?? ""} initialUsername={sshTarget?.username ?? ""} /></Panel>
+    {/* Kept mounted while hidden so live SSH sessions survive navigation. */}
+    <div className="stack" hidden={view !== "sessions"}>
+      <Sessions sessions={sessions} active={activeSession} onSelect={setActiveSession} onClosed={closedSession} />
+      <Panel title={sessions.length ? "New connection" : "Connect to a guest"}>
+        <Console key={`adhoc.${adhoc.key}`} native={native} target={adhoc.target} onSession={addSession} onOpenKeychain={() => setView("keychain")} />
+        <p className="hint">Tip: open a machine and use its Console tab to connect with its known address.</p>
+      </Panel>
     </div>
 
     {view === "activity" && <Panel title="Creations"><RemoteRecovery key={`recovery-${connection.connectionId}`} connectionId={connection.connectionId} endpoint={connection.endpoint} disabled={busy || mutationLocked} onSshTarget={selectSshTarget} /></Panel>}
+
+    {view === "keychain" && <Keychain native={native} panel={(title, body, action) => <Panel title={title} action={action}>{body}</Panel>} />}
 
     {view === "settings" && <div className="stack">
       <Panel title="Server" action={<button type="button" className="danger" disabled={busy} onClick={() => void disconnect()}>Disconnect</button>}>
@@ -285,7 +302,6 @@ export function Workspace({ native }: { native: boolean }) {
           <div className="table">{images.map(image => <div className="row" key={image.image}><strong>{image.image}</strong><span>{image.node}</span><span>template {image.templateVmid}</span><span>{image.sourceDiskGiB} GiB</span><span className="mono">{image.templateVersion}</span></div>)}</div>}
         {hasSaved && <button type="button" className="link" onClick={forgetServer}>Forget saved server on this device</button>}
       </Panel>
-      <Panel title="Application SSH identity"><AppIdentity disabled={busy} /></Panel>
       <Panel title="About">
         <dl className="facts"><div><dt>Application</dt><dd>VMAnyware · {native ? "native" : "browser preview"}</dd></div><div><dt>Platform</dt><dd>{runtime || "—"}</dd></div></dl>
       </Panel>

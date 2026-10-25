@@ -67,7 +67,7 @@ export function SshTerminal({ id, account }: { id: string; account: string }) {
       if (emulator.current === term) emulator.current = null;
       observer.disconnect(); window.clearTimeout(timer);
       text.dispose(); binary.dispose(); term.dispose();
-      // SshAuthentication owns native lifetime, including a pending lazy mount.
+      // The owning session list (Sessions or SshAuthentication) closes the native session.
       // Disposing this renderer must not close a surviving StrictMode session.
     };
   }, [id]);
@@ -85,6 +85,6 @@ export function SshTerminal({ id, account }: { id: string; account: string }) {
       <button type="button" disabled={closed} onClick={() => transport.current?.write(new Uint8Array([3]))}>Send Ctrl-C</button>
       <button type="button" disabled={closed} onClick={disconnect}>Disconnect</button>
     </div>}
-    {closed && <p>List identities again to open a fresh connection.</p>}
+    {closed && <p className="hint">Session ended. Open a new one from the machine's Console.</p>}
   </div>;
 }

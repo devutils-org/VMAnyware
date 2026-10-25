@@ -225,6 +225,42 @@ impl Store {
             })),
         }
     }
+    /// Pinned endpoints with their key algorithm and SHA-256 fingerprint.
+    pub fn trusted(&self) -> Result<Vec<(Endpoint, String, String)>, Error> {
+        let _lock = self.lock()?;
+        self.read()?
+            .entries
+            .into_iter()
+            .map(|record| {
+                let key =
+                    PublicKey::from_openssh(&record.public_key).map_err(|_| Error::InvalidStore)?;
+                Ok((
+                    record.endpoint,
+                    key.algorithm().to_string(),
+                    key.fingerprint(HashAlg::Sha256).to_string(),
+                ))
+            })
+            .collect()
+    }
+    /// Removes a pin only when the caller names the exact pinned fingerprint.
+    pub fn forget(&self, endpoint: &Endpoint, fingerprint: &str) -> Result<(), Error> {
+        let _lock = self.lock()?;
+        let mut document = self.read()?;
+        let index = document
+            .entries
+            .iter()
+            .position(|r| &r.endpoint == endpoint)
+            .ok_or(Error::ConfirmationMismatch)?;
+        let pinned = PublicKey::from_openssh(&document.entries[index].public_key)
+            .map_err(|_| Error::InvalidStore)?
+            .fingerprint(HashAlg::Sha256)
+            .to_string();
+        if pinned != fingerprint {
+            return Err(Error::ConfirmationMismatch);
+        }
+        document.entries.remove(index);
+        self.write(&document)
+    }
     /// Observes a changed key for explicit replacement; never alters storage.
     pub fn replacement(&self, endpoint: Endpoint, key: &PublicKey) -> Result<Replacement, Error> {
         if Endpoint::new(&endpoint.host, endpoint.port)? != endpoint {
@@ -589,6 +625,44 @@ mod tests {
                 .inspect(endpoint, second.public_key())
                 .unwrap(),
             Inspection::Trusted
+        ));
+    }
+    #[test]
+    fn trusted_listing_and_forget_require_the_exact_pinned_fingerprint() {
+        let (_root, store) = setup();
+        let endpoint = Endpoint::new("10.10.10.205", 22).unwrap();
+        let key = ephemeral_key();
+        assert!(store.trusted().unwrap().is_empty());
+        accept(
+            &store,
+            observation(&store, endpoint.clone(), key.public_key()),
+        )
+        .unwrap();
+        let listed = store.trusted().unwrap();
+        let fingerprint = key.public_key().fingerprint(HashAlg::Sha256).to_string();
+        assert_eq!(listed.len(), 1);
+        assert!(listed[0].0 == endpoint);
+        assert_eq!(listed[0].1, "ssh-ed25519");
+        assert_eq!(listed[0].2, fingerprint);
+        assert_eq!(
+            store.forget(&endpoint, "SHA256:incorrect"),
+            Err(Error::ConfirmationMismatch)
+        );
+        assert_eq!(
+            store.forget(&Endpoint::new("10.10.10.206", 22).unwrap(), &fingerprint),
+            Err(Error::ConfirmationMismatch)
+        );
+        assert_eq!(store.trusted().unwrap().len(), 1);
+        store.forget(&endpoint, &fingerprint).unwrap();
+        assert!(Store::open(&store.directory)
+            .unwrap()
+            .trusted()
+            .unwrap()
+            .is_empty());
+        // A forgotten endpoint is unknown again, never silently trusted.
+        assert!(matches!(
+            store.inspect(endpoint, key.public_key()).unwrap(),
+            Inspection::Unknown(_)
         ));
     }
 }

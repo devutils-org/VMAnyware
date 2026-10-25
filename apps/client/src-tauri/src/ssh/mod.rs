@@ -44,6 +44,14 @@ pub struct HostInspection {
 }
 #[derive(serde::Serialize)]
 #[serde(rename_all = "camelCase")]
+pub struct TrustedHost {
+    host: String,
+    port: u16,
+    algorithm: String,
+    fingerprint: String,
+}
+#[derive(serde::Serialize)]
+#[serde(rename_all = "camelCase")]
 pub struct HostConfirmation {
     host: String,
     port: u16,
@@ -115,6 +123,37 @@ pub async fn replace_ssh_host(
             fingerprint,
         );
         Err("SSH host inspection is unavailable on this platform".into())
+    }
+}
+#[tauri::command]
+pub async fn list_ssh_hosts(
+    manager: tauri::State<'_, HostManager>,
+) -> Result<Vec<TrustedHost>, String> {
+    #[cfg(unix)]
+    {
+        manager.trusted().await
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = manager;
+        Err("SSH host trust is unavailable on this platform".into())
+    }
+}
+#[tauri::command]
+pub async fn forget_ssh_host(
+    manager: tauri::State<'_, HostManager>,
+    host: String,
+    port: u16,
+    fingerprint: String,
+) -> Result<(), String> {
+    #[cfg(unix)]
+    {
+        manager.forget(&host, port, &fingerprint).await
+    }
+    #[cfg(not(unix))]
+    {
+        let _ = (manager, host, port, fingerprint);
+        Err("SSH host trust is unavailable on this platform".into())
     }
 }
 #[tauri::command]

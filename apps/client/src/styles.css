@@ -391,3 +391,41 @@ button + label { margin-top: 14px; }
 
 /* devutils mark replaces the placeholder glyph. */
 .brand .brand-mark { width: 24px; height: 24px; border: 0; border-radius: 0; background: none; filter: drop-shadow(0 0 10px #a7b6ff55); }
+
+/* ---------- console: machine → verified session ---------- */
+.inline-form .field.user { flex: 0 0 10rem; }
+.console-steps { display: flex; flex-wrap: wrap; gap: 8px 20px; margin: 14px 0 4px; padding: 0; list-style: none; counter-reset: step; }
+.console-steps li { display: flex; align-items: center; gap: 8px; padding: 0; border: 0; color: var(--muted); font-size: 12px; counter-increment: step; }
+.console-steps li::before { content: counter(step); display: grid; place-items: center; width: 20px; height: 20px; border: 1px solid var(--line-strong); border-radius: 50%; font: 11px var(--mono); }
+.console-steps li.active { color: var(--fg); }
+.console-steps li.active::before { border-color: var(--purple); color: var(--purple); }
+.console-steps li.done { color: var(--soft); }
+.console-steps li.done::before { content: "✓"; border-color: #7ef0b460; color: var(--ok); }
+.trust-card, .identity-card { margin-top: 14px; padding: 16px; border: 1px solid var(--line-strong); border-radius: var(--radius-control); background: var(--raised); }
+.identity-card select { width: auto; }
+
+/* ---------- sessions ---------- */
+.sessions { display: grid; gap: 0; border: 1px solid var(--line); border-radius: var(--radius-panel); background: var(--surface); overflow: hidden; }
+.session-tabs { display: flex; gap: 2px; padding: 6px 6px 0; border-bottom: 1px solid var(--line); overflow-x: auto; scrollbar-width: none; }
+.session-tab { display: flex; align-items: center; border: 1px solid transparent; border-bottom: 0; border-radius: 10px 10px 0 0; }
+.session-tab[aria-selected="true"] { background: var(--surface-2); border-color: var(--line); }
+.session-tab button { border: 0; background: none; min-height: 34px; }
+.session-tab .session-title { gap: 8px; color: var(--soft); font-weight: 400; }
+.session-tab[aria-selected="true"] .session-title { color: var(--fg); }
+.session-tab .icon { width: 28px; color: var(--muted); }
+.session-panel { padding: 12px 16px 16px; }
+.session-panel h3 { display: none; }
+.session-panel .ssh-terminal { height: min(36rem, 62dvh); }
+
+/* ---------- key picker ---------- */
+.key-picker { margin-top: 4px; }
+.key-picker .full { flex-basis: 100%; margin: 0; }
+.key-picker.added { display: flex; flex-wrap: wrap; align-items: center; gap: 10px; padding: 10px 12px; border: 1px solid #82e9ff30; border-radius: var(--radius-control); background: #82e9ff08; }
+.extra-keys { margin-top: 10px; }
+.table .row .grow { flex: 1 1 18rem; }
+.table .row button { margin-left: auto; }
+
+@media (max-width: 820px) {
+  .tabbar { grid-template-columns: repeat(6, minmax(0, 1fr)); }
+  .inline-form .field.user, .inline-form .field.port { flex: 1 1 6rem; }
+}

@@ -120,6 +120,8 @@ pub fn run() {
             ssh::inspect_ssh_host,
             ssh::confirm_ssh_host,
             ssh::replace_ssh_host,
+            ssh::list_ssh_hosts,
+            ssh::forget_ssh_host,
             ssh::cancel_ssh_host,
             ssh::list_ssh_identities,
             ssh::check_ssh_authentication,
